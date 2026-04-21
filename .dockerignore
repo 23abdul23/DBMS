@@ -1,0 +1,15 @@
+node_modules
+backend/node_modules
+frontend/node_modules
+**/.expo
+**/.expo-shared
+**/dist
+**/web-build
+**/.cache
+**/.git
+**/.DS_Store
+**/.env
+**/.env.*
+README.md
+installation.md
+UPDATE.md

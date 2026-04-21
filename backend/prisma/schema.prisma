@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  student
+  warden
+  security
+  admin
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum Department {
+  IT
+  IT_BI
+  Electronics
+}
+
+enum AcademicYear {
+  FIRST_YEAR
+  SECOND_YEAR
+  THIRD_YEAR
+  FOURTH_YEAR
+}
+
+enum EmergencyType {
+  medical
+  security
+  fire
+  other
+}
+
+enum EmergencyStatus {
+  active
+  responded
+  resolved
+}
+
+enum EmergencyPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum MediaType {
+  photo
+  audio
+}
+
+enum OutpassStatus {
+  pending
+  approved
+  rejected
+  expired
+  cancelled
+}
+
+enum LogAction {
+  entry
+  exit
+  scan_attempt
+  outpass_request
+  outpass_generated
+  emergency_alert
+}
+
+enum ScanType {
+  qr
+  nfc
+  manual
+}
+
+model User {
+  id               String    @id @db.VarChar(24)
+  name             String
+  email            String    @unique @db.VarChar(255)
+  passwordHash     String    @map("password_hash") @db.VarChar(255)
+  role             UserRole  @default(student)
+  gender           Gender?
+  department       Department?
+  year             AcademicYear?
+  hostel           String?   @db.VarChar(255)
+  roomNumber       String?   @map("room_number") @db.VarChar(50)
+  phoneNumber      String?   @map("phone_number") @db.VarChar(20)
+  emergencyContact String?   @map("emergency_contact") @db.VarChar(255)
+  profilePhoto     String?   @map("profile_photo") @db.VarChar(500)
+  studentId        String?   @unique @map("student_id") @db.VarChar(100)
+  guardId          String?   @unique @map("guard_id") @db.VarChar(100)
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  emergencies            Emergency[] @relation("EmergencyOwner")
+  respondedEmergencies   Emergency[] @relation("EmergencyResponder")
+  outpasses              Outpass[]   @relation("OutpassOwner")
+  approvedOutpasses      Outpass[]   @relation("OutpassApprover")
+  outpassAuditChanges    OutpassAuditTrail[]
+  passkeys               Passkey[]
+  logs                   Log[]
+
+  @@index([role])
+  @@index([hostel])
+  @@map("users")
+}
+
+model Emergency {
+  id             String            @id @db.VarChar(24)
+  userId         String            @map("user_id") @db.VarChar(24)
+  type           EmergencyType
+  description    String?
+  latitude       Decimal           @db.Decimal(9, 6)
+  longitude      Decimal           @db.Decimal(9, 6)
+  address        String?           @db.VarChar(500)
+  status         EmergencyStatus   @default(active)
+  respondedById  String?           @map("responded_by") @db.VarChar(24)
+  responseTime   DateTime?         @map("response_time")
+  resolvedTime   DateTime?         @map("resolved_time")
+  priority       EmergencyPriority @default(medium)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  user           User               @relation("EmergencyOwner", fields: [userId], references: [id], onDelete: Cascade)
+  respondedBy    User?              @relation("EmergencyResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+  media          EmergencyMedia[]
+  contactCalls   EmergencyContactCall[]
+
+  @@index([status, priority])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("emergencies")
+}
+
+model EmergencyMedia {
+  id          String    @id @db.VarChar(24)
+  emergencyId String    @map("emergency_id") @db.VarChar(24)
+  url         String    @db.VarChar(500)
+  mediaType   MediaType @map("media_type")
+  uploadedAt  DateTime? @map("uploaded_at")
+
+  emergency Emergency @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+
+  @@index([emergencyId])
+  @@map("emergency_media")
+}
+
+model EmergencyContactCall {
+  id          String    @id @db.VarChar(24)
+  emergencyId String    @map("emergency_id") @db.VarChar(24)
+  name        String?   @db.VarChar(255)
+  phone       String?   @db.VarChar(20)
+  calledAt    DateTime? @map("called_at")
+
+  emergency Emergency @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+
+  @@index([emergencyId])
+  @@map("emergency_contact_calls")
+}
+
+model Outpass {
+  id                    String       @id @db.VarChar(24)
+  userId                String       @map("user_id") @db.VarChar(24)
+  reason                String       @db.VarChar(500)
+  destination           String       @db.VarChar(500)
+  outDate               DateTime     @map("out_date")
+  expectedReturnDate    DateTime     @map("expected_return_date")
+  actualReturnDate      DateTime?    @map("actual_return_date")
+  status                OutpassStatus @default(pending)
+  approvedById          String?      @map("approved_by") @db.VarChar(24)
+  rejectionReason       String?      @map("rejection_reason")
+  emergencyContactName  String?      @map("emergency_contact_name") @db.VarChar(255)
+  emergencyContactPhone String?      @map("emergency_contact_phone") @db.VarChar(20)
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  user        User               @relation("OutpassOwner", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy  User?              @relation("OutpassApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  auditTrail  OutpassAuditTrail[]
+
+  @@index([userId, status])
+  @@index([outDate])
+  @@map("outpasses")
+}
+
+model OutpassAuditTrail {
+  id        String   @id @db.VarChar(24)
+  outpassId String   @map("outpass_id") @db.VarChar(24)
+  status    String   @db.VarChar(50)
+  changedBy String?  @map("changed_by") @db.VarChar(24)
+  changedAt DateTime @map("changed_at")
+  remarks   String?
+
+  outpass Outpass @relation(fields: [outpassId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@index([outpassId])
+  @@map("outpass_audit_trail")
+}
+
+model Passkey {
+  id        String   @id @db.VarChar(24)
+  userId    String   @map("user_id") @db.VarChar(24)
+  hash      String   @unique @db.VarChar(256)
+  date      DateTime
+  expiresAt DateTime @map("expires_at")
+  isUsed    Boolean  @default(false) @map("is_used")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([expiresAt])
+  @@map("passkeys")
+}
+
+model Location {
+  id          String   @id @db.VarChar(24)
+  name        String   @unique @db.VarChar(255)
+  code        String   @unique @db.VarChar(100)
+  hash        String   @unique @db.VarChar(256)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("locations")
+}
+
+model Log {
+  id          String    @id @db.VarChar(24)
+  userId      String    @map("user_id") @db.VarChar(24)
+  action      LogAction
+  location    String?   @db.VarChar(255)
+  guardId     String?   @map("guard_id") @db.VarChar(100)
+  guardName   String?   @map("guard_name") @db.VarChar(255)
+  deviceInfo  String?   @map("device_info") @db.VarChar(500)
+  ipAddress   String?   @map("ip_address") @db.VarChar(45)
+  success     Boolean   @default(true)
+  details     Json?
+  errorCode   String?   @map("error_code") @db.VarChar(100)
+  errorMessage String?  @map("error_message")
+  scanType    ScanType  @default(qr) @map("scan_type")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("logs")
+}
