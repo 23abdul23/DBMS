@@ -87,7 +87,7 @@ You can use `backend/.env.example` as a template.
 
 ```env
 DB_MODE=sql
-POSTGRES_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRE=7d
 PORT=3000
@@ -103,7 +103,7 @@ EMERGENCY_OTHER_PHONE=7909069340
 Notes:
 
 - `DB_MODE` must stay `sql`
-- `POSTGRES_URL` is required for Prisma
+- `DATABASE_URL` is required for Prisma
 - `FRONTEND_URL` is used for CORS when you run the mobile app or Expo web
 - `GMAIL_ID` and `GMAIL_PASSWORD` are required for the password reset flow
 - The backend Docker compose service reads `backend/.env` and overrides the database URL for the container network
@@ -185,7 +185,7 @@ npx expo start --tunnel
 A typical local development session looks like this:
 
 1. Create or start PostgreSQL
-2. Set `POSTGRES_URL` in `.env`
+2. Set `DATABASE_URL` in `.env`
 3. Run `npm install`
 4. Run `npm run prisma:generate`
 5. Run `npm run prisma:migrate -- --name init`
@@ -196,10 +196,10 @@ A typical local development session looks like this:
 
 ## 10. Troubleshooting
 
-### Backend fails with `POSTGRES_URL is required`
+### Backend fails with `DATABASE_URL is required`
 
 - Make sure the `.env` file exists at the repository root
-- Confirm `POSTGRES_URL` is spelled correctly
+- Confirm `DATABASE_URL` is spelled correctly
 - Restart the terminal after editing `.env`
 
 ### Prisma says the client is not generated

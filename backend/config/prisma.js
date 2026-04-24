@@ -15,13 +15,13 @@ const loadPrismaClient = () => {
 
 const getPrismaClient = () => {
   if (!prisma) {
-    if (!process.env.POSTGRES_URL) {
-      throw new Error("POSTGRES_URL is required when DB_MODE is sql or hybrid")
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is required when DB_MODE is sql or hybrid")
     }
     const PrismaClientClass = loadPrismaClient()
     // Prisma 7+ requires the PrismaPg adapter for PostgreSQL
     const { PrismaPg } = require("@prisma/adapter-pg")
-    const adapter = new PrismaPg({ connectionString: process.env.POSTGRES_URL })
+    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
     prisma = new PrismaClientClass({
       adapter,
       log: process.env.NODE_ENV === "development" ? ["query", "warn", "error"] : ["warn", "error"],

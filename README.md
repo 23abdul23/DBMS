@@ -27,7 +27,7 @@ Create `backend/.env` using `backend/.env.example` as the template. The backend 
 
 ```env
 DB_MODE=sql
-POSTGRES_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
 JWT_SECRET=your-secret
 JWT_EXPIRE=7d
 PORT=3000
