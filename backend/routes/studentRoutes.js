@@ -6,6 +6,20 @@ const { authenticate } = require("../middleware/auth")
 const prisma = getPrismaClient()
 const router = express.Router()
 
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])(?=\S+$).{8,64}$/
+
+const getStrongPasswordError = (password) => {
+  if (!password) {
+    return "New password is required"
+  }
+
+  if (!STRONG_PASSWORD_REGEX.test(password)) {
+    return "Password must be 8-64 characters and include uppercase, lowercase, number, and special character (no spaces)."
+  }
+
+  return null
+}
+
 const userSelect = {
   id: true,
   name: true,
@@ -115,6 +129,14 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
       return res.status(400).json({ message: "Passwords do not match" })
     }
 
+    const strongPasswordError = getStrongPasswordError(newPassword)
+    if (strongPasswordError) {
+      return res.status(400).json({
+        code: "WEAK_PASSWORD",
+        message: strongPasswordError,
+      })
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
     })
@@ -127,6 +149,10 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
       const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash)
       if (!passwordMatches) {
         return res.status(400).json({ message: "Current password is incorrect" })
+      }
+
+      if (newPassword === currentPassword) {
+        return res.status(400).json({ message: "New password must be different from current password" })
       }
     }
 
