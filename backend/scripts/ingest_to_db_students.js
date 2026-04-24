@@ -421,6 +421,25 @@ const createInsertRows = async (students) =>
     studentId: student.studentId,
   }));
 
+const createStudentProfileRows = (users, studentMap) =>
+  users
+    .map((user) => {
+      const student = studentMap.get(user.email)
+      if (!student) {
+        return null
+      }
+
+      return {
+        userId: user.id,
+        studentId: student.studentId,
+        department: student.department,
+        year: student.year,
+        hostel: student.hostel,
+        roomNumber: student.roomNumber || null,
+      }
+    })
+    .filter(Boolean)
+
 const formatSummaryLine = ({ branch, batchYear, total, inserted, skipped, maleStudents, femaleStudents, singleOccupancy }) =>
   `${branch} ${batchYear}: total=${total}, inserted=${inserted}, skipped=${skipped}, male=${maleStudents}, female=${femaleStudents}, singleRooms=${singleOccupancy}`;
 
@@ -551,9 +570,35 @@ const run = async () => {
         () =>
           prisma.user.createMany({
             data: rows,
+              skipDuplicates: true,
+            }),
+      );
+
+      const insertedUsers = await withRetry(`Fetch inserted users for ${summary.branch} ${summary.batchYear}`, () =>
+        prisma.user.findMany({
+          where: {
+            email: {
+              in: group.map((student) => student.email),
+            },
+          },
+          select: {
+            id: true,
+            email: true,
+          },
+        }),
+      )
+
+      const studentMap = new Map(group.map((student) => [student.email, student]))
+      const studentProfileRows = createStudentProfileRows(insertedUsers, studentMap)
+
+      if (studentProfileRows.length > 0) {
+        await withRetry(`Insert student profiles for ${summary.branch} ${summary.batchYear}`, () =>
+          prisma.studentProfile.createMany({
+            data: studentProfileRows,
             skipDuplicates: true,
           }),
-      );
+        )
+      }
 
       insertedTotal += result.count;
       duplicateConflicts += rows.length - result.count;

@@ -157,7 +157,7 @@ const run = async () => {
       role: guard.role,
       gender: guard.gender,
       guardId: guard.guardId,
-      // The current schema has no dedicated `securityPost` column, so the assigned post is kept in `hostel`.
+      // Keep the legacy `users.hostel` field populated during the migration period.
       hostel: guard.location,
       phoneNumber: guard.phoneNumber,
       emergencyContact: guard.emergencyContact,
@@ -168,6 +168,41 @@ const run = async () => {
     data: rows,
     skipDuplicates: true,
   });
+
+  const insertedGuards = await prisma.user.findMany({
+    where: {
+      email: {
+        in: guardsToInsert.map((guard) => guard.email),
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  })
+
+  const guardMap = new Map(guardsToInsert.map((guard) => [guard.email, guard]))
+  const securityProfileRows = insertedGuards
+    .map((user) => {
+      const guard = guardMap.get(user.email)
+      if (!guard) {
+        return null
+      }
+
+      return {
+        userId: user.id,
+        guardId: guard.guardId,
+        securityPost: guard.location,
+      }
+    })
+    .filter(Boolean)
+
+  if (securityProfileRows.length > 0) {
+    await prisma.securityProfile.createMany({
+      data: securityProfileRows,
+      skipDuplicates: true,
+    })
+  }
 
   const duplicateConflicts = rows.length - result.count;
 
