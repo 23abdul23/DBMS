@@ -4,34 +4,10 @@ const jwt = require("jsonwebtoken")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
+const { userSelect, userSelectWithPassword, serializeUser } = require("../utils/userProfiles")
 
 const prisma = getPrismaClient()
 const router = express.Router()
-
-const userSelect = {
-  id: true,
-  name: true,
-  email: true,
-  role: true,
-  gender: true,
-  department: true,
-  year: true,
-  hostel: true,
-  roomNumber: true,
-  phoneNumber: true,
-  emergencyContact: true,
-  profilePhoto: true,
-  studentId: true,
-  guardId: true,
-  isActive: true,
-  createdAt: true,
-  updatedAt: true,
-}
-
-const loginUserSelect = {
-  ...userSelect,
-  passwordHash: true,
-}
 
 const roleValues = new Set(["student", "warden", "security", "admin"])
 const genderValues = new Set(["male", "female", "other"])
@@ -77,34 +53,6 @@ const normalizeText = (value) => {
   return normalized.length > 0 ? normalized : undefined
 }
 
-const serializeUser = (user) => {
-  if (!user) {
-    return null
-  }
-
-  return {
-    id: user.id,
-    _id: user.id,
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    gender: user.gender,
-    department: user.department,
-    year: user.year,
-    hostel: user.hostel,
-    roomNumber: user.roomNumber,
-    phoneNumber: user.phoneNumber,
-    emergencyContact: user.emergencyContact,
-    profilePhoto: user.profilePhoto,
-    studentId: user.studentId,
-    guardId: user.guardId,
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  }
-}
-
 const normalizeRole = (value, fallback = "student") => {
   if (!value) {
     return fallback
@@ -141,6 +89,45 @@ const normalizeYear = (value) => {
   return yearMap[normalized] || undefined
 }
 
+const buildRoleProfileCreateData = ({ role, studentId, guardId, hostel, roomNumber, year, department, securityPost }) => {
+  if (role === "student" && studentId && department && year && hostel) {
+    return {
+      studentProfile: {
+        create: {
+          studentId,
+          department,
+          year,
+          hostel,
+          roomNumber: roomNumber || null,
+        },
+      },
+    }
+  }
+
+  if (role === "warden" && hostel) {
+    return {
+      wardenProfile: {
+        create: {
+          hostel,
+        },
+      },
+    }
+  }
+
+  if (role === "security" && guardId && securityPost) {
+    return {
+      securityProfile: {
+        create: {
+          guardId,
+          securityPost,
+        },
+      },
+    }
+  }
+
+  return {}
+}
+
 const parseRequestedUser = (value) => {
   if (!value) {
     return null
@@ -171,6 +158,7 @@ router.post("/register", async (req, res) => {
       studentId,
       guardId,
       hostel,
+      securityPost,
       roomNumber,
       phoneNumber,
       emergencyContact,
@@ -186,13 +174,38 @@ router.post("/register", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10)
     const normalizedRole = normalizeRole(role)
+    const normalizedStudentId = normalizeText(studentId)
+    const normalizedGuardId = normalizeText(guardId)
+    const normalizedHostel = normalizeText(hostel)
+    const normalizedSecurityPost = normalizeText(securityPost || hostel)
+    const normalizedRoomNumber = normalizeText(roomNumber)
+    const normalizedPhoneNumber = normalizeText(phoneNumber)
+    const normalizedEmergencyContact = normalizeText(emergencyContact)
+    const normalizedGender = normalizeGender(gender)
+    const normalizedYear = normalizeYear(year)
+    const normalizedDepartment = normalizeDepartment(department)
+
+    if (normalizedRole === "student" && (!normalizedStudentId || !normalizedDepartment || !normalizedYear || !normalizedHostel)) {
+      return res.status(400).json({ message: "Student registration requires student ID, department, year, and hostel" })
+    }
+
+    if (normalizedRole === "warden" && !normalizedHostel) {
+      return res.status(400).json({ message: "Warden registration requires an assigned hostel" })
+    }
+
+    if (normalizedRole === "security" && (!normalizedGuardId || !normalizedSecurityPost)) {
+      return res.status(400).json({ message: "Security registration requires guard ID and security post" })
+    }
 
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { email },
-          studentId ? { studentId } : null,
-          guardId ? { guardId } : null,
+          normalizedStudentId ? { studentId: normalizedStudentId } : null,
+          normalizedGuardId ? { guardId: normalizedGuardId } : null,
+          normalizedStudentId ? { studentProfile: { is: { studentId: normalizedStudentId } } } : null,
+          normalizedGuardId ? { securityProfile: { is: { guardId: normalizedGuardId } } } : null,
+          normalizedRole === "warden" && normalizedHostel ? { wardenProfile: { is: { hostel: normalizedHostel } } } : null,
         ].filter(Boolean),
       },
     })
@@ -207,16 +220,26 @@ router.post("/register", async (req, res) => {
         name: normalizeText(name),
         email: normalizeText(email),
         passwordHash,
-        studentId: normalizeText(studentId),
-        guardId: normalizeText(guardId),
-        hostel: normalizeText(hostel),
-        roomNumber: normalizeText(roomNumber),
-        phoneNumber: normalizeText(phoneNumber),
-        emergencyContact: normalizeText(emergencyContact),
-        gender: normalizeGender(gender),
-        year: normalizeYear(year),
-        department: normalizeDepartment(department),
+        studentId: normalizedStudentId,
+        guardId: normalizedGuardId,
+        hostel: normalizedRole === "security" ? normalizedSecurityPost : normalizedHostel,
+        roomNumber: normalizedRoomNumber,
+        phoneNumber: normalizedPhoneNumber,
+        emergencyContact: normalizedEmergencyContact,
+        gender: normalizedGender,
+        year: normalizedYear,
+        department: normalizedDepartment,
         role: normalizedRole,
+        ...buildRoleProfileCreateData({
+          role: normalizedRole,
+          studentId: normalizedStudentId,
+          guardId: normalizedGuardId,
+          hostel: normalizedHostel,
+          roomNumber: normalizedRoomNumber,
+          year: normalizedYear,
+          department: normalizedDepartment,
+          securityPost: normalizedSecurityPost,
+        }),
       },
       select: userSelect,
     })
@@ -264,7 +287,7 @@ router.post("/login", async (req, res) => {
         email,
         ...(normalizedRole ? { role: normalizedRole } : {}),
       },
-      select: loginUserSelect,
+      select: userSelectWithPassword,
     })
 
     if (!user) {
@@ -338,26 +361,93 @@ router.put("/profile", authenticate, async (req, res) => {
       guardId,
       emergencyContact,
       hostel,
+      securityPost,
       roomNumber,
       year,
       department,
       gender,
     } = req.body
+    const normalizedName = normalizeText(name)
+    const normalizedPhoneNumber = normalizeText(phoneNumber)
+    const normalizedEmail = normalizeText(email)
+    const normalizedStudentId = normalizeText(studentId)
+    const normalizedGuardId = normalizeText(guardId)
+    const normalizedEmergencyContact = normalizeText(emergencyContact)
+    const normalizedHostel = normalizeText(hostel)
+    const normalizedSecurityPost = normalizeText(securityPost || hostel)
+    const normalizedRoomNumber = normalizeText(roomNumber)
+    const normalizedYear = normalizeYear(year)
+    const normalizedDepartment = normalizeDepartment(department)
+    const normalizedGender = normalizeGender(gender)
+    const currentRole = req.user.role
 
     const user = await prisma.user.update({
       where: { id: req.user.userId },
       data: {
-        name: normalizeText(name),
-        phoneNumber: normalizeText(phoneNumber),
-        email: normalizeText(email),
-        studentId: normalizeText(studentId),
-        guardId: normalizeText(guardId),
-        emergencyContact: normalizeText(emergencyContact),
-        hostel: normalizeText(hostel),
-        roomNumber: normalizeText(roomNumber),
-        year: normalizeYear(year),
-        department: normalizeDepartment(department),
-        gender: normalizeGender(gender),
+        name: normalizedName,
+        phoneNumber: normalizedPhoneNumber,
+        email: normalizedEmail,
+        studentId: normalizedStudentId,
+        guardId: normalizedGuardId,
+        emergencyContact: normalizedEmergencyContact,
+        hostel: currentRole === "security" ? normalizedSecurityPost : normalizedHostel,
+        roomNumber: normalizedRoomNumber,
+        year: normalizedYear,
+        department: normalizedDepartment,
+        gender: normalizedGender,
+        ...(currentRole === "student" &&
+        (normalizedStudentId || normalizedDepartment || normalizedYear || normalizedHostel || normalizedRoomNumber)
+          ? {
+              studentProfile: {
+                upsert: {
+                  create: {
+                    studentId: normalizedStudentId,
+                    department: normalizedDepartment,
+                    year: normalizedYear,
+                    hostel: normalizedHostel,
+                    roomNumber: normalizedRoomNumber || null,
+                  },
+                  update: {
+                    studentId: normalizedStudentId,
+                    department: normalizedDepartment,
+                    year: normalizedYear,
+                    hostel: normalizedHostel,
+                    roomNumber: normalizedRoomNumber || null,
+                  },
+                },
+              },
+            }
+          : {}),
+        ...(currentRole === "warden" && normalizedHostel
+          ? {
+              wardenProfile: {
+                upsert: {
+                  create: {
+                    hostel: normalizedHostel,
+                  },
+                  update: {
+                    hostel: normalizedHostel,
+                  },
+                },
+              },
+            }
+          : {}),
+        ...(currentRole === "security" && (normalizedGuardId || normalizedSecurityPost)
+          ? {
+              securityProfile: {
+                upsert: {
+                  create: {
+                    guardId: normalizedGuardId,
+                    securityPost: normalizedSecurityPost,
+                  },
+                  update: {
+                    guardId: normalizedGuardId,
+                    securityPost: normalizedSecurityPost,
+                  },
+                },
+              },
+            }
+          : {}),
       },
       select: userSelect,
     })

@@ -2,6 +2,7 @@ const express = require("express")
 const bcrypt = require("bcryptjs")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
+const { userSelect, serializeUser } = require("../utils/userProfiles")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -18,54 +19,6 @@ const getStrongPasswordError = (password) => {
   }
 
   return null
-}
-
-const userSelect = {
-  id: true,
-  name: true,
-  email: true,
-  role: true,
-  gender: true,
-  department: true,
-  year: true,
-  hostel: true,
-  roomNumber: true,
-  phoneNumber: true,
-  emergencyContact: true,
-  profilePhoto: true,
-  studentId: true,
-  guardId: true,
-  isActive: true,
-  createdAt: true,
-  updatedAt: true,
-}
-
-const serializeUser = (user) => {
-  if (!user) {
-    return null
-  }
-
-  return {
-    id: user.id,
-    _id: user.id,
-    userId: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    gender: user.gender,
-    department: user.department,
-    year: user.year,
-    hostel: user.hostel,
-    roomNumber: user.roomNumber,
-    phoneNumber: user.phoneNumber,
-    emergencyContact: user.emergencyContact,
-    profilePhoto: user.profilePhoto,
-    studentId: user.studentId,
-    guardId: user.guardId,
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  }
 }
 
 router.get("/profile", authenticate, async (req, res) => {
@@ -99,6 +52,27 @@ router.put("/profile", authenticate, async (req, res) => {
         hostel: req.body.hostel || undefined,
         year: req.body.year || undefined,
         department: req.body.department || undefined,
+        studentProfile:
+          req.body.studentId || req.body.hostel || req.body.roomNumber || req.body.year || req.body.department
+            ? {
+                upsert: {
+                  create: {
+                    studentId: req.body.studentId,
+                    hostel: req.body.hostel,
+                    roomNumber: req.body.roomNumber || null,
+                    year: req.body.year,
+                    department: req.body.department,
+                  },
+                  update: {
+                    studentId: req.body.studentId || undefined,
+                    hostel: req.body.hostel || undefined,
+                    roomNumber: req.body.roomNumber || undefined,
+                    year: req.body.year || undefined,
+                    department: req.body.department || undefined,
+                  },
+                },
+              }
+            : undefined,
       },
       select: userSelect,
     })

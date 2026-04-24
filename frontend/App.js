@@ -15,6 +15,7 @@ import CreateOutpassScreen from "./screens/CreateOutpassScreen"
 import Scanner from './screens/ScannerScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import LogBook from './screens/LogBookScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import { StackScreen } from 'react-native-screens';
 import GuardDashboardScreen from './screens/GuardScreen';
 const Stack = createStackNavigator();
@@ -43,6 +44,7 @@ function RootNavigator() {
         ) :
         (<>
           <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="SAC" component={SACScreen} />
           <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
           <Stack.Screen name="Scan" component={Scanner} />  

@@ -19,6 +19,12 @@ const TABLE_MAP = {
   emergencymedia: "emergency_media",
   emergency_contact_calls: "emergency_contact_calls",
   emergencycontactcalls: "emergency_contact_calls",
+  student_profiles: "student_profiles",
+  studentprofile: "student_profiles",
+  warden_profiles: "warden_profiles",
+  wardenprofile: "warden_profiles",
+  security_profiles: "security_profiles",
+  securityprofile: "security_profiles",
   outpasses: "outpasses",
   outpass: "outpasses",
   outpass_audit_trail: "outpass_audit_trail",
@@ -63,7 +69,7 @@ const normalizeTableName = (input) => {
 
 const printUsage = () => {
   console.log("Usage:");
-  console.log("  node scripts/clear_table.js <table_name> --force");
+  console.log("  node backend/scripts/clear_table.js <table_name> --force");
   console.log("");
   console.log("Allowed tables:");
   for (const tableName of VALID_TABLES) {

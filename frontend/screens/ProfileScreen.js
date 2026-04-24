@@ -99,6 +99,7 @@ export default function ProfileScreen() {
 
   const isStudent = profile?.role === "student"
   const isSecurity = profile?.role === "security"
+  const locationLabel = isSecurity ? "Assigned Post" : "Assigned Hostel"
   const idLabel = isSecurity ? "Guard ID" : "Student ID"
 
   return (
@@ -193,7 +194,7 @@ export default function ProfileScreen() {
         <View style={[styles.section, { backgroundColor: colors.card }]}> 
           <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {isStudent ? "Academic Information" : "Hostel Information"}
+            {isStudent ? "Academic Information" : isSecurity ? "Station Information" : "Hostel Information"}
           </Text>
           </View>
           {
@@ -256,7 +257,7 @@ export default function ProfileScreen() {
               </>
             ) : (
               <View style={styles.fieldContainer}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Assigned Hostel</Text>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>{locationLabel}</Text>
                 <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.hostel || "Not assigned"}</Text>
               </View>
             )

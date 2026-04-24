@@ -157,6 +157,40 @@ const run = async () => {
     skipDuplicates: true,
   });
 
+  const insertedWardens = await prisma.user.findMany({
+    where: {
+      email: {
+        in: wardensToInsert.map((warden) => warden.email),
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  })
+
+  const wardenMap = new Map(wardensToInsert.map((warden) => [warden.email, warden]))
+  const wardenProfileRows = insertedWardens
+    .map((user) => {
+      const warden = wardenMap.get(user.email)
+      if (!warden) {
+        return null
+      }
+
+      return {
+        userId: user.id,
+        hostel: warden.hostel,
+      }
+    })
+    .filter(Boolean)
+
+  if (wardenProfileRows.length > 0) {
+    await prisma.wardenProfile.createMany({
+      data: wardenProfileRows,
+      skipDuplicates: true,
+    })
+  }
+
   const duplicateConflicts = rows.length - result.count;
 
   console.log(`\nSummary: inserted=${result.count}, skipped=${skippedCount + duplicateConflicts}, total=${wardens.length}`);
