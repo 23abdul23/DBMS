@@ -7,6 +7,7 @@ require("dotenv").config()
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
 const { generateDailyPasskeys } = require("./utils/hashGenerator")
+const { runLibraryVisitSimulation, runLibraryClosingSweep, LIBRARY_TIMEZONE } = require("./utils/libraryVisitSimulator")
 
 // Import routes
 const authRoutes = require("./routes/authRoutes")
@@ -22,6 +23,7 @@ const forgotRoutes = require("./routes/forgotRoute")
 const app = express()
 const PORT = process.env.PORT || 5000
 const DB_MODE = getDatabaseMode()
+const ENABLE_LIBRARY_SIMULATION = String(process.env.ENABLE_LIBRARY_SIMULATION || "").toLowerCase() === "true"
 
 // Security middleware
 app.use(helmet())
@@ -102,6 +104,40 @@ cron.schedule("0 0 * * *", async () => {
     console.error("Error generating daily passkeys:", error)
   }
 })
+
+if (ENABLE_LIBRARY_SIMULATION) {
+  cron.schedule(
+    "*/10 7-22 * * *",
+    async () => {
+      try {
+        const result = await runLibraryVisitSimulation()
+        if (!result?.skipped) {
+          console.log(
+            `Library simulation created ${result.createdCount} logs (${result.entryCount} entries, ${result.exitCount} exits) at hour ${result.localHour}.`,
+          )
+        }
+      } catch (error) {
+        console.error("Library simulation cron failed:", error)
+      }
+    },
+    { timezone: LIBRARY_TIMEZONE },
+  )
+
+  cron.schedule(
+    "0 23 * * *",
+    async () => {
+      try {
+        const result = await runLibraryClosingSweep()
+        if (!result?.skipped) {
+          console.log(`Library closing sweep created ${result.createdCount} exit logs.`)
+        }
+      } catch (error) {
+        console.error("Library closing sweep cron failed:", error)
+      }
+    },
+    { timezone: LIBRARY_TIMEZONE },
+  )
+}
 
 // Error handling middleware (keep this above 404 handler)
 app.use((err, req, res, next) => {
