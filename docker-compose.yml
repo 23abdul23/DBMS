@@ -30,7 +30,7 @@ services:
       - ./backend/.env
     environment:
       DB_MODE: sql
-      POSTGRES_URL: postgresql://postgres:postgres@db:5432/aegis?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aegis?schema=public
       PORT: 3000
       FRONTEND_URL: http://localhost:8081
     ports:

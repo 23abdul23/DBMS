@@ -16,7 +16,7 @@ This document tracks the first implementation milestone for moving Aegis backend
 Required for SQL mode:
 
 - `DB_MODE=sql` or `DB_MODE=hybrid`
-- `POSTGRES_URL=postgresql://USER:PASSWORD@HOST:PORT/DB?schema=public`
+- `DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB?schema=public`
 
 Existing Mongo values continue to work when `DB_MODE=mongo`.
 
