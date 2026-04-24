@@ -1,5 +1,6 @@
 const { verifyToken } = require("../config/jwt")
 const { getPrismaClient } = require("../config/prisma")
+const { userSelect, serializeUser } = require("../utils/userProfiles")
 
 const prisma = getPrismaClient()
 
@@ -17,25 +18,7 @@ const authenticate = async (req, res, next) => {
       where: {
         id: decoded.userId,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        gender: true,
-        department: true,
-        year: true,
-        hostel: true,
-        roomNumber: true,
-        phoneNumber: true,
-        emergencyContact: true,
-        profilePhoto: true,
-        studentId: true,
-        guardId: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userSelect,
     })
 
     if (!user || (typeof user.isActive === "boolean" && !user.isActive)) {
@@ -43,9 +26,7 @@ const authenticate = async (req, res, next) => {
     }
 
     req.user = {
-      ...user,
-      _id: user.id,
-      userId: user.id,
+      ...serializeUser(user),
       role: decoded.role || user.role,
     }
     next()

@@ -87,6 +87,7 @@ model User {
   passwordHash     String    @map("password_hash") @db.VarChar(255)
   role             UserRole  @default(student)
   gender           Gender?
+  // Legacy role-specific columns are retained temporarily for compatibility during migration.
   department       Department?
   year             AcademicYear?
   hostel           String?   @db.VarChar(255)
@@ -100,6 +101,10 @@ model User {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
+  studentProfile         StudentProfile?
+  wardenProfile          WardenProfile?
+  securityProfile        SecurityProfile?
+  
   emergencies            Emergency[] @relation("EmergencyOwner")
   respondedEmergencies   Emergency[] @relation("EmergencyResponder")
   outpasses              Outpass[]   @relation("OutpassOwner")
@@ -111,6 +116,46 @@ model User {
   @@index([role])
   @@index([hostel])
   @@map("users")
+}
+
+model StudentProfile {
+  userId      String       @id @map("user_id") @db.VarChar(24)
+  studentId   String       @unique @map("student_id") @db.VarChar(100)
+  department  Department
+  year        AcademicYear
+  hostel      String       @db.VarChar(255)
+  roomNumber  String?      @map("room_number") @db.VarChar(50)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hostel])
+  @@map("student_profiles")
+}
+
+model WardenProfile {
+  userId     String   @id @map("user_id") @db.VarChar(24)
+  hostel     String   @unique @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("warden_profiles")
+}
+
+model SecurityProfile {
+  userId        String   @id @map("user_id") @db.VarChar(24)
+  guardId       String   @unique @map("guard_id") @db.VarChar(100)
+  securityPost  String   @map("security_post") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([securityPost])
+  @@map("security_profiles")
 }
 
 model Emergency {

@@ -30,14 +30,14 @@ export default function GuardDashboardScreen({ navigation }) {
     loadDashboardData()
   }, [])
   
-  // Ensure a default location is selected (use profile.location if available,
+  // Ensure a default location is selected from the guard's assigned post,
   // otherwise fall back to the first entry in AllLocations)
   useEffect(() => {
     if (!loc) {
-      if (profile?.location) {
-        setLoc(profile.location)
-      } else if (Array.isArray(AllLocations?.Locations) && AllLocations.Locations.length > 0) {
-        setLoc(AllLocations.Locations[0])
+      if (profile?.hostel) {
+        setLoc(profile.hostel)
+      } else if (Array.isArray(AllLocations?.Locations) && AllLocations.Locations.length > 1) {
+        setLoc(AllLocations.Locations[1])
       }
     }
   }, [profile, loc])
@@ -93,7 +93,7 @@ export default function GuardDashboardScreen({ navigation }) {
           <View>
             <Text style={[styles.greeting, { color: colors.text }]}>Good {getGreeting()}</Text>
             <Text style={[styles.userName, { color: colors.text }]}>{user?.name}</Text>
-            <Text style={[styles.userRole, { color: colors.subText }]}>Current Location: {profile?.location}</Text>
+            <Text style={[styles.userRole, { color: colors.subText }]}>Current Stationed Location: {profile?.hostel || "-"}</Text>
           </View>
 
           <View>
@@ -132,6 +132,17 @@ export default function GuardDashboardScreen({ navigation }) {
               <Ionicons name="document-text" size={24} color="#fff" />
             </View>
             <Text style={[localStyles.actionText, { color: colors.subText }]}>Logs</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[localStyles.actionCard, { backgroundColor: isDarkMode ? '#e0f2fe' : '#eff6ff' }]}
+            onPress={() => navigation.navigate("Profile")}
+            activeOpacity={0.8}
+          >
+            <View style={[localStyles.actionIcon, { backgroundColor: '#2563eb' }]}>
+              <Ionicons name="person-circle" size={24} color="#fff" />
+            </View>
+            <Text style={[localStyles.actionText, { color: colors.subText }]}>Profile</Text>
           </TouchableOpacity>
         </View>
 
