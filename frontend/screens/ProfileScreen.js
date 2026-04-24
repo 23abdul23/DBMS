@@ -1,6 +1,6 @@
 "use client"
 
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform, ToastAndroid } from "react-native"
 import { useState, useEffect } from "react"
 import { useTheme } from "../context/ThemeContext"
 import { Ionicons } from "@expo/vector-icons"
@@ -11,6 +11,29 @@ import { AcademicYearList, AcademicYearMap, DepartmentList, DepartmentMap } from
 import LoadingSpinner from "../components/LoadingSpinner"
 
 import { Picker } from "@react-native-picker/picker"
+
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])(?=\S+$).{8,64}$/
+
+const getStrongPasswordError = (password) => {
+  if (!password) {
+    return "Please enter a new password"
+  }
+
+  if (!STRONG_PASSWORD_REGEX.test(password)) {
+    return "Password must be 8-64 chars with uppercase, lowercase, number, and special character (no spaces)."
+  }
+
+  return null
+}
+
+const showToast = (title, message) => {
+  if (Platform.OS === "android") {
+    ToastAndroid.show(`${title}: ${message}`, ToastAndroid.LONG)
+    return
+  }
+
+  Alert.alert(title, message)
+}
 
 export default function ProfileScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -328,29 +351,35 @@ export default function ProfileScreen() {
                   return
                 }
                 if (newPassword !== confirmPassword) {
-                  Alert.alert("Error", "New password and confirm password do not match")
+                  showToast("Error", "New password and confirm password do not match")
                   return
                 }
-                if (newPassword.length < 6) {
-                  Alert.alert("Error", "New password must be at least 6 characters")
+
+                const strongPasswordError = getStrongPasswordError(newPassword)
+                if (strongPasswordError) {
+                  showToast("Weak Password", strongPasswordError)
                   return
                 }
                 try {
                   setPwdSaving(true)
                   const res = await commonAPI.changePassword({ currentPassword, newPassword, confirmPassword })
 
-                  console.log(res.message)
-                  
                   setPwdSaving(false)
 
-                  Alert.alert("Success", res?.data?.message || "Password updated")
+                  showToast("Success", res?.data?.message || "Password updated")
                   setCurrentPassword("")
                   setNewPassword("")
                   setConfirmPassword("")
                 } catch (err) {
                   setPwdSaving(false)
                   console.log("Change password error", err)
-                  Alert.alert("Error", err?.response?.data?.message || err.message || "Server error")
+
+                  if (err?.response?.data?.code === "WEAK_PASSWORD") {
+                    showToast("Weak Password", err?.response?.data?.message || "Please choose a stronger password")
+                    return
+                  }
+
+                  showToast("Error", err?.response?.data?.message || err.message || "Server error")
                 }
               }}
               style={[styles.editButton, { paddingHorizontal: 16 }]}
