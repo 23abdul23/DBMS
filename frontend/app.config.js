@@ -84,6 +84,8 @@ module.exports = {
     ios: {
       supportsTablet: true,
       infoPlist: {
+        NSCameraUsageDescription:
+          "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
       },
@@ -118,6 +120,13 @@ module.exports = {
     plugins: [
       "@react-native-community/datetimepicker",
       "expo-font",
+      [
+        "expo-camera",
+        {
+          cameraPermission:
+            "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+        },
+      ],
       [
         "expo-location",
         {
