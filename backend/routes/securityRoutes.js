@@ -3,6 +3,7 @@ const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
 const { OUTPASS_REQUEST_TYPE, outpassInclude } = require("../utils/outpassLifecycle")
+const { classifyLocation, isExitGate, requiresOutpassForExit } = require("../utils/locationPolicy")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -58,6 +59,38 @@ const createHttpError = (statusCode, message) => {
   return error
 }
 
+const buildMovementLogPayload = ({
+  scannedUser,
+  action,
+  location,
+  guardId,
+  guardName,
+  scannedByUserId,
+  details = {},
+}) => ({
+  id: generateId(),
+  userId: scannedUser.id,
+  action,
+  location: location || null,
+  guardId: guardId || null,
+  guardName: guardName || null,
+  success: true,
+  details: {
+    message: "Security log created successfully",
+    scannedUserId: scannedUser.id,
+    scannedStudentId: scannedUser.studentId || null,
+    scannedUserName: scannedUser.name,
+    scannedByUserId,
+    ...details,
+  },
+  scanType: "qr",
+})
+
+const createStandardMovementLog = async (client, options) =>
+  client.log.create({
+    data: buildMovementLogPayload(options),
+  })
+
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
@@ -112,22 +145,35 @@ const getRangeWindow = ({ rangePreset, month, year }) => {
   }
 }
 
-const getResolvedAction = async (userId, action) => {
+const getResolvedAction = async ({ userId, action, location }) => {
   const allowedActions = new Set(["entry", "exit"])
 
   if (action && allowedActions.has(action)) {
     return action
   }
 
-  const previousLog = await prisma.log.findFirst({
-    where: {
-      userId,
-      action: {
-        in: ["entry", "exit"],
-      },
+  const resolvedLocation = classifyLocation(location).name || null
+  const baseWhere = {
+    userId,
+    action: {
+      in: ["entry", "exit"],
     },
-    orderBy: { createdAt: "desc" },
+  }
+
+  const logs = await prisma.log.findMany({
+    where: {
+      ...baseWhere,
+      ...(resolvedLocation && !isExitGate(resolvedLocation)
+        ? {
+            location: resolvedLocation,
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: resolvedLocation && isExitGate(resolvedLocation) ? 100 : 1,
   })
+
+  const previousLog = resolvedLocation && isExitGate(resolvedLocation) ? logs.find((log) => isExitGate(log.location)) : logs[0]
 
   return previousLog?.action === "entry" ? "exit" : "entry"
 }
@@ -177,28 +223,19 @@ const findScannedUser = async ({ userId, studentId, hash }) => {
 }
 
 const createMovementLog = async ({ scannedUser, action, location, guardId, guardName, scannedByUserId }) => {
-  const resolvedAction = await getResolvedAction(scannedUser.id, action)
+  const locationInfo = classifyLocation(location)
+  const resolvedLocation = locationInfo.name || null
+  const resolvedAction = await getResolvedAction({ userId: scannedUser.id, action, location: resolvedLocation })
   const timestamp = new Date()
 
   if (scannedUser.role !== "student" || !["entry", "exit"].includes(resolvedAction)) {
-    const log = await prisma.log.create({
-      data: {
-        id: generateId(),
-        userId: scannedUser.id,
-        action: resolvedAction,
-        location: location || null,
-        guardId: guardId || null,
-        guardName: guardName || null,
-        success: true,
-        details: {
-          message: "Security log created successfully",
-          scannedUserId: scannedUser.id,
-          scannedStudentId: scannedUser.studentId || null,
-          scannedUserName: scannedUser.name,
-          scannedByUserId,
-        },
-        scanType: "qr",
-      },
+    const log = await createStandardMovementLog(prisma, {
+      scannedUser,
+      action: resolvedAction,
+      location: resolvedLocation,
+      guardId,
+      guardName,
+      scannedByUserId,
     })
 
     return {
@@ -208,99 +245,124 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
   }
 
   if (resolvedAction === "exit") {
-    const candidateOutpass = await prisma.outpass.findFirst({
-      where: {
-        userId: scannedUser.id,
-        requestType: OUTPASS_REQUEST_TYPE.REGULAR,
-        status: "approved",
-        actualReturnDate: null,
-        outDate: {
-          lte: timestamp,
-        },
-        expectedReturnDate: {
-          gt: timestamp,
-        },
-      },
-      orderBy: [{ outDate: "desc" }, { createdAt: "desc" }],
-      include: outpassInclude,
-    })
-
-    if (!candidateOutpass) {
-      throw createHttpError(400, "No approved same-day outpass is available for exit")
-    }
-
-    const latestMovement = await prisma.log.findFirst({
-      where: {
-        userId: scannedUser.id,
-        action: {
-          in: ["entry", "exit"],
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    })
-
-    if (latestMovement?.action === "exit" && latestMovement.createdAt >= candidateOutpass.outDate) {
-      throw createHttpError(400, "This outpass has already been used for exit")
-    }
-
-    return prisma.$transaction(async (tx) => {
-      const log = await tx.log.create({
-        data: {
-          id: generateId(),
+    if (isExitGate(resolvedLocation)) {
+      const candidateOutpass = await prisma.outpass.findFirst({
+        where: {
           userId: scannedUser.id,
-          action: resolvedAction,
-          location: location || null,
-          guardId: guardId || null,
-          guardName: guardName || null,
-          success: true,
-          details: {
-            message: "Security log created successfully",
-            scannedUserId: scannedUser.id,
-            scannedStudentId: scannedUser.studentId || null,
-            scannedUserName: scannedUser.name,
-            scannedByUserId,
-            outpassId: candidateOutpass.id,
-            requestType: candidateOutpass.requestType,
+          requestType: OUTPASS_REQUEST_TYPE.REGULAR,
+          status: "approved",
+          actualReturnDate: null,
+          outDate: {
+            lte: timestamp,
           },
-          scanType: "qr",
-        },
-      })
-
-      await tx.outpassAuditTrail.create({
-        data: {
-          id: generateId(),
-          outpassId: candidateOutpass.id,
-          status: candidateOutpass.status,
-          changedBy: scannedByUserId,
-          changedAt: timestamp,
-          remarks: "Student exited campus using approved outpass",
-        },
-      })
-
-      await tx.log.create({
-        data: {
-          id: generateId(),
-          userId: scannedUser.id,
-          action: "outpass_used",
-          location: location || null,
-          guardId: guardId || null,
-          guardName: guardName || null,
-          success: true,
-          details: {
-            direction: "exit",
-            outpassId: candidateOutpass.id,
-            requestType: candidateOutpass.requestType,
-            scannedByUserId,
+          expectedReturnDate: {
+            gt: timestamp,
           },
-          scanType: "qr",
         },
+        orderBy: [{ outDate: "desc" }, { createdAt: "desc" }],
+        include: outpassInclude,
       })
 
-      return {
-        log,
-        outpass: candidateOutpass,
+      if (candidateOutpass) {
+        const latestMovement = await prisma.log.findFirst({
+          where: {
+            userId: scannedUser.id,
+            action: {
+              in: ["entry", "exit"],
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+
+        if (latestMovement?.action === "exit" && latestMovement.createdAt >= candidateOutpass.outDate) {
+          throw createHttpError(400, "This outpass has already been used for exit")
+        }
+
+        return prisma.$transaction(async (tx) => {
+          const log = await createStandardMovementLog(tx, {
+            scannedUser,
+            action: resolvedAction,
+            location: resolvedLocation,
+            guardId,
+            guardName,
+            scannedByUserId,
+            details: {
+              outpassId: candidateOutpass.id,
+              requestType: candidateOutpass.requestType,
+            },
+          })
+
+          await tx.outpassAuditTrail.create({
+            data: {
+              id: generateId(),
+              outpassId: candidateOutpass.id,
+              status: candidateOutpass.status,
+              changedBy: scannedByUserId,
+              changedAt: timestamp,
+              remarks: "Student exited campus using approved outpass",
+            },
+          })
+
+          await tx.log.create({
+            data: {
+              id: generateId(),
+              userId: scannedUser.id,
+              action: "outpass_used",
+              location: resolvedLocation,
+              guardId: guardId || null,
+              guardName: guardName || null,
+              success: true,
+              details: {
+                direction: "exit",
+                outpassId: candidateOutpass.id,
+                requestType: candidateOutpass.requestType,
+                scannedByUserId,
+              },
+              scanType: "qr",
+            },
+          })
+
+          return {
+            log,
+            outpass: candidateOutpass,
+          }
+        })
       }
+
+      if (requiresOutpassForExit(resolvedLocation, timestamp)) {
+        throw createHttpError(400, "An approved outpass is required to exit campus after 6:00 PM")
+      }
+    }
+
+    const log = await createStandardMovementLog(prisma, {
+      scannedUser,
+      action: resolvedAction,
+      location: resolvedLocation,
+      guardId,
+      guardName,
+      scannedByUserId,
     })
+
+    return {
+      log,
+      outpass: null,
+    }
+  }
+
+  if (!isExitGate(resolvedLocation)) {
+    const log = await createStandardMovementLog(prisma, {
+      scannedUser,
+      action: resolvedAction,
+      location: resolvedLocation,
+      guardId,
+      guardName,
+      scannedByUserId,
+    })
+
+    return {
+      log,
+      outpass: null,
+    }
   }
 
   const candidateOutpass = await prisma.outpass.findFirst({
@@ -320,25 +382,16 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
   })
 
   return prisma.$transaction(async (tx) => {
-    const log = await tx.log.create({
-      data: {
-        id: generateId(),
-        userId: scannedUser.id,
-        action: resolvedAction,
-        location: location || null,
-        guardId: guardId || null,
-        guardName: guardName || null,
-        success: true,
-        details: {
-          message: "Security log created successfully",
-          scannedUserId: scannedUser.id,
-          scannedStudentId: scannedUser.studentId || null,
-          scannedUserName: scannedUser.name,
-          scannedByUserId,
-          outpassId: candidateOutpass?.id || null,
-          requestType: candidateOutpass?.requestType || null,
-        },
-        scanType: "qr",
+    const log = await createStandardMovementLog(tx, {
+      scannedUser,
+      action: resolvedAction,
+      location: resolvedLocation,
+      guardId,
+      guardName,
+      scannedByUserId,
+      details: {
+        outpassId: candidateOutpass?.id || null,
+        requestType: candidateOutpass?.requestType || null,
       },
     })
 
@@ -373,7 +426,7 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
           id: generateId(),
           userId: scannedUser.id,
           action: "outpass_used",
-          location: location || null,
+          location: resolvedLocation,
           guardId: guardId || null,
           guardName: guardName || null,
           success: true,

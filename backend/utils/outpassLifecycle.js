@@ -1,4 +1,5 @@
 const { generateId } = require("./hashGenerator")
+const { isExitGate } = require("./locationPolicy")
 
 const userSelect = {
   id: true,
@@ -471,6 +472,40 @@ const getLatestMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
+const getLatestGateMovementMap = async (prisma, userIds = []) => {
+  const distinctUserIds = [...new Set(userIds.filter(Boolean))]
+
+  if (distinctUserIds.length === 0) {
+    return new Map()
+  }
+
+  const logs = await prisma.log.findMany({
+    where: {
+      userId: {
+        in: distinctUserIds,
+      },
+      action: {
+        in: ["entry", "exit"],
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  })
+
+  const movementMap = new Map()
+
+  for (const log of logs) {
+    if (!isExitGate(log.location)) {
+      continue
+    }
+
+    if (!movementMap.has(log.userId)) {
+      movementMap.set(log.userId, log)
+    }
+  }
+
+  return movementMap
+}
+
 const expireOldOutpasses = async (prisma) => {
   const now = new Date()
 
@@ -572,5 +607,6 @@ module.exports = {
   buildOutpassResponse,
   deriveMonitoringState,
   getLatestMovementMap,
+  getLatestGateMovementMap,
   expireOldOutpasses,
 }

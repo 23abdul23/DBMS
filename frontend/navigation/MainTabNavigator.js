@@ -6,8 +6,7 @@ import DashboardScreen from "../screens/DashboardScreen"
 import OutpassScreen from "../screens/OutpassScreen"
 import EmergencyScreen from "../screens/EmergencyScreen"
 import ProfileScreen from "../screens/ProfileScreen"
-import Library from "../screens/LibraryScreen"
-import SAC from "../screens/SACScreen"
+import StudentLogsScreen from "../screens/StudentLogsScreen"
 
 const Tab = createBottomTabNavigator()
 
@@ -24,15 +23,11 @@ export default function MainTabNavigator() {
             iconName = focused ? "document-text" : "document-text-outline"
           } else if (route.name === "Emergency") {
             iconName = focused ? "warning" : "warning-outline"
+          } else if (route.name === "Logs") {
+            iconName = focused ? "list" : "list-outline"
           } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline"
-          } else if (route.name === "Library") {
-            iconName = focused ? "book" : "book-outline"
-          } else if (route.name === "SAC") {
-            iconName = focused ? "bicycle" : "bicycle-outline"
           }
-
-
 
           return <Ionicons name={iconName} size={size} color={color} />
         },
@@ -41,9 +36,10 @@ export default function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Outpass" component={OutpassScreen} />
       <Tab.Screen name="Emergency" component={EmergencyScreen} />
+      <Tab.Screen name="Outpass" component={OutpassScreen} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: "Home" }} />
+      <Tab.Screen name="Logs" component={StudentLogsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )

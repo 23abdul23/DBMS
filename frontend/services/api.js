@@ -83,6 +83,10 @@ export const commonAPI = {
   getDailyPasskeyGuard: () => api.get("/passkey/todayGuard"),
 }
 
+export const studentAPI = {
+  getLogs: (params = {}) => api.get("/student/logs", { params }),
+}
+
 
 export const outpass = {
   getOutpasses: () => api.get("/outpass/today"),

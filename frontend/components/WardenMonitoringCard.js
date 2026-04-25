@@ -8,16 +8,8 @@ import { COLORS } from "../utils/constants"
 const stateColors = {
   danger: "#dc2626",
   yellow_alert: "#f59e0b",
-  overdue: "#dc2626",
-  ongoing: "#7c3aed",
-  pending_review: "#f59e0b",
-  awaiting_exit: "#2563eb",
-  approved: "#10b981",
-  returned: "#059669",
-  returned_late: "#c2410c",
-  long_visit_away: "#0f766e",
+  ongoing: COLORS.primary,
   inside: "#6b7280",
-  outside_without_outpass: "#b91c1c",
 }
 
 const prettify = (value) =>
@@ -36,6 +28,12 @@ const formatDateTime = (value) => {
 
 export default function WardenMonitoringCard({ entry, colors }) {
   const badgeColor = stateColors[entry.monitoringState] || COLORS.gray[500]
+  const badgeLabel =
+    entry.monitoringState === "ongoing"
+      ? "Outside With Outpass"
+      : entry.monitoringState === "inside"
+        ? "Inside Campus"
+        : prettify(entry.monitoringState)
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border || COLORS.gray[200] }]}>
@@ -47,20 +45,31 @@ export default function WardenMonitoringCard({ entry, colors }) {
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: `${badgeColor}20` }]}>
-          <Text style={[styles.badgeText, { color: badgeColor }]}>{prettify(entry.monitoringState)}</Text>
+          <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
         </View>
       </View>
 
-      {entry.outpass ? (
+      {entry.campusPresence === "outside" ? (
         <>
-          <Text style={[styles.metaText, { color: colors.text }]}>Reason: {entry.outpass.reason}</Text>
-          <Text style={[styles.metaText, { color: colors.text }]}>Destination: {entry.outpass.destination}</Text>
-          <Text style={[styles.metaText, { color: colors.subText }]}>
-            Window: {formatDateTime(entry.outpass.outDate)} to {formatDateTime(entry.outpass.expectedReturnDate)}
+          <Text style={[styles.metaText, { color: colors.text }]}>Exit Gate: {entry.exitGate || "-"}</Text>
+          <Text style={[styles.metaText, { color: colors.subText }]}>Exit Time: {formatDateTime(entry.exitTime)}</Text>
+          <Text style={[styles.metaText, { color: colors.text }]}>
+            Outpass: {entry.hasOutpass ? "Approved / Used" : "No approved outpass"}
           </Text>
+          {entry.outpass ? (
+            <>
+              <Text style={[styles.metaText, { color: colors.text }]}>Reason: {entry.outpass.reason}</Text>
+              <Text style={[styles.metaText, { color: colors.text }]}>Destination: {entry.outpass.destination}</Text>
+              <Text style={[styles.metaText, { color: colors.subText }]}>
+                Window: {formatDateTime(entry.outpass.outDate)} to {formatDateTime(entry.outpass.expectedReturnDate)}
+              </Text>
+            </>
+          ) : null}
         </>
       ) : (
-        <Text style={[styles.metaText, { color: colors.subText }]}>No recent outpass record linked to this student.</Text>
+        <Text style={[styles.metaText, { color: colors.subText }]}>
+          Student is currently inside campus. Exact internal location is intentionally hidden.
+        </Text>
       )}
 
       {entry.latestMovement ? (

@@ -5,12 +5,13 @@ const { generateId } = require("../utils/hashGenerator")
 const {
   outpassInclude,
   buildOutpassResponse,
-  deriveMonitoringState,
   getLatestMovementMap,
+  getLatestGateMovementMap,
   expireOldOutpasses,
   getDayRange,
   canCancelOutpass,
 } = require("../utils/outpassLifecycle")
+const { requiresOutpassForExit } = require("../utils/locationPolicy")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -499,7 +500,9 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
     await expireOldOutpasses(prisma)
 
     const search = typeof req.query.search === "string" ? req.query.search.trim().toLowerCase() : ""
-    const state = typeof req.query.state === "string" ? req.query.state.trim().toLowerCase() : ""
+    const campusPresence =
+      typeof req.query.campusPresence === "string" ? req.query.campusPresence.trim().toLowerCase() : ""
+    const now = new Date()
 
     const students = await prisma.user.findMany({
       where: {
@@ -543,16 +546,28 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
       }
     }
 
-    const movementMap = await getLatestMovementMap(prisma, students.map((item) => item.id))
+    const studentIds = students.map((item) => item.id)
+    const [movementMap, gateMovementMap] = await Promise.all([
+      getLatestMovementMap(prisma, studentIds),
+      getLatestGateMovementMap(prisma, studentIds),
+    ])
 
     let monitoring = students.map((student) => {
       const latestOutpass = outpassMap.get(student.id) || null
       const latestMovement = movementMap.get(student.id) || null
-      const monitoringState = latestOutpass
-        ? deriveMonitoringState(latestOutpass, latestMovement)
-        : latestMovement?.action === "exit"
-          ? "outside_without_outpass"
-          : "inside"
+      const latestGateMovement = gateMovementMap.get(student.id) || null
+      const outsideWithOutpass =
+        Boolean(latestOutpass) &&
+        ["approved", "expired"].includes(latestOutpass.status) &&
+        !latestOutpass.actualReturnDate
+      const isOutsideCampus = latestGateMovement?.action === "exit"
+      const monitoringState = isOutsideCampus
+        ? outsideWithOutpass
+          ? "ongoing"
+          : requiresOutpassForExit(latestGateMovement.location, now)
+            ? "danger"
+            : "yellow_alert"
+        : "inside"
 
       return {
         student: {
@@ -564,19 +579,23 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
           roomNumber: student.roomNumber,
           phoneNumber: student.phoneNumber,
         },
+        campusPresence: isOutsideCampus ? "outside" : "inside",
         monitoringState,
         latestMovement: latestMovement
           ? {
               action: latestMovement.action,
               createdAt: latestMovement.createdAt,
-              location: latestMovement.location,
               guardName: latestMovement.guardName,
             }
           : null,
-        outpass: latestOutpass
+        exitGate: isOutsideCampus ? latestGateMovement.location : null,
+        exitTime: isOutsideCampus ? latestGateMovement.createdAt : null,
+        hasOutpass: isOutsideCampus ? outsideWithOutpass : false,
+        outpass: isOutsideCampus && latestOutpass
           ? buildOutpassResponse(latestOutpass, {
-              latestMovement,
-            })
+            latestMovement,
+            now,
+          })
           : null,
       }
     })
@@ -588,8 +607,6 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
           item.student.email,
           item.student.studentId,
           item.student.roomNumber,
-          item.outpass?.reason,
-          item.outpass?.destination,
         ]
           .filter(Boolean)
           .join(" ")
@@ -599,23 +616,15 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
       })
     }
 
-    if (state) {
-      monitoring = monitoring.filter((item) => item.monitoringState === state)
+    if (campusPresence) {
+      monitoring = monitoring.filter((item) => item.campusPresence === campusPresence)
     }
 
     const sortPriority = {
-      outside_without_outpass: 1,
-      danger: 2,
-      yellow_alert: 3,
-      overdue: 4,
-      ongoing: 5,
-      long_visit_away: 6,
-      pending_review: 7,
-      awaiting_exit: 8,
-      approved: 9,
-      returned_late: 10,
-      returned: 11,
-      inside: 12,
+      danger: 1,
+      yellow_alert: 2,
+      ongoing: 3,
+      inside: 4,
     }
 
     monitoring.sort((left, right) => {
@@ -629,6 +638,7 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
     })
 
     const counts = monitoring.reduce((accumulator, item) => {
+      accumulator[item.campusPresence] = (accumulator[item.campusPresence] || 0) + 1
       accumulator[item.monitoringState] = (accumulator[item.monitoringState] || 0) + 1
       return accumulator
     }, {})
