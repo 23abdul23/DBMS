@@ -54,7 +54,9 @@ function getLocalIPAddress() {
 const backendEnv = readEnvFile(path.resolve(__dirname, "../backend/.env"))
 const getConfigValue = (key, fallback) => process.env[key] || backendEnv[key] || fallback
 
-const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
+const apiHost = getConfigValue("API_HOST", "10.145.159.171")
+
+// const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
 const apiPort = Number(getConfigValue("API_PORT", getConfigValue("PORT", 3000)))
 const emergencyMedicalPhone = getConfigValue("EMERGENCY_MEDICAL_PHONE", "9329594882")
 const emergencySecurityPhone = getConfigValue("EMERGENCY_SECURITY_PHONE", "7217492629")
