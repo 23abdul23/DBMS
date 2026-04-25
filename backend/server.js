@@ -35,7 +35,27 @@ const allowedOrigins = [
   "http://localhost:8081", // Expo web dev
 ]
 
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow mobile apps, Postman, curl (no origin)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Allow browser frontend if needed
+    const allowedOrigins = [
+      "http://localhost:3000"
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow mobile API access
+    return callback(null, true);
+  },
+  credentials: true
+}));app.use(cors());
 
 
 // Rate limiting
