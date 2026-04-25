@@ -75,7 +75,7 @@ module.exports = {
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
@@ -89,12 +89,16 @@ module.exports = {
       },
     },
     android: {
+      package: "com.abdul.aegis",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
-      permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      permissions: [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
     },
     web: {
       favicon: "./assets/favicon.png",
@@ -107,9 +111,12 @@ module.exports = {
       EMERGENCY_SECURITY_PHONE: emergencySecurityPhone,
       EMERGENCY_FIRE_PHONE: emergencyFirePhone,
       EMERGENCY_OTHER_PHONE: emergencyOtherPhone,
+      "eas": {
+        "projectId": "0713ff11-c8b1-468c-93b8-c664dbf6d0f3"
+      }
     },
     plugins: [
-      "expo-barcode-scanner",
+      "@react-native-community/datetimepicker",
       "expo-font",
       [
         "expo-location",
