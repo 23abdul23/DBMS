@@ -3,9 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import Constants from 'expo-constants';
 
 
-const PORT = Constants.expoConfig?.extra?.PORT || 3000;
+const configuredApiBaseUrl = Constants.expoConfig?.extra?.API_BASE_URL;
+const PORT = Constants.expoConfig?.extra?.PORT || 8080;
 const API_HOST = Constants.expoConfig?.extra?.API_HOST || "localhost";
-const API_BASE_URL = `http://${API_HOST}:${PORT}/api`;
+const API_BASE_URL = configuredApiBaseUrl || `http://${API_HOST}:${PORT}/api`;
 
 console.log("Current URL: ", API_BASE_URL)
 
