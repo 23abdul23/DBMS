@@ -315,5 +315,6 @@ model Log {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
+  @@index([location, createdAt(sort: Desc)])
   @@map("logs")
 }

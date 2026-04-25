@@ -48,6 +48,62 @@ const buildOutpassSummary = (outpass) =>
       }
     : null
 
+const LOG_RANGE_PRESETS = new Set(["today", "yesterday", "last_3_days", "last_week", "last_month", "custom_month"])
+
+const parsePositiveInteger = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+const getRangeWindow = ({ rangePreset, month, year }) => {
+  const now = new Date()
+  const todayStart = new Date(now)
+  todayStart.setHours(0, 0, 0, 0)
+
+  const tomorrowStart = new Date(todayStart)
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1)
+
+  switch (rangePreset) {
+    case "yesterday": {
+      const start = new Date(todayStart)
+      start.setDate(start.getDate() - 1)
+      return { start, end: todayStart, label: "Yesterday" }
+    }
+    case "last_3_days": {
+      const start = new Date(todayStart)
+      start.setDate(start.getDate() - 2)
+      return { start, end: tomorrowStart, label: "Last 3 Days" }
+    }
+    case "last_week": {
+      const start = new Date(todayStart)
+      start.setDate(start.getDate() - 6)
+      return { start, end: tomorrowStart, label: "Last 7 Days" }
+    }
+    case "last_month": {
+      const start = new Date(todayStart)
+      start.setDate(start.getDate() - 29)
+      return { start, end: tomorrowStart, label: "Last 30 Days" }
+    }
+    case "custom_month": {
+      const parsedMonth = Number.parseInt(month, 10)
+      const parsedYear = Number.parseInt(year, 10)
+
+      if (!Number.isFinite(parsedMonth) || !Number.isFinite(parsedYear) || parsedMonth < 1 || parsedMonth > 12) {
+        return null
+      }
+
+      const start = new Date(parsedYear, parsedMonth - 1, 1, 0, 0, 0, 0)
+      const end = new Date(parsedYear, parsedMonth, 1, 0, 0, 0, 0)
+      const monthName = start.toLocaleString("en-US", { month: "long" })
+
+      return { start, end, label: `${monthName} ${parsedYear}` }
+    }
+    case "today":
+    default:
+      return { start: todayStart, end: tomorrowStart, label: "Today" }
+  }
+}
+
 const getResolvedAction = async (userId, action) => {
   const allowedActions = new Set(["entry", "exit"])
 
@@ -397,35 +453,94 @@ router.post("/student-log", authenticate, async (req, res) => {
 
 router.get("/logs", authenticate, async (req, res) => {
   try {
-    const { location } = req.query
+    if (req.user.role !== "security") {
+      return res.status(403).json({ message: "Only security staff can view security logs." })
+    }
 
-    const logs = await prisma.log.findMany({
-      where: {
-        ...(location && location.trim().length > 0
-          ? {
-              location: {
-                contains: location.trim(),
-                mode: "insensitive",
-              },
-            }
-          : {}),
+    const location = typeof req.query.location === "string" ? req.query.location.trim() : ""
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : ""
+    const rangePreset =
+      typeof req.query.rangePreset === "string" && LOG_RANGE_PRESETS.has(req.query.rangePreset)
+        ? req.query.rangePreset
+        : "today"
+    const page = parsePositiveInteger(req.query.page, 1)
+    const limit = Math.min(parsePositiveInteger(req.query.limit, 20), 100)
+    const month = typeof req.query.month === "string" ? req.query.month : undefined
+    const year = typeof req.query.year === "string" ? req.query.year : undefined
+    const skip = (page - 1) * limit
+
+    const rangeWindow = getRangeWindow({ rangePreset, month, year })
+    if (!rangeWindow) {
+      return res.status(400).json({ message: "Invalid month or year for custom month filter" })
+    }
+
+    const where = {
+      createdAt: {
+        gte: rangeWindow.start,
+        lt: rangeWindow.end,
       },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            studentId: true,
-            role: true,
-            hostel: true,
-            roomNumber: true,
+      ...(location
+        ? {
+            location: {
+              contains: location,
+              mode: "insensitive",
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            user: {
+              is: {
+                OR: [
+                  {
+                    name: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    studentId: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          }
+        : {}),
+    }
+
+    const [logs, total] = await prisma.$transaction([
+      prisma.log.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              studentId: true,
+              role: true,
+              hostel: true,
+              roomNumber: true,
+            },
           },
         },
-      },
-    })
+      }),
+      prisma.log.count({ where }),
+    ])
 
-    res.status(200).json({ logs })
+    res.status(200).json({
+      logs,
+      page,
+      limit,
+      total,
+      hasMore: skip + logs.length < total,
+      activeRangeLabel: rangeWindow.label,
+    })
   } catch (error) {
     console.error("Fetch security logs error:", error)
     res.status(500).json({ message: "Server error fetching security logs" })

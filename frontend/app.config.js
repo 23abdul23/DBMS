@@ -73,11 +73,11 @@ module.exports = {
     slug: "aegis-id",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/aegisIdLogo_bg.png",
     userInterfaceStyle: "light",
     newArchEnabled: false,
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/aegisIdLogo_bg.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff",
     },
@@ -85,7 +85,7 @@ module.exports = {
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
-          "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+          "Aegis uses your camera to scan QR codes for entry and exit verification.",
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
       },
@@ -93,7 +93,7 @@ module.exports = {
     android: {
       package: "com.abdul.aegis",
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
+        foregroundImage: "./assets/aegisIdLogo_bg.png",
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
@@ -103,7 +103,7 @@ module.exports = {
       ],
     },
     web: {
-      favicon: "./assets/favicon.png",
+      favicon: "./assets/aegisIdLogo_bg.png",
     },
     extra: {
       API_BASE_URL: apiBaseUrl,
@@ -124,7 +124,7 @@ module.exports = {
         "expo-camera",
         {
           cameraPermission:
-            "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+            "Aegis uses your camera to scan QR codes for entry and exit verification.",
         },
       ],
       [
