@@ -3,7 +3,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { outpass as outpassAPI } from "../services/api"
-import { COLORS, FONTS, SIZES, SPACING, OUTPASS_STATUS } from "../utils/constants"
+import { COLORS, FONTS, OUTPASS_REQUEST_TYPE, SIZES, SPACING, OUTPASS_STATUS } from "../utils/constants"
 
 export default function OutpassCard({ outpass, onUpdate }) {
   const getStatusColor = (status) => {
@@ -83,9 +83,11 @@ export default function OutpassCard({ outpass, onUpdate }) {
     ])
   }
 
-  const canCancel =
-    outpass.status === OUTPASS_STATUS.PENDING ||
-    (outpass.status === OUTPASS_STATUS.APPROVED && outpass.monitoringState !== "ongoing")
+  const canCancel = typeof outpass.canCancel === "boolean"
+    ? outpass.canCancel
+    : outpass.status === OUTPASS_STATUS.PENDING ||
+      (outpass.status === OUTPASS_STATUS.APPROVED && outpass.monitoringState !== "ongoing")
+  const isLongVisit = (outpass.requestType || outpass.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT
 
   return (
     <View style={styles.card}>
@@ -127,6 +129,14 @@ export default function OutpassCard({ outpass, onUpdate }) {
             </Text>
           </View>
         </View>
+
+        {isLongVisit ? (
+          <View style={[styles.requestTypeChip, { backgroundColor: "#fff7ed" }]}>
+            <Text style={[styles.requestTypeText, { color: "#c2410c" }]}>
+              Long Visit: physical warden approval and family stay flow
+            </Text>
+          </View>
+        ) : null}
 
         {outpass.emergencyContact && (
           <View style={styles.contactContainer}>
@@ -246,6 +256,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.gray[50],
     padding: SPACING.sm,
     borderRadius: 8,
+  },
+  requestTypeChip: {
+    borderRadius: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  requestTypeText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
   },
   remarksLabel: {
     fontSize: SIZES.sm,

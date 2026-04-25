@@ -17,7 +17,7 @@ import { useTheme } from "../context/ThemeContext"
 import DateTimePicker from "@react-native-community/datetimepicker"
 import { outpass } from "../services/api"
 import {useAuth} from "../context/AuthContext"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { COLORS, FONTS, OUTPASS_REQUEST_TYPE, SIZES, SPACING } from "../utils/constants"
 import LoadingSpinner from "../components/LoadingSpinner"
 
 import styles from "../styles/CreateOutpassStyles"
@@ -39,6 +39,7 @@ export default function CreateOutpassScreen({ navigation }) {
     emergencyName: "Abdul",
     emergencyContact: "8909627048",
     remarks: "Nothing",
+    longVisit: false,
   })
   const [showDatePicker, setShowDatePicker] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -55,7 +56,8 @@ export default function CreateOutpassScreen({ navigation }) {
   }
 
   const validateForm = () => {
-    const { purpose, destination, fromDate, toDate, emergencyContact } = formData
+    const { purpose, destination, fromDate, toDate, fromTime, toTime, emergencyName, emergencyContact, longVisit } =
+      formData
 
     if (!purpose.trim()) {
       Alert.alert("Error", "Please enter the purpose of outpass")
@@ -67,9 +69,42 @@ export default function CreateOutpassScreen({ navigation }) {
       return false
     }
 
+    if (!emergencyName.trim()) {
+      Alert.alert("Error", "Please enter emergency contact name")
+      return false
+    }
+
     if (!emergencyContact.trim()) {
       Alert.alert("Error", "Please enter emergency contact number")
       return false
+    }
+
+    const departure = new Date(fromDate)
+    departure.setHours(fromTime.getHours(), fromTime.getMinutes(), 0, 0)
+
+    const expectedReturn = new Date(toDate)
+    expectedReturn.setHours(toTime.getHours(), toTime.getMinutes(), 0, 0)
+
+    if (expectedReturn <= departure) {
+      Alert.alert("Error", "Expected return time must be after departure time")
+      return false
+    }
+
+    if (!longVisit) {
+      const isSameDay =
+        departure.getFullYear() === expectedReturn.getFullYear() &&
+        departure.getMonth() === expectedReturn.getMonth() &&
+        departure.getDate() === expectedReturn.getDate()
+
+      if (!isSameDay) {
+        Alert.alert("Error", "Regular outpasses must start and end on the same day")
+        return false
+      }
+
+      if (expectedReturn.getHours() > 22 || (expectedReturn.getHours() === 22 && expectedReturn.getMinutes() > 30)) {
+        Alert.alert("Error", "Regular outpasses must end by 10:30 PM")
+        return false
+      }
     }
 
     return true
@@ -80,10 +115,17 @@ export default function CreateOutpassScreen({ navigation }) {
 
     setLoading(true)
     try {
-      const response = await outpass.createOutpass(formData)
+      const payload = {
+        ...formData,
+        requestType: formData.longVisit ? OUTPASS_REQUEST_TYPE.LONG_VISIT : OUTPASS_REQUEST_TYPE.REGULAR,
+      }
+      const response = await outpass.createOutpass(payload)
       const createdStatus = response?.data?.outpass?.status || "pending"
+      const isLongVisit = response?.data?.outpass?.requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
       const successMessage =
-        createdStatus === "pending"
+        isLongVisit
+          ? "Long visit request submitted. Please visit the warden physically for approval."
+          : createdStatus === "pending"
           ? "Outpass request submitted successfully and is now pending warden approval."
           : `Outpass request submitted with status: ${createdStatus}.`
 
@@ -188,6 +230,44 @@ export default function CreateOutpassScreen({ navigation }) {
             </View>
           </View>
 
+          <TouchableOpacity
+            style={[
+              localStyles.longVisitToggle,
+              { backgroundColor: colors.card, borderColor: formData.longVisit ? COLORS.warning : colors.text },
+            ]}
+            onPress={() => updateFormData("longVisit", !formData.longVisit)}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name={formData.longVisit ? "checkbox" : "square-outline"}
+              size={22}
+              color={formData.longVisit ? COLORS.warning : colors.text}
+            />
+            <View style={localStyles.longVisitCopy}>
+              <Text style={[localStyles.longVisitTitle, { color: colors.text }]}>Long Visit (Home / Relative Visit)</Text>
+              <Text style={[localStyles.longVisitText, { color: colors.subText }]}>
+                Use this when you will not return on the same day.
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {formData.longVisit ? (
+            <View style={[localStyles.noticeCard, { backgroundColor: "#fff7ed", borderColor: "#fdba74" }]}>
+              <Text style={localStyles.noticeTitle}>Physical Warden Approval Required</Text>
+              <Text style={localStyles.noticeText}>
+                This outpass will be granted only by physically visiting the warden. Same-day and 10:30 PM rules do not
+                apply to this request.
+              </Text>
+            </View>
+          ) : (
+            <View style={[localStyles.noticeCard, { backgroundColor: "#eff6ff", borderColor: "#93c5fd" }]}>
+              <Text style={[localStyles.noticeTitle, { color: "#1d4ed8" }]}>Regular Outpass Rule</Text>
+              <Text style={[localStyles.noticeText, { color: "#1e3a8a" }]}>
+                Regular outpasses must start and end on the same day and return by 10:30 PM.
+              </Text>
+            </View>
+          )}
+
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Emergency Name *</Text>
             <TextInput
@@ -243,3 +323,45 @@ export default function CreateOutpassScreen({ navigation }) {
     </KeyboardAvoidingView>
   )
 }
+
+const localStyles = StyleSheet.create({
+  longVisitToggle: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+  },
+  longVisitCopy: {
+    flex: 1,
+    marginLeft: SPACING.sm,
+  },
+  longVisitTitle: {
+    fontSize: SIZES.md,
+    fontFamily: FONTS.bold,
+  },
+  longVisitText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.regular,
+    marginTop: 4,
+  },
+  noticeCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  noticeTitle: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+    color: "#9a3412",
+  },
+  noticeText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.regular,
+    color: "#7c2d12",
+    marginTop: 4,
+    lineHeight: 20,
+  },
+})

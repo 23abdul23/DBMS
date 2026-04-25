@@ -2,7 +2,7 @@ const express = require("express")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
-const { outpassInclude } = require("../utils/outpassLifecycle")
+const { OUTPASS_REQUEST_TYPE, outpassInclude } = require("../utils/outpassLifecycle")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -41,6 +41,8 @@ const buildOutpassSummary = (outpass) =>
   outpass
     ? {
         id: outpass.id,
+        requestType: outpass.requestType,
+        type: outpass.requestType,
         status: outpass.status,
         outDate: outpass.outDate,
         expectedReturnDate: outpass.expectedReturnDate,
@@ -49,6 +51,12 @@ const buildOutpassSummary = (outpass) =>
     : null
 
 const LOG_RANGE_PRESETS = new Set(["today", "yesterday", "last_3_days", "last_week", "last_month", "custom_month"])
+
+const createHttpError = (statusCode, message) => {
+  const error = new Error(message)
+  error.statusCode = statusCode
+  return error
+}
 
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10)
@@ -168,14 +176,137 @@ const findScannedUser = async ({ userId, studentId, hash }) => {
   return null
 }
 
-const resolveLinkedOutpass = async ({ scannedUser, action, timestamp, changedBy }) => {
-  if (scannedUser.role !== "student" || !["entry", "exit"].includes(action)) {
-    return null
+const createMovementLog = async ({ scannedUser, action, location, guardId, guardName, scannedByUserId }) => {
+  const resolvedAction = await getResolvedAction(scannedUser.id, action)
+  const timestamp = new Date()
+
+  if (scannedUser.role !== "student" || !["entry", "exit"].includes(resolvedAction)) {
+    const log = await prisma.log.create({
+      data: {
+        id: generateId(),
+        userId: scannedUser.id,
+        action: resolvedAction,
+        location: location || null,
+        guardId: guardId || null,
+        guardName: guardName || null,
+        success: true,
+        details: {
+          message: "Security log created successfully",
+          scannedUserId: scannedUser.id,
+          scannedStudentId: scannedUser.studentId || null,
+          scannedUserName: scannedUser.name,
+          scannedByUserId,
+        },
+        scanType: "qr",
+      },
+    })
+
+    return {
+      log,
+      outpass: null,
+    }
+  }
+
+  if (resolvedAction === "exit") {
+    const candidateOutpass = await prisma.outpass.findFirst({
+      where: {
+        userId: scannedUser.id,
+        requestType: OUTPASS_REQUEST_TYPE.REGULAR,
+        status: "approved",
+        actualReturnDate: null,
+        outDate: {
+          lte: timestamp,
+        },
+        expectedReturnDate: {
+          gt: timestamp,
+        },
+      },
+      orderBy: [{ outDate: "desc" }, { createdAt: "desc" }],
+      include: outpassInclude,
+    })
+
+    if (!candidateOutpass) {
+      throw createHttpError(400, "No approved same-day outpass is available for exit")
+    }
+
+    const latestMovement = await prisma.log.findFirst({
+      where: {
+        userId: scannedUser.id,
+        action: {
+          in: ["entry", "exit"],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    if (latestMovement?.action === "exit" && latestMovement.createdAt >= candidateOutpass.outDate) {
+      throw createHttpError(400, "This outpass has already been used for exit")
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const log = await tx.log.create({
+        data: {
+          id: generateId(),
+          userId: scannedUser.id,
+          action: resolvedAction,
+          location: location || null,
+          guardId: guardId || null,
+          guardName: guardName || null,
+          success: true,
+          details: {
+            message: "Security log created successfully",
+            scannedUserId: scannedUser.id,
+            scannedStudentId: scannedUser.studentId || null,
+            scannedUserName: scannedUser.name,
+            scannedByUserId,
+            outpassId: candidateOutpass.id,
+            requestType: candidateOutpass.requestType,
+          },
+          scanType: "qr",
+        },
+      })
+
+      await tx.outpassAuditTrail.create({
+        data: {
+          id: generateId(),
+          outpassId: candidateOutpass.id,
+          status: candidateOutpass.status,
+          changedBy: scannedByUserId,
+          changedAt: timestamp,
+          remarks: "Student exited campus using approved outpass",
+        },
+      })
+
+      await tx.log.create({
+        data: {
+          id: generateId(),
+          userId: scannedUser.id,
+          action: "outpass_used",
+          location: location || null,
+          guardId: guardId || null,
+          guardName: guardName || null,
+          success: true,
+          details: {
+            direction: "exit",
+            outpassId: candidateOutpass.id,
+            requestType: candidateOutpass.requestType,
+            scannedByUserId,
+          },
+          scanType: "qr",
+        },
+      })
+
+      return {
+        log,
+        outpass: candidateOutpass,
+      }
+    })
   }
 
   const candidateOutpass = await prisma.outpass.findFirst({
     where: {
       userId: scannedUser.id,
+      requestType: OUTPASS_REQUEST_TYPE.REGULAR,
       status: {
         in: ["approved", "expired"],
       },
@@ -188,12 +319,32 @@ const resolveLinkedOutpass = async ({ scannedUser, action, timestamp, changedBy 
     include: outpassInclude,
   })
 
-  if (!candidateOutpass) {
-    return null
-  }
+  return prisma.$transaction(async (tx) => {
+    const log = await tx.log.create({
+      data: {
+        id: generateId(),
+        userId: scannedUser.id,
+        action: resolvedAction,
+        location: location || null,
+        guardId: guardId || null,
+        guardName: guardName || null,
+        success: true,
+        details: {
+          message: "Security log created successfully",
+          scannedUserId: scannedUser.id,
+          scannedStudentId: scannedUser.studentId || null,
+          scannedUserName: scannedUser.name,
+          scannedByUserId,
+          outpassId: candidateOutpass?.id || null,
+          requestType: candidateOutpass?.requestType || null,
+        },
+        scanType: "qr",
+      },
+    })
 
-  if (action === "entry") {
-    return prisma.$transaction(async (tx) => {
+    let updatedOutpass = null
+
+    if (candidateOutpass) {
       await tx.outpass.update({
         where: {
           id: candidateOutpass.id,
@@ -208,73 +359,47 @@ const resolveLinkedOutpass = async ({ scannedUser, action, timestamp, changedBy 
           id: generateId(),
           outpassId: candidateOutpass.id,
           status: candidateOutpass.status,
-          changedBy,
+          changedBy: scannedByUserId,
           changedAt: timestamp,
           remarks:
             candidateOutpass.status === "expired"
               ? "Student returned to campus after the outpass window had expired"
-              : "Student returned to campus",
+              : "Student returned to campus using outpass",
         },
       })
 
-      return tx.outpass.findUnique({
+      await tx.log.create({
+        data: {
+          id: generateId(),
+          userId: scannedUser.id,
+          action: "outpass_used",
+          location: location || null,
+          guardId: guardId || null,
+          guardName: guardName || null,
+          success: true,
+          details: {
+            direction: "entry",
+            outpassId: candidateOutpass.id,
+            requestType: candidateOutpass.requestType,
+            scannedByUserId,
+          },
+          scanType: "qr",
+        },
+      })
+
+      updatedOutpass = await tx.outpass.findUnique({
         where: {
           id: candidateOutpass.id,
         },
         include: outpassInclude,
       })
-    })
-  }
+    }
 
-  await prisma.outpassAuditTrail.create({
-    data: {
-      id: generateId(),
-      outpassId: candidateOutpass.id,
-      status: candidateOutpass.status,
-      changedBy,
-      changedAt: timestamp,
-      remarks: "Student exited campus using an approved outpass",
-    },
+    return {
+      log,
+      outpass: updatedOutpass,
+    }
   })
-
-  return candidateOutpass
-}
-
-const createMovementLog = async ({ scannedUser, action, location, guardId, guardName, scannedByUserId }) => {
-  const resolvedAction = await getResolvedAction(scannedUser.id, action)
-  const timestamp = new Date()
-
-  const log = await prisma.log.create({
-    data: {
-      id: generateId(),
-      userId: scannedUser.id,
-      action: resolvedAction,
-      location: location || null,
-      guardId: guardId || null,
-      guardName: guardName || null,
-      success: true,
-      details: {
-        message: "Security log created successfully",
-        scannedUserId: scannedUser.id,
-        scannedStudentId: scannedUser.studentId || null,
-        scannedUserName: scannedUser.name,
-        scannedByUserId,
-      },
-      scanType: "qr",
-    },
-  })
-
-  const linkedOutpass = await resolveLinkedOutpass({
-    scannedUser,
-    action: resolvedAction,
-    timestamp,
-    changedBy: scannedByUserId,
-  })
-
-  return {
-    log,
-    outpass: linkedOutpass,
-  }
 }
 
 router.post("/validate", authenticate, async (req, res) => {
@@ -315,7 +440,7 @@ router.post("/validate", authenticate, async (req, res) => {
       data: {
         id: generateId(),
         userId: passkey.userId,
-        action: "scan_attempt",
+        action: "passkey_validated",
         location: location || null,
         success: true,
         details: {
@@ -376,7 +501,7 @@ router.post("/log", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Security log error:", error)
-    res.status(500).json({ message: "Server error creating security log" })
+    res.status(error.statusCode || 500).json({ message: error.message || "Server error creating security log" })
   }
 })
 
@@ -447,7 +572,7 @@ router.post("/student-log", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Student movement log error:", error)
-    res.status(500).json({ message: "Server error creating student movement log" })
+    res.status(error.statusCode || 500).json({ message: error.message || "Server error creating student movement log" })
   }
 })
 
@@ -548,3 +673,4 @@ router.get("/logs", authenticate, async (req, res) => {
 })
 
 module.exports = router
+
