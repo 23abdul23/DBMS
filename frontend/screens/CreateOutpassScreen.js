@@ -138,7 +138,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Purpose *</Text>
             <TextInput
-              style={[styles.input, { color: colors.subText }]}
+              style={[styles.input, { color: colors.text }]}
               placeholder="e.g., Medical appointment, Family visit"
               placeholderTextColor={colors.subText}
               value={formData.purpose}
@@ -150,7 +150,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Destination *</Text>
             <TextInput
-              style={[styles.input, { color: colors.subText }]}
+              style={[styles.input, { color: colors.text }]}
               placeholder="e.g., City Hospital, Home"
               placeholderTextColor={colors.subText}
               value={formData.destination}
@@ -191,7 +191,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Emergency Name *</Text>
             <TextInput
-              style={[styles.input, { color: colors.subText }]}
+              style={[styles.input, { color: colors.text }]}
               placeholder="Person to contact in emergency"
               placeholderTextColor={colors.subText}
               value={formData.emergencyName}
@@ -203,7 +203,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Emergency Contact *</Text>
             <TextInput
-              style={[styles.input, { color: colors.subText }]}
+              style={[styles.input, { color: colors.text }]}
               placeholder="Phone number to contact in emergency"
               placeholderTextColor={colors.subText}
               value={formData.emergencyContact}
@@ -215,7 +215,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
             <Text style={[styles.label, { color: colors.text }]}>Additional Remarks</Text>
             <TextInput
-              style={[styles.input, styles.textArea, { color: colors.subText }]}
+              style={[styles.input, styles.textArea, { color: colors.text }]}
               placeholder="Any additional information..."
               placeholderTextColor={colors.subText}
               value={formData.remarks}

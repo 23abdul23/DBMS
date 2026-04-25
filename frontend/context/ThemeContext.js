@@ -7,13 +7,16 @@ export const ThemeProvider = ({ children }) => {
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
 
+  const subText = isDarkMode ? '#b3b3b3' : '#6b7280';
+
   const theme = {
     isDarkMode,
     toggleTheme,
     colors: {
       background: isDarkMode ? '#181818' : '#fff',
       text: isDarkMode ? '#fff' : '#181818',
-      subtext: isDarkMode ? '#000000ff' : '#ffffffff',
+      subText,
+      subtext: subText,
       card: isDarkMode ? '#232323' : '#f5f5f5',
       // Add more theme colors as needed
     },

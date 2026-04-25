@@ -7,6 +7,7 @@ require("dotenv").config()
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
 const { generateDailyPasskeys } = require("./utils/hashGenerator")
+const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
 const { runLibraryVisitSimulation, runLibraryClosingSweep, LIBRARY_TIMEZONE } = require("./utils/libraryVisitSimulator")
 
 // Import routes
@@ -112,6 +113,17 @@ cron.schedule("0 0 * * *", async () => {
     console.log("Daily passkeys generated successfully")
   } catch (error) {
     console.error("Error generating daily passkeys:", error)
+  }
+})
+
+cron.schedule("*/5 * * * *", async () => {
+  try {
+    const result = await cleanupExpiredPasswordOtps()
+    if (result?.count) {
+      console.log(`Cleaned up ${result.count} expired password OTP record(s)`)
+    }
+  } catch (error) {
+    console.error("Password OTP cleanup failed:", error)
   }
 })
 

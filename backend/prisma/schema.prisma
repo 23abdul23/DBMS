@@ -111,6 +111,7 @@ model User {
   approvedOutpasses      Outpass[]   @relation("OutpassApprover")
   outpassAuditChanges    OutpassAuditTrail[]
   passkeys               Passkey[]
+  passwordUpdateOtps     PasswordUpdateOtp[]
   logs                   Log[]
 
   @@index([role])
@@ -266,6 +267,21 @@ model Passkey {
   @@index([userId, date])
   @@index([expiresAt])
   @@map("passkeys")
+}
+
+model PasswordUpdateOtp {
+  id                  String   @id @db.VarChar(24)
+  userId              String   @map("user_id") @db.VarChar(24)
+  otpHash             String   @map("otp_hash") @db.VarChar(255)
+  pendingPasswordHash String   @map("pending_password_hash") @db.VarChar(255)
+  expiresAt           DateTime @map("expires_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_update_otps")
 }
 
 model Location {
