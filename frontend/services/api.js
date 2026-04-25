@@ -78,6 +78,8 @@ export const commonAPI = {
 
     return api.put("/student/passwordUpdate", { currentPassword, newPassword, confirmPassword })
   },
+  requestPasswordOtp: (data) => api.post("/student/password-update/request-otp", data),
+  verifyPasswordOtp: (data) => api.post("/student/password-update/verify-otp", data),
   getDailyPasskeyGuard: () => api.get("/passkey/todayGuard"),
 }
 

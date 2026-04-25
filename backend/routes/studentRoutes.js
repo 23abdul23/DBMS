@@ -3,6 +3,14 @@ const bcrypt = require("bcryptjs")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { userSelect, serializeUser } = require("../utils/userProfiles")
+const { sendMail } = require("../utils/mailer")
+const {
+  PASSWORD_OTP_EXPIRY_SECONDS,
+  cleanupExpiredPasswordOtps,
+  createPasswordOtpRecord,
+  generatePasswordOtp,
+  hashPasswordOtp,
+} = require("../utils/passwordOtp")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -19,6 +27,15 @@ const getStrongPasswordError = (password) => {
   }
 
   return null
+}
+
+const requireStudent = (req, res) => {
+  if (req.user?.role !== "student") {
+    res.status(403).json({ message: "Only students can use OTP password verification" })
+    return false
+  }
+
+  return true
 }
 
 router.get("/profile", authenticate, async (req, res) => {
@@ -89,14 +106,168 @@ router.put("/profile", authenticate, async (req, res) => {
   }
 })
 
+router.post("/password-update/request-otp", authenticate, async (req, res) => {
+  try {
+    if (!requireStudent(req, res)) {
+      return
+    }
+
+    const { newPassword, confirmPassword } = req.body
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "New password and confirmation are required" })
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" })
+    }
+
+    const strongPasswordError = getStrongPasswordError(newPassword)
+    if (strongPasswordError) {
+      return res.status(400).json({
+        code: "WEAK_PASSWORD",
+        message: strongPasswordError,
+      })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+      },
+    })
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" })
+    }
+
+    if (!user.email) {
+      return res.status(400).json({ message: "Student email is missing from the profile" })
+    }
+
+    const isCurrentPassword = await bcrypt.compare(newPassword, user.passwordHash)
+    if (isCurrentPassword) {
+      return res.status(400).json({ message: "New password must be different from current password" })
+    }
+
+    await cleanupExpiredPasswordOtps(prisma)
+    await prisma.passwordUpdateOtp.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    })
+
+    const otp = generatePasswordOtp()
+    const pendingPasswordHash = await bcrypt.hash(newPassword, 10)
+
+    const otpRecord = await createPasswordOtpRecord(prisma, {
+      userId: user.id,
+      otp,
+      pendingPasswordHash,
+    })
+
+    try {
+      await sendMail({
+        to: user.email,
+        subject: "Aegis Password Update OTP",
+        text: `Your Aegis password update OTP is ${otp}. It will expire in ${PASSWORD_OTP_EXPIRY_SECONDS} seconds.`,
+      })
+    } catch (mailError) {
+      await prisma.passwordUpdateOtp.delete({
+        where: {
+          id: otpRecord.id,
+        },
+      })
+
+      console.error("Password OTP email error:", mailError)
+      return res.status(500).json({ message: "Failed to send OTP email" })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `OTP sent to ${user.email}`,
+      expiresInSeconds: PASSWORD_OTP_EXPIRY_SECONDS,
+    })
+  } catch (error) {
+    console.error("Password OTP request error:", error)
+    return res.status(500).json({ message: "Server error requesting password OTP" })
+  }
+})
+
+router.post("/password-update/verify-otp", authenticate, async (req, res) => {
+  try {
+    if (!requireStudent(req, res)) {
+      return
+    }
+
+    const otp = String(req.body?.otp || "").trim()
+    if (!otp) {
+      return res.status(400).json({ message: "OTP is required" })
+    }
+
+    await cleanupExpiredPasswordOtps(prisma)
+
+    const otpRecord = await prisma.passwordUpdateOtp.findFirst({
+      where: {
+        userId: req.user.userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
+
+    if (!otpRecord) {
+      return res.status(400).json({ message: "OTP expired or not found" })
+    }
+
+    if (hashPasswordOtp(otp) !== otpRecord.otpHash) {
+      return res.status(400).json({ message: "Invalid OTP" })
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: {
+          id: req.user.userId,
+        },
+        data: {
+          passwordHash: otpRecord.pendingPasswordHash,
+        },
+      }),
+      prisma.passwordUpdateOtp.delete({
+        where: {
+          id: otpRecord.id,
+        },
+      }),
+    ])
+
+    return res.status(200).json({
+      success: true,
+      message: "Password Updated Successfully",
+    })
+  } catch (error) {
+    console.error("Password OTP verification error:", error)
+    return res.status(500).json({ message: "Server error verifying password OTP" })
+  }
+})
+
 router.put("/passwordUpdate", authenticate, async (req, res) => {
   try {
+    if (req.user?.role === "student") {
+      return res.status(400).json({ message: "Students must verify an OTP to update password" })
+    }
+
     const currentPassword = req.body.currentPassword || req.body?.currentPassword?.currentPassword
     const newPassword = req.body.newPassword || req.body?.currentPassword?.newPassword
     const confirmPassword = req.body.confirmPassword || req.body?.currentPassword?.confirmPassword
 
     if (!newPassword || !confirmPassword) {
       return res.status(400).json({ message: "New password and confirmation are required" })
+    }
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: "Current password is required" })
     }
 
     if (newPassword !== confirmPassword) {
@@ -119,15 +290,13 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
       return res.status(404).json({ message: "User not found" })
     }
 
-    if (currentPassword) {
-      const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash)
-      if (!passwordMatches) {
-        return res.status(400).json({ message: "Current password is incorrect" })
-      }
+    const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!passwordMatches) {
+      return res.status(400).json({ message: "Current password is incorrect" })
+    }
 
-      if (newPassword === currentPassword) {
-        return res.status(400).json({ message: "New password must be different from current password" })
-      }
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ message: "New password must be different from current password" })
     }
 
     await prisma.user.update({
