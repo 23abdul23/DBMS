@@ -65,12 +65,23 @@ enum OutpassStatus {
   cancelled
 }
 
+enum OutpassRequestType {
+  regular
+  long_visit
+}
+
 enum LogAction {
   entry
   exit
   scan_attempt
   outpass_request
   outpass_generated
+  outpass_used
+  outpass_long_visit
+  outpass_status_changed
+  passkey_validated
+  emergency_status_updated
+  user_status_updated
   emergency_alert
 }
 
@@ -220,6 +231,7 @@ model Outpass {
   outDate               DateTime     @map("out_date")
   expectedReturnDate    DateTime     @map("expected_return_date")
   actualReturnDate      DateTime?    @map("actual_return_date")
+  requestType           OutpassRequestType @default(regular) @map("request_type")
   status                OutpassStatus @default(pending)
   approvedById          String?      @map("approved_by") @db.VarChar(24)
   rejectionReason       String?      @map("rejection_reason")
@@ -233,6 +245,7 @@ model Outpass {
   auditTrail  OutpassAuditTrail[]
 
   @@index([userId, status])
+  @@index([userId, requestType, status])
   @@index([outDate])
   @@map("outpasses")
 }

@@ -3,7 +3,7 @@
 import { Alert, Text, TouchableOpacity, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import styles from "../styles/WardenStyles"
-import { COLORS } from "../utils/constants"
+import { COLORS, OUTPASS_REQUEST_TYPE } from "../utils/constants"
 
 const statusColors = {
   pending: "#f59e0b",
@@ -18,6 +18,9 @@ const monitoringColors = {
   approved: "#10b981",
   awaiting_exit: "#2563eb",
   ongoing: "#8b5cf6",
+  yellow_alert: "#f59e0b",
+  danger: "#dc2626",
+  long_visit_away: "#0f766e",
   overdue: "#dc2626",
   expired: "#6b7280",
   returned: "#059669",
@@ -50,7 +53,8 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
     ])
   }
 
-  const canCancel = outpass.status === "approved" && outpass.monitoringState !== "ongoing"
+  const canCancel = typeof outpass.canCancel === "boolean" ? outpass.canCancel : outpass.status === "approved"
+  const isLongVisit = (outpass.requestType || outpass.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border || COLORS.gray[200] }]}>
@@ -65,6 +69,11 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
       </View>
 
       <View style={styles.badgeRow}>
+        {isLongVisit ? (
+          <View style={[styles.badge, { backgroundColor: "#ccfbf1" }]}>
+            <Text style={[styles.badgeText, { color: "#115e59" }]}>Long Visit</Text>
+          </View>
+        ) : null}
         <View style={[styles.badge, { backgroundColor: `${statusColors[outpass.status] || COLORS.gray[500]}20` }]}>
           <Text style={[styles.badgeText, { color: statusColors[outpass.status] || COLORS.gray[500] }]}>
             {prettify(outpass.status)}
@@ -99,6 +108,11 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
       <Text style={[styles.metaText, { color: colors.subText }]}>
         Return By: {formatDateTime(outpass.expectedReturnDate)}
       </Text>
+      {isLongVisit ? (
+        <Text style={[styles.metaText, { color: "#b45309" }]}>
+          Student must visit the warden physically for approval handling.
+        </Text>
+      ) : null}
 
       {outpass.emergencyContact?.phone ? (
         <Text style={[styles.metaText, { color: colors.subText }]}>

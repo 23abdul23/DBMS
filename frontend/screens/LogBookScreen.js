@@ -184,13 +184,27 @@ export default function LogBook({ navigation, route }) {
 
   const renderLog = useCallback(
     ({ item }) => {
-      const actionLabel = item.action === "entry" ? "Entry" : item.action === "exit" ? "Exit" : item.action
+      const actionLabels = {
+        entry: "Entry",
+        exit: "Exit",
+        outpass_used: "Outpass Used",
+        passkey_validated: "Passkey Validated",
+        outpass_status_changed: "Outpass Status Changed",
+      }
+      const actionColors = {
+        entry: COLORS.success,
+        exit: COLORS.error,
+        outpass_used: "#7c3aed",
+        passkey_validated: "#2563eb",
+        outpass_status_changed: "#f59e0b",
+      }
+      const actionLabel = actionLabels[item.action] || item.action
       const residentName = item?.user?.name || item?.details?.scannedUserName || "Resident"
       const residentStudentId = item?.user?.studentId || item?.details?.scannedStudentId || "-"
       const residentSystemId = item?.user?.id || item?.userId || item?.details?.scannedUserId || "-"
       const guardOnDuty = item.guardName || "Guard"
       const timestamp = item?.createdAt ? new Date(item.createdAt).toLocaleString() : "Unknown"
-      const actionColor = item.action === "entry" ? COLORS.success : item.action === "exit" ? COLORS.error : COLORS.warning
+      const actionColor = actionColors[item.action] || COLORS.warning
 
       return (
         <View style={[styles.logCard, { backgroundColor: colors.card, borderLeftColor: actionColor }]}>

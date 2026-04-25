@@ -11,6 +11,8 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import styles from "../styles/WardenStyles"
 
 const statCards = [
+  { key: "dangerAlerts", label: "Danger", color: "#fee2e2", textColor: "#991b1b" },
+  { key: "yellowAlerts", label: "Yellow", color: "#fef3c7", textColor: "#92400e" },
   { key: "pendingRequests", label: "Pending Requests", color: "#fef3c7", textColor: "#92400e" },
   { key: "approvedRequests", label: "Approved", color: "#dcfce7", textColor: "#166534" },
   { key: "ongoingCount", label: "Currently Outside", color: "#ede9fe", textColor: "#5b21b6" },
@@ -159,7 +161,7 @@ export default function WardenDashboardScreen({ navigation }) {
               <Ionicons name="shield-checkmark-outline" size={36} color={colors.subText} />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No active alerts</Text>
               <Text style={[styles.emptyText, { color: colors.subText }]}>
-                Students who are outside, overdue, or awaiting exit will be listed here.
+                Students in danger, yellow alert, outside, overdue, or awaiting exit will be listed here.
               </Text>
             </View>
           )}
