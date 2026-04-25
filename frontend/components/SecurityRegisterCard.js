@@ -5,6 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AllLocations from '../constants/SecuityLocations.json';
 import { Picker } from '@react-native-picker/picker';
 
+const LOCATION_OPTIONS = [
+  AllLocations.defaultOption,
+  ...(Array.isArray(AllLocations.exit_gates) ? AllLocations.exit_gates : []),
+  ...(Array.isArray(AllLocations.campus_buildings) ? AllLocations.campus_buildings : []),
+  ...(Array.isArray(AllLocations.hostels) ? AllLocations.hostels : []),
+]
 
 export default function SecurityRegisterCard({ formData, updateFormData, colors }) {
   return (
@@ -42,7 +48,7 @@ export default function SecurityRegisterCard({ formData, updateFormData, colors 
           onValueChange={(value) => updateFormData('securityPost', value)}
           style={{ width: 310 }}
         >
-          {AllLocations['Locations'].map((loc, index) => <Picker.Item key={index} label={loc} value={loc} />)}
+          {LOCATION_OPTIONS.map((loc, index) => <Picker.Item key={index} label={loc} value={loc} />)}
         </Picker>
       </View>
     </>

@@ -15,6 +15,14 @@ import api from "../services/api"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 
+const locationOptions = [
+  ...(Array.isArray(AllLocations.exit_gates) ? AllLocations.exit_gates : []),
+  ...(Array.isArray(AllLocations.campus_buildings) ? AllLocations.campus_buildings : []),
+  ...(Array.isArray(AllLocations.hostels) ? AllLocations.hostels : []),
+]
+
+const defaultLocation = locationOptions[0] || ""
+
 const sanitizeFilePart = (value) =>
   String(value || "")
     .trim()
@@ -51,8 +59,8 @@ export default function GuardDashboardScreen({ navigation }) {
     if (!loc) {
       if (profile?.hostel) {
         setLoc(profile.hostel)
-      } else if (Array.isArray(AllLocations?.Locations) && AllLocations.Locations.length > 1) {
-        setLoc(AllLocations.Locations[1])
+      } else if (defaultLocation) {
+        setLoc(defaultLocation)
       }
     }
   }, [profile, loc])
@@ -231,12 +239,14 @@ export default function GuardDashboardScreen({ navigation }) {
 
         <View style={localStyles.pickerWrapper}>
           <Text style={[localStyles.sectionTitle, { color: colors.text }]}>QR For Location</Text>
+          <Text style={[localStyles.sectionHint, { color: colors.subText }]}>
+            Gates need outpass checks after 6:00 PM. Buildings and hostels are internal campus locations.
+          </Text>
           <View style={[localStyles.pickerCard, { backgroundColor: colors.card, borderColor: colors.subText }]}>
             <Picker selectedValue={loc} onValueChange={(value) => setLoc(value)} style={{ width: "100%" }}>
-              {Array.isArray(AllLocations?.Locations) &&
-                AllLocations.Locations.map((location, index) => (
-                  <Picker.Item key={`${location}-${index}`} label={location} value={location} />
-                ))}
+              {locationOptions.map((location, index) => (
+                <Picker.Item key={`${location}-${index}`} label={location} value={location} />
+              ))}
             </Picker>
           </View>
         </View>
@@ -326,6 +336,12 @@ const localStyles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 14,
     fontFamily: FONTS.bold,
+  },
+  sectionHint: {
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    fontSize: SIZES.xs,
+    fontFamily: FONTS.regular,
   },
   pickerCard: {
     width: "100%",

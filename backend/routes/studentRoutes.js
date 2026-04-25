@@ -38,6 +38,20 @@ const requireStudent = (req, res) => {
   return true
 }
 
+const STUDENT_LOG_ACTIONS = [
+  "entry",
+  "exit",
+  "outpass_request",
+  "outpass_long_visit",
+  "outpass_used",
+  "outpass_status_changed",
+]
+
+const parsePositiveInteger = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 router.get("/profile", authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -310,6 +324,46 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Password update error:", error)
     return res.status(500).json({ message: "Server error updating password" })
+  }
+})
+
+router.get("/logs", authenticate, async (req, res) => {
+  try {
+    if (!requireStudent(req, res)) {
+      return
+    }
+
+    const page = parsePositiveInteger(req.query.page, 1)
+    const limit = Math.min(parsePositiveInteger(req.query.limit, 20), 100)
+    const skip = (page - 1) * limit
+
+    const where = {
+      userId: req.user.userId,
+      action: {
+        in: STUDENT_LOG_ACTIONS,
+      },
+    }
+
+    const [logs, total] = await prisma.$transaction([
+      prisma.log.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.log.count({ where }),
+    ])
+
+    return res.status(200).json({
+      logs,
+      page,
+      limit,
+      total,
+      hasMore: skip + logs.length < total,
+    })
+  } catch (error) {
+    console.error("Student logs error:", error)
+    return res.status(500).json({ message: "Server error fetching student logs" })
   }
 })
 
