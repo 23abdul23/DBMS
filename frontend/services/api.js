@@ -124,7 +124,7 @@ export const securityAPI = {
   validatePasskey: (data) => api.post("/security/validate", data),
   logEntry: (data) => api.post("/security/log", data),
   logStudentScan: (data) => api.post("/security/student-log", data),
-  getLogs: (params, token) =>
+  getLogs: (params = {}, token) =>
     api.get("/security/logs", {
       params,
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
