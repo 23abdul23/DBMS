@@ -65,12 +65,24 @@ enum OutpassStatus {
   cancelled
 }
 
+enum OutpassRequestType {
+  regular
+  long_visit
+}
+
 enum LogAction {
   entry
   exit
   scan_attempt
+  without_outpass
   outpass_request
   outpass_generated
+  outpass_used
+  outpass_long_visit
+  outpass_status_changed
+  passkey_validated
+  emergency_status_updated
+  user_status_updated
   emergency_alert
 }
 
@@ -111,6 +123,7 @@ model User {
   approvedOutpasses      Outpass[]   @relation("OutpassApprover")
   outpassAuditChanges    OutpassAuditTrail[]
   passkeys               Passkey[]
+  passwordUpdateOtps     PasswordUpdateOtp[]
   logs                   Log[]
 
   @@index([role])
@@ -219,6 +232,7 @@ model Outpass {
   outDate               DateTime     @map("out_date")
   expectedReturnDate    DateTime     @map("expected_return_date")
   actualReturnDate      DateTime?    @map("actual_return_date")
+  requestType           OutpassRequestType @default(regular) @map("request_type")
   status                OutpassStatus @default(pending)
   approvedById          String?      @map("approved_by") @db.VarChar(24)
   rejectionReason       String?      @map("rejection_reason")
@@ -232,6 +246,7 @@ model Outpass {
   auditTrail  OutpassAuditTrail[]
 
   @@index([userId, status])
+  @@index([userId, requestType, status])
   @@index([outDate])
   @@map("outpasses")
 }
@@ -268,6 +283,21 @@ model Passkey {
   @@map("passkeys")
 }
 
+model PasswordUpdateOtp {
+  id                  String   @id @db.VarChar(24)
+  userId              String   @map("user_id") @db.VarChar(24)
+  otpHash             String   @map("otp_hash") @db.VarChar(255)
+  pendingPasswordHash String   @map("pending_password_hash") @db.VarChar(255)
+  expiresAt           DateTime @map("expires_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_update_otps")
+}
+
 model Location {
   id          String   @id @db.VarChar(24)
   name        String   @unique @db.VarChar(255)
@@ -299,5 +329,6 @@ model Log {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
+  @@index([location, createdAt(sort: Desc)])
   @@map("logs")
 }

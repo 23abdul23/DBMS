@@ -54,10 +54,11 @@ function getLocalIPAddress() {
 const backendEnv = readEnvFile(path.resolve(__dirname, "../backend/.env"))
 const getConfigValue = (key, fallback) => process.env[key] || backendEnv[key] || fallback
 
-const apiBaseUrl = getConfigValue(
-  "API_BASE_URL",
-  "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api",
+const apiPrimaryBaseUrl = getConfigValue(
+  "API_BASE_URL_PRIMARY",
+  getConfigValue("API_BASE_URL", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api"),
 )
+const apiSecondaryBaseUrl = getConfigValue("API_BASE_URL_SECONDARY", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api")
 const apiHost = getConfigValue("API_HOST", "10.145.159.171")
 
 // const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
@@ -75,42 +76,60 @@ module.exports = {
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#ffffff00",
     },
     ios: {
       supportsTablet: true,
       infoPlist: {
+        NSCameraUsageDescription:
+          "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
       },
     },
     android: {
+      package: "com.abdul.aegis",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
-      permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      permissions: [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
     },
     web: {
       favicon: "./assets/favicon.png",
     },
     extra: {
-      API_BASE_URL: apiBaseUrl,
+      API_BASE_URL: apiPrimaryBaseUrl,
+      API_BASE_URL_PRIMARY: apiPrimaryBaseUrl,
+      API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
       EMERGENCY_MEDICAL_PHONE: emergencyMedicalPhone,
       EMERGENCY_SECURITY_PHONE: emergencySecurityPhone,
       EMERGENCY_FIRE_PHONE: emergencyFirePhone,
       EMERGENCY_OTHER_PHONE: emergencyOtherPhone,
+      "eas": {
+        "projectId": "0713ff11-c8b1-468c-93b8-c664dbf6d0f3"
+      }
     },
     plugins: [
-      "expo-barcode-scanner",
+      "@react-native-community/datetimepicker",
       "expo-font",
+      [
+        "expo-camera",
+        {
+          cameraPermission:
+            "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+        },
+      ],
       [
         "expo-location",
         {

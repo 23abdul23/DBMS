@@ -62,6 +62,11 @@ export const OUTPASS_STATUS = {
   COMPLETED: "completed",
 }
 
+export const OUTPASS_REQUEST_TYPE = {
+  REGULAR: "regular",
+  LONG_VISIT: "long_visit",
+}
+
 export const EMERGENCY_TYPES = {
   MEDICAL: "medical",
   SECURITY: "security",

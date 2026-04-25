@@ -1,23 +1,29 @@
 {
-    "Locations" : [
-        "--select location--",
-        "Gate 1",
-        "Gate 2",
-        "Gate 3 (Main Gate)",
-        "Gate 4",
-        "Library",
-        "Auditorium",
-        "CC1",
-        "CC2",
-        "CC3",
-        "SAC",
-        "BH 1",
-        "BH 2",
-        "BH 3",
-        "BH 4",
-        "BH 5",
-        "GH 1",
-        "GH 2",
-        "GH 3"
-    ]
+  "defaultOption": "--select location--",
+  "exit_gates": [
+    "Gate 1",
+    "Gate 2",
+    "Gate 3 (Main Gate)",
+    "Gate 4"
+  ],
+  "campus_buildings": [
+    "Library",
+    "Auditorium",
+    "CC1",
+    "CC2",
+    "CC3",
+    "SAC",
+    "AAA",
+    "Lecture Theatre"
+  ],
+  "hostels": [
+    "BH 1",
+    "BH 2",
+    "BH 3",
+    "BH 4",
+    "BH 5",
+    "GH 1",
+    "GH 2",
+    "GH 3"
+  ]
 }

@@ -1,0 +1,15 @@
+diff --git a/node_modules/@react-native-picker/picker/android/build.gradle b/node_modules/@react-native-picker/picker/android/build.gradle
+index 155b3a8..87c4753 100644
+--- a/node_modules/@react-native-picker/picker/android/build.gradle
++++ b/node_modules/@react-native-picker/picker/android/build.gradle
+@@ -80,7 +80,9 @@ android {
+   }
+ 
+   compileSdkVersion safeExtGet('compileSdkVersion', 31)
+-
++  buildFeatures {
++        buildConfig = true
++    }
+     defaultConfig {
+         minSdkVersion safeExtGet('minSdkVersion', 21)
+         targetSdkVersion safeExtGet('targetSdkVersion', 31)

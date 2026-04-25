@@ -63,7 +63,7 @@ export default function RegisterScreen({ navigation }) {
   const years = AcademicYearList
 
   const hostels = ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
-  
+
   const roles = ["student", "warden", "security"]
 
   const updateFormData = (key, value) => {
@@ -162,30 +162,30 @@ export default function RegisterScreen({ navigation }) {
             <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.cardGlass, borderColor: colors.border, shadowColor: colors.shadow }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
-          <Text style={[styles.subtitle, { color: colors.text }]}>Join Aegis ID Campus Pass</Text>
+          <Text style={[styles.title, { color: colors.heading }]}>Create Account</Text>
+          <Text style={[styles.subtitle, { color: colors.subText }]}>Join Aegis ID Campus Pass</Text>
         </View>
         <View style={styles.form}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="person-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="person-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Full Name *"
-              placeholderTextColor={colors.text}
+              placeholderTextColor={colors.placeholder}
               value={formData.name}
               onChangeText={(value) => updateFormData("name", value)}
               autoCapitalize="words"
             />
           </View>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="library-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="library-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <Picker
               selectedValue={formData.role}
-              style={styles.picker}
+              style={[styles.picker, { color: colors.inputText }]}
               onValueChange={(value) => updateFormData("role", value)}
             >
               <Picker.Item label="Select Role *" value="" />
@@ -220,22 +220,22 @@ export default function RegisterScreen({ navigation }) {
             />
           )}
           {/* Common fields for all roles */}
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="call-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="call-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Phone Number *"
-              placeholderTextColor={colors.text}
+              placeholderTextColor={colors.placeholder}
               value={formData.phone}
               onChangeText={(value) => updateFormData("phone", value)}
               keyboardType="phone-pad"
             />
           </View>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="male-female-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="male-female-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <Picker
               selectedValue={formData.gender}
-              style={styles.picker}
+              style={[styles.picker, { color: colors.inputText }]}
               onValueChange={(value) => updateFormData("gender", value)}
             >
               <Picker.Item label="Select Gender *" value="" />
@@ -245,26 +245,26 @@ export default function RegisterScreen({ navigation }) {
             </Picker>
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Password *"
-              placeholderTextColor={colors.text}
+              placeholderTextColor={colors.placeholder}
               value={formData.password}
               onChangeText={(value) => updateFormData("password", value)}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.text} />
+              <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.subText} />
             </TouchableOpacity>
           </View>
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.text} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Confirm Password *"
-              placeholderTextColor={colors.text}
+              placeholderTextColor={colors.placeholder}
               value={formData.confirmPassword}
               onChangeText={(value) => updateFormData("confirmPassword", value)}
               secureTextEntry={!showConfirmPassword}
@@ -273,18 +273,18 @@ export default function RegisterScreen({ navigation }) {
               <Ionicons
                 name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
                 size={20}
-                color={colors.text}
+                color={colors.subText}
               />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={[styles.registerButton, { backgroundColor: isDarkMode ? '#2196f3' : '#2196f3' }]} onPress={handleRegister}>
-            <Text style={[styles.registerButtonText, { color: colors.text }]}>Create Account</Text>
+          <TouchableOpacity style={[styles.registerButton, { backgroundColor: colors.primary }]} onPress={handleRegister}>
+            <Text style={[styles.registerButtonText, { color: colors.onPrimary }]}>Create Account</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.text }]}>Already have an account? </Text>
+          <Text style={[styles.footerText, { color: colors.subText }]}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={[styles.signInText, { color: colors.text }]}>Sign In</Text>
+            <Text style={[styles.signInText, { color: colors.primary }]}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -305,6 +305,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: SPACING.xl,
     marginTop: SPACING.xl,
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.xl,
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
   },
   backButton: {
     position: "absolute",

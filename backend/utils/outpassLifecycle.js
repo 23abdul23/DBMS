@@ -1,4 +1,5 @@
 const { generateId } = require("./hashGenerator")
+const { isExitGate } = require("./locationPolicy")
 
 const userSelect = {
   id: true,
@@ -28,6 +29,23 @@ const auditUserSelect = {
   role: true,
 }
 
+const OUTPASS_REQUEST_TYPE = {
+  REGULAR: "regular",
+  LONG_VISIT: "long_visit",
+}
+
+const CAMPUS_RISK_LEVEL = {
+  NORMAL: "normal",
+  YELLOW: "yellow",
+  DANGER: "danger",
+}
+
+const MAX_ADVANCE_DAYS = 1
+const RETURN_CUTOFF_HOUR = 22
+const RETURN_CUTOFF_MINUTE = 30
+const YELLOW_ALERT_HOUR = 21
+const YELLOW_ALERT_MINUTE = 30
+
 const outpassInclude = {
   user: {
     select: userSelect,
@@ -53,11 +71,22 @@ const getStartOfDay = (value = new Date()) => {
   return date
 }
 
+const addDays = (value, days) => {
+  const date = new Date(value)
+  date.setDate(date.getDate() + days)
+  return date
+}
+
 const getDayRange = (value = new Date()) => {
   const start = getStartOfDay(value)
-  const end = new Date(start)
-  end.setDate(end.getDate() + 1)
+  const end = addDays(start, 1)
   return { start, end }
+}
+
+const getCutoffTimeForDate = (value, hours, minutes) => {
+  const date = new Date(value)
+  date.setHours(hours, minutes, 0, 0)
+  return date
 }
 
 const toDate = (value) => {
@@ -109,6 +138,132 @@ const resolveOutpassDateTimes = (payload = {}) => {
   }
 }
 
+const normalizeOutpassRequestType = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase() === OUTPASS_REQUEST_TYPE.LONG_VISIT
+    ? OUTPASS_REQUEST_TYPE.LONG_VISIT
+    : OUTPASS_REQUEST_TYPE.REGULAR
+
+const resolveOutpassRequestType = (payload = {}) => {
+  if (payload.longVisit === true || String(payload.longVisit || "").trim().toLowerCase() === "true") {
+    return OUTPASS_REQUEST_TYPE.LONG_VISIT
+  }
+
+  return normalizeOutpassRequestType(payload.requestType || payload.type)
+}
+
+const isLongVisitOutpass = (outpass) =>
+  normalizeOutpassRequestType(outpass?.requestType || outpass?.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT
+
+const isSameCalendarDay = (left, right) => {
+  if (!left || !right) {
+    return false
+  }
+
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  )
+}
+
+const isWithinAdvanceWindow = (exitDate, now = new Date()) => {
+  const startOfToday = getStartOfDay(now)
+  const endOfTomorrow = addDays(startOfToday, MAX_ADVANCE_DAYS + 1)
+  return exitDate >= startOfToday && exitDate < endOfTomorrow
+}
+
+const hasExitedForOutpass = (outpass, latestMovement) =>
+  latestMovement?.action === "exit" && latestMovement?.createdAt >= outpass.outDate
+
+const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
+  if (!outpass || isLongVisitOutpass(outpass) || outpass.actualReturnDate || !hasExitedForOutpass(outpass, latestMovement)) {
+    return CAMPUS_RISK_LEVEL.NORMAL
+  }
+
+  const yellowThreshold = getCutoffTimeForDate(outpass.outDate, YELLOW_ALERT_HOUR, YELLOW_ALERT_MINUTE)
+  const dangerThreshold = getCutoffTimeForDate(outpass.outDate, RETURN_CUTOFF_HOUR, RETURN_CUTOFF_MINUTE)
+
+  if (now >= dangerThreshold) {
+    return CAMPUS_RISK_LEVEL.DANGER
+  }
+
+  if (now >= yellowThreshold) {
+    return CAMPUS_RISK_LEVEL.YELLOW
+  }
+
+  return CAMPUS_RISK_LEVEL.NORMAL
+}
+
+const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
+  if (!outpass || isLongVisitOutpass(outpass)) {
+    return false
+  }
+
+  if (outpass.status !== "approved" || outpass.actualReturnDate) {
+    return false
+  }
+
+  if (hasExitedForOutpass(outpass, latestMovement)) {
+    return false
+  }
+
+  return outpass.outDate <= now && outpass.expectedReturnDate > now
+}
+
+const canCancelOutpass = (outpass, latestMovement, now = new Date()) => {
+  if (!outpass) {
+    return false
+  }
+
+  if (!["pending", "approved"].includes(outpass.status)) {
+    return false
+  }
+
+  if (outpass.actualReturnDate || hasExitedForOutpass(outpass, latestMovement)) {
+    return false
+  }
+
+  return outpass.expectedReturnDate > now
+}
+
+const validateOutpassWindow = ({ exitDate, returnDate, requestType, now = new Date() }) => {
+  if (!exitDate || !returnDate) {
+    return "Please provide purpose, destination, departure, and return time"
+  }
+
+  if (returnDate <= exitDate) {
+    return "Expected return time must be after departure time"
+  }
+
+  const normalizedType = normalizeOutpassRequestType(requestType)
+
+  if (!isWithinAdvanceWindow(exitDate, now)) {
+    return "Outpasses can only be requested for today or tomorrow"
+  }
+
+  if (normalizedType === OUTPASS_REQUEST_TYPE.LONG_VISIT) {
+    return null
+  }
+
+  const pastThreshold = new Date(now.getTime() - 5 * 60 * 1000)
+  if (exitDate < pastThreshold) {
+    return "Departure time cannot be more than 5 minutes in the past"
+  }
+
+  if (!isSameCalendarDay(exitDate, returnDate)) {
+    return "Regular outpasses must start and end on the same day"
+  }
+
+  const returnCutoff = getCutoffTimeForDate(exitDate, RETURN_CUTOFF_HOUR, RETURN_CUTOFF_MINUTE)
+  if (returnDate > returnCutoff) {
+    return "Regular outpasses must end by 10:30 PM"
+  }
+
+  return null
+}
+
 const serializeAuditItem = (auditItem) => ({
   id: auditItem.id,
   status: auditItem.status,
@@ -152,12 +307,44 @@ const deriveMonitoringState = (outpass, latestMovement, now = new Date()) => {
     return "cancelled"
   }
 
+  const exited = hasExitedForOutpass(outpass, latestMovement)
+
+  if (isLongVisitOutpass(outpass)) {
+    if (exited) {
+      return "long_visit_away"
+    }
+
+    if (outpass.status === "approved" && outpass.outDate > now) {
+      return "approved"
+    }
+
+    if (outpass.status === "approved") {
+      return "awaiting_exit"
+    }
+
+    return outpass.status
+  }
+
   if (outpass.status === "expired") {
-    return latestMovement?.action === "exit" && latestMovement?.createdAt >= outpass.outDate ? "overdue" : "expired"
+    return exited ? "overdue" : "expired"
   }
 
   if (outpass.status === "approved") {
-    if (latestMovement?.action === "exit" && latestMovement?.createdAt >= outpass.outDate) {
+    if (exited) {
+      const campusRiskLevel = getCampusRiskLevel(outpass, latestMovement, now)
+
+      if (campusRiskLevel === CAMPUS_RISK_LEVEL.DANGER) {
+        return "danger"
+      }
+
+      if (campusRiskLevel === CAMPUS_RISK_LEVEL.YELLOW) {
+        return "yellow_alert"
+      }
+
+      if (outpass.expectedReturnDate <= now) {
+        return "overdue"
+      }
+
       return "ongoing"
     }
 
@@ -173,13 +360,18 @@ const deriveMonitoringState = (outpass, latestMovement, now = new Date()) => {
 
 const buildOutpassResponse = (outpass, options = {}) => {
   const latestMovement = options.latestMovement || null
+  const now = options.now || new Date()
   const auditTrail = Array.isArray(outpass.auditTrail) ? outpass.auditTrail.map(serializeAuditItem) : []
   const requestAudit = auditTrail.find((item) => item.status === "pending") || null
   const latestAudit = auditTrail.length > 0 ? auditTrail[auditTrail.length - 1] : null
-  const monitoringState = deriveMonitoringState(outpass, latestMovement)
+  const monitoringState = deriveMonitoringState(outpass, latestMovement, now)
   const timeRemainingMs = outpass.actualReturnDate
     ? 0
-    : Math.max(0, new Date(outpass.expectedReturnDate).getTime() - Date.now())
+    : Math.max(0, new Date(outpass.expectedReturnDate).getTime() - now.getTime())
+  const requestType = normalizeOutpassRequestType(outpass.requestType || outpass.type)
+  const campusRiskLevel = getCampusRiskLevel(outpass, latestMovement, now)
+  const canCancel = canCancelOutpass(outpass, latestMovement, now)
+  const canUse = canUseOutpass(outpass, latestMovement, now)
 
   return {
     id: outpass.id,
@@ -191,6 +383,9 @@ const buildOutpassResponse = (outpass, options = {}) => {
     outDate: outpass.outDate,
     expectedReturnDate: outpass.expectedReturnDate,
     actualReturnDate: outpass.actualReturnDate,
+    requestType,
+    type: requestType,
+    isLongVisit: requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT,
     status: outpass.status,
     rejectionReason: outpass.rejectionReason,
     emergencyContactName: outpass.emergencyContactName,
@@ -200,6 +395,10 @@ const buildOutpassResponse = (outpass, options = {}) => {
     remarks: requestAudit?.remarks || null,
     latestStatusRemark: latestAudit?.remarks || null,
     monitoringState,
+    campusRiskLevel,
+    canCancel,
+    canUseOutpass: canUse,
+    mustReturnBy: outpass.expectedReturnDate,
     timeRemainingMs,
     isOverdue: monitoringState === "overdue",
     createdAt: outpass.createdAt,
@@ -259,10 +458,7 @@ const getLatestMovementMap = async (prisma, userIds = []) => {
         in: ["entry", "exit"],
       },
     },
-    orderBy: [
-      { createdAt: "desc" },
-      { id: "desc" },
-    ],
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   })
 
   const movementMap = new Map()
@@ -276,9 +472,42 @@ const getLatestMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
+const getLatestGateMovementMap = async (prisma, userIds = []) => {
+  const distinctUserIds = [...new Set(userIds.filter(Boolean))]
+
+  if (distinctUserIds.length === 0) {
+    return new Map()
+  }
+
+  const logs = await prisma.log.findMany({
+    where: {
+      userId: {
+        in: distinctUserIds,
+      },
+      action: {
+        in: ["entry", "exit"],
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  })
+
+  const movementMap = new Map()
+
+  for (const log of logs) {
+    if (!isExitGate(log.location)) {
+      continue
+    }
+
+    if (!movementMap.has(log.userId)) {
+      movementMap.set(log.userId, log)
+    }
+  }
+
+  return movementMap
+}
+
 const expireOldOutpasses = async (prisma) => {
   const now = new Date()
-  const startOfToday = getStartOfDay(now)
 
   const expiredCandidates = await prisma.outpass.findMany({
     where: {
@@ -286,21 +515,14 @@ const expireOldOutpasses = async (prisma) => {
         in: ["pending", "approved"],
       },
       actualReturnDate: null,
-      OR: [
-        {
-          expectedReturnDate: {
-            lt: now,
-          },
-        },
-        {
-          outDate: {
-            lt: startOfToday,
-          },
-        },
-      ],
+      expectedReturnDate: {
+        lt: now,
+      },
     },
     select: {
       id: true,
+      userId: true,
+      requestType: true,
       status: true,
     },
   })
@@ -331,8 +553,24 @@ const expireOldOutpasses = async (prisma) => {
         changedAt: now,
         remarks:
           item.status === "pending"
-            ? "Request auto-expired before approval window ended"
-            : "Outpass auto-expired after expected return time elapsed",
+            ? "Request auto-expired before the approval window ended"
+            : "Outpass auto-expired after the expected return time elapsed",
+      })),
+    }),
+    prisma.log.createMany({
+      data: expiredCandidates.map((item) => ({
+        id: generateId(),
+        userId: item.userId,
+        action: "outpass_status_changed",
+        success: true,
+        details: {
+          outpassId: item.id,
+          requestType: item.requestType,
+          previousStatus: item.status,
+          nextStatus: "expired",
+          source: "auto_expiry",
+        },
+        scanType: "manual",
       })),
     }),
   ])
@@ -341,16 +579,34 @@ const expireOldOutpasses = async (prisma) => {
 }
 
 module.exports = {
+  CAMPUS_RISK_LEVEL,
+  MAX_ADVANCE_DAYS,
+  OUTPASS_REQUEST_TYPE,
+  RETURN_CUTOFF_HOUR,
+  RETURN_CUTOFF_MINUTE,
+  YELLOW_ALERT_HOUR,
+  YELLOW_ALERT_MINUTE,
   userSelect,
   approverSelect,
   outpassInclude,
   getStartOfDay,
   getDayRange,
+  getCutoffTimeForDate,
   toDate,
   combineDateAndTime,
   resolveOutpassDateTimes,
+  normalizeOutpassRequestType,
+  resolveOutpassRequestType,
+  isLongVisitOutpass,
+  isSameCalendarDay,
+  hasExitedForOutpass,
+  getCampusRiskLevel,
+  canUseOutpass,
+  canCancelOutpass,
+  validateOutpassWindow,
   buildOutpassResponse,
   deriveMonitoringState,
   getLatestMovementMap,
+  getLatestGateMovementMap,
   expireOldOutpasses,
 }

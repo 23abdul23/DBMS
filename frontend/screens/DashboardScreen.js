@@ -15,6 +15,7 @@ export default function DashboardScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const { user, logout } = useAuth()
   const [passkey, setPasskey] = useState(null)
+  const [currentOutpass, setCurrentOutpass] = useState(null)
   const [stats, setStats] = useState({
     totalOutpasses: 0,
     activeOutpasses: 0,
@@ -35,6 +36,7 @@ export default function DashboardScreen({ navigation }) {
       ])
 
       setPasskey(passkeyResponse.data)
+      setCurrentOutpass(outpassesResponse.data?.outpass || null)
 
       if (outpassesResponse.data.outpass){
         const outpasses = outpassesResponse.data.outpass.auditTrail
@@ -65,6 +67,35 @@ export default function DashboardScreen({ navigation }) {
     ])
   }
 
+  const handleUseOutpass = async () => {
+    try {
+      const activeOutpass = currentOutpass || (await outpass.getOutpasses()).data?.outpass
+
+      if (!activeOutpass) {
+        Alert.alert("No Outpass", "You do not have a current outpass to use.")
+        return
+      }
+
+      if ((activeOutpass.requestType || activeOutpass.type) === "long_visit") {
+        Alert.alert(
+          "Long Visit Request",
+          "Long visit requests are handled physically by the warden and are not used through the standard QR outpass flow.",
+        )
+        return
+      }
+
+      if (!activeOutpass.canUseOutpass) {
+        Alert.alert("Outpass Not Usable", "Your approved regular outpass is not currently usable for exit.")
+        return
+      }
+
+      navigation.navigate("Scan")
+    } catch (error) {
+      console.log("Use outpass error:", error)
+      Alert.alert("Error", "Unable to load your current outpass right now.")
+    }
+  }
+
   if (loading) {
     return <LoadingSpinner />
   }
@@ -74,24 +105,27 @@ export default function DashboardScreen({ navigation }) {
       style={[styles.container, { backgroundColor: colors.background }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={[styles.header, { backgroundColor: colors.card }]}> 
-        
-        
+      <View style={[styles.header, { backgroundColor: colors.header }]}>
+
+
         <View style={styles.headerContent}>
 
           <View>
-            <Text style={[styles.greeting, { color: colors.text }]}>Good {getGreeting()}</Text>
-            <Text style={[styles.userName, { color: colors.text }]}>{user?.name}</Text>
-            <Text style={[styles.studentId, { color: colors.text }]}>{user?.studentId}</Text>
+            <Text style={[styles.greeting, { color: colors.subText }]}>Good {getGreeting()}</Text>
+            <Text style={[styles.userName, { color: colors.heading }]}>{user?.name}</Text>
+            <Text style={[styles.studentId, { color: colors.subText }]}>{user?.studentId}</Text>
           </View>
 
           <View>
-            <TouchableOpacity onPress={toggleTheme}>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={{ padding: 10, borderRadius: 14, backgroundColor: colors.cardElevated, borderWidth: 1, borderColor: colors.border }}
+            >
               <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={colors.text} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={28} color={isDarkMode ? '#f44336' : '#f44336'} />
+            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.dangerSoft }]} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color={colors.danger} />
             </TouchableOpacity>
           </View>
 
@@ -104,34 +138,38 @@ export default function DashboardScreen({ navigation }) {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.heading }]}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("Scan")}> 
-              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#4caf5020' : '#4caf5020' }]}> 
-                <Ionicons name="scan" size={24} color={isDarkMode ? '#4caf50' : '#4caf50'} />
+            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("Scan")}>
+              <View style={[styles.actionIcon, { backgroundColor: colors.successSoft }]}>
+                <Ionicons name="scan" size={24} color={colors.success} />
               </View>
-              <Text style={[styles.actionText, { color: colors.subText }]}>Scan</Text>
+              <Text style={[styles.actionText, { color: colors.heading }]}>Scan</Text>
+              <Text style={[styles.actionSubText, { color: colors.subText }]}>Verify movement</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("Library")}> 
-              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#2196f320' : '#2196f320' }]}> 
-                <Ionicons name="book" size={24} color={isDarkMode ? '#2196f3' : '#2196f3'} />
+            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("Library")}>
+              <View style={[styles.actionIcon, { backgroundColor: colors.primarySoft }]}>
+                <Ionicons name="book" size={24} color={colors.primary} />
               </View>
-              <Text style={[styles.actionText, { color: colors.subText }]}>Library</Text>
+              <Text style={[styles.actionText, { color: colors.heading }]}>Library</Text>
+              <Text style={[styles.actionSubText, { color: colors.subText }]}>Campus resources</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("SAC")}> 
-              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#f4433620' : '#f4433620' }]}> 
-                <Ionicons name="bicycle" size={24} color={isDarkMode ? '#ff9800' : '#ff9800'} />
+            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("SAC")}>
+              <View style={[styles.actionIcon, { backgroundColor: colors.warningSoft }]}>
+                <Ionicons name="bicycle" size={24} color={colors.warning} />
               </View>
-              <Text style={[styles.actionText, { color: colors.subText }]}>SAC</Text>
+              <Text style={[styles.actionText, { color: colors.heading }]}>SAC</Text>
+              <Text style={[styles.actionSubText, { color: colors.subText }]}>Recreation access</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("Profile")}> 
-              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#4caf5020' : '#4caf5020' }]}> 
-                <Ionicons name="person" size={24} color={isDarkMode ? '#4caf50' : '#4caf50'} />
+            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={handleUseOutpass}>
+              <View style={[styles.actionIcon, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="log-out-outline" size={24} color={colors.accent} />
               </View>
-              <Text style={[styles.actionText, { color: colors.subText }]}>Profile</Text>
+              <Text style={[styles.actionText, { color: colors.heading }]}>Use Outpass</Text>
+              <Text style={[styles.actionSubText, { color: colors.subText }]}>Approved exit flow</Text>
             </TouchableOpacity>
           </View>
         </View>

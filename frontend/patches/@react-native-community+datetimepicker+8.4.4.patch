@@ -1,0 +1,15 @@
+diff --git a/node_modules/@react-native-community/datetimepicker/android/build.gradle b/node_modules/@react-native-community/datetimepicker/android/build.gradle
+index af810e8..e44a015 100644
+--- a/node_modules/@react-native-community/datetimepicker/android/build.gradle
++++ b/node_modules/@react-native-community/datetimepicker/android/build.gradle
+@@ -31,7 +31,9 @@ android {
+     }
+ 
+     compileSdkVersion getExtOrIntegerDefault('compileSdkVersion')
+-
++    buildFeatures {
++        buildConfig = true
++    }
+     // Used to override the NDK path/version on internal CI or by allowing
+     // users to customize the NDK path/version from their root project (e.g. for M1 support)
+     if (rootProject.hasProperty("ndkPath")) {

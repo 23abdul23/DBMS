@@ -13,11 +13,8 @@ import styles from "../styles/WardenStyles"
 
 const filters = [
   { key: "all", label: "All" },
-  { key: "pending_review", label: "Pending" },
-  { key: "awaiting_exit", label: "Awaiting Exit" },
-  { key: "ongoing", label: "Outside" },
-  { key: "overdue", label: "Overdue" },
-  { key: "inside", label: "Inside" },
+  { key: "inside", label: "Inside Campus" },
+  { key: "outside", label: "Outside Campus" },
 ]
 
 export default function WardenMonitoringScreen() {
@@ -70,7 +67,7 @@ export default function WardenMonitoringScreen() {
       return monitoring
     }
 
-    return monitoring.filter((item) => item.monitoringState === activeFilter)
+    return monitoring.filter((item) => item.campusPresence === activeFilter)
   }, [activeFilter, monitoring])
 
   const filterOptions = useMemo(
@@ -103,7 +100,7 @@ export default function WardenMonitoringScreen() {
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Student Monitoring</Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
-              Track who is waiting, outside, overdue, or back inside.
+              Privacy-safe inside and outside campus presence for your hostel.
             </Text>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
