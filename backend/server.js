@@ -35,18 +35,8 @@ const allowedOrigins = [
   "http://localhost:8081", // Expo web dev
 ]
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        callback(new Error("Not allowed by CORS"))
-      }
-    },
-    credentials: true,
-  })
-)
+app.use(cors());
+
 
 // Rate limiting
 const limiter = rateLimit({
