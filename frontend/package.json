@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "postinstall": "patch-package",
     "web": "expo start --web",
     "test:api": "node scripts/smoke-api.js"
@@ -29,7 +29,6 @@
     "embla-carousel-react": "8.5.1",
     "expo": "^54.0.30",
     "expo-application": "~7.0.8",
-    "expo-barcode-scanner": "^13.0.1",
     "expo-camera": "~17.0.10",
     "expo-device": "~8.0.10",
     "expo-font": "~14.0.10",
