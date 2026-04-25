@@ -307,7 +307,7 @@ router.put("/students/:id/status", [authenticate, adminAuth], async (req, res) =
       data: {
         id: generateId(),
         userId: req.params.id,
-        action: "scan_attempt",
+        action: "user_status_updated",
         success: true,
         details: {
           message: `Student status updated to ${nextIsActive ? "active" : "inactive"} by admin`,

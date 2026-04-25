@@ -15,6 +15,7 @@ export default function DashboardScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const { user, logout } = useAuth()
   const [passkey, setPasskey] = useState(null)
+  const [currentOutpass, setCurrentOutpass] = useState(null)
   const [stats, setStats] = useState({
     totalOutpasses: 0,
     activeOutpasses: 0,
@@ -35,6 +36,7 @@ export default function DashboardScreen({ navigation }) {
       ])
 
       setPasskey(passkeyResponse.data)
+      setCurrentOutpass(outpassesResponse.data?.outpass || null)
 
       if (outpassesResponse.data.outpass){
         const outpasses = outpassesResponse.data.outpass.auditTrail
@@ -63,6 +65,35 @@ export default function DashboardScreen({ navigation }) {
       { text: "Cancel", style: "cancel" },
       { text: "Logout", style: "destructive", onPress: logout },
     ])
+  }
+
+  const handleUseOutpass = async () => {
+    try {
+      const activeOutpass = currentOutpass || (await outpass.getOutpasses()).data?.outpass
+
+      if (!activeOutpass) {
+        Alert.alert("No Outpass", "You do not have a current outpass to use.")
+        return
+      }
+
+      if ((activeOutpass.requestType || activeOutpass.type) === "long_visit") {
+        Alert.alert(
+          "Long Visit Request",
+          "Long visit requests are handled physically by the warden and are not used through the standard QR outpass flow.",
+        )
+        return
+      }
+
+      if (!activeOutpass.canUseOutpass) {
+        Alert.alert("Outpass Not Usable", "Your approved regular outpass is not currently usable for exit.")
+        return
+      }
+
+      navigation.navigate("Scan")
+    } catch (error) {
+      console.log("Use outpass error:", error)
+      Alert.alert("Error", "Unable to load your current outpass right now.")
+    }
   }
 
   if (loading) {
@@ -127,11 +158,11 @@ export default function DashboardScreen({ navigation }) {
               <Text style={[styles.actionText, { color: colors.subText }]}>SAC</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate("Profile")}> 
-              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#4caf5020' : '#4caf5020' }]}> 
-                <Ionicons name="person" size={24} color={isDarkMode ? '#4caf50' : '#4caf50'} />
+            <TouchableOpacity style={styles.actionCard} onPress={handleUseOutpass}> 
+              <View style={[styles.actionIcon, { backgroundColor: isDarkMode ? '#f59e0b20' : '#f59e0b20' }]}> 
+                <Ionicons name="log-out-outline" size={24} color="#f59e0b" />
               </View>
-              <Text style={[styles.actionText, { color: colors.subText }]}>Profile</Text>
+              <Text style={[styles.actionText, { color: colors.subText }]}>Use Outpass</Text>
             </TouchableOpacity>
           </View>
         </View>
