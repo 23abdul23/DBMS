@@ -4,50 +4,20 @@ const { authenticate, authorize } = require("../middleware/auth")
 const { checkOutpassExpiry } = require("../middleware/outpassExpiry")
 const { generateId } = require("../utils/hashGenerator")
 const {
+  OUTPASS_REQUEST_TYPE,
   outpassInclude,
   getDayRange,
   resolveOutpassDateTimes,
+  resolveOutpassRequestType,
   buildOutpassResponse,
   getLatestMovementMap,
   expireOldOutpasses,
+  canCancelOutpass,
+  validateOutpassWindow,
 } = require("../utils/outpassLifecycle")
 
 const prisma = getPrismaClient()
 const router = express.Router()
-
-const validateCreatePayload = ({ reason, destination, exitDate, returnDate }) => {
-  if (!reason || !destination || !exitDate || !returnDate) {
-    return "Please provide purpose, destination, departure, and return time"
-  }
-
-  if (returnDate <= exitDate) {
-    return "Expected return time must be after departure time"
-  }
-
-  const now = new Date()
-  const pastThreshold = new Date(now.getTime() - 5 * 60 * 1000)
-  if (exitDate < pastThreshold) {
-    return "Departure time cannot be in the past"
-  }
-
-  return null
-}
-
-const canStudentCancelOutpass = (outpass, latestMovement) => {
-  if (!["pending", "approved"].includes(outpass.status)) {
-    return false
-  }
-
-  if (outpass.actualReturnDate) {
-    return false
-  }
-
-  if (latestMovement?.action === "exit" && latestMovement.createdAt >= outpass.outDate) {
-    return false
-  }
-
-  return outpass.outDate > new Date()
-}
 
 router.post("/generate", [authenticate, authorize("student")], async (req, res) => {
   try {
@@ -58,13 +28,21 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
     const requestRemarks = String(req.body.remarks || "").trim()
     const emergencyName = String(req.body.emergencyName || req.body.emergencyContactName || "").trim()
     const emergencyContact = String(req.body.emergencyContact || req.body.emergencyContactPhone || "").trim()
+    const requestType = resolveOutpassRequestType(req.body)
     const { exitDate, returnDate } = resolveOutpassDateTimes(req.body)
 
-    const validationError = validateCreatePayload({
-      reason,
-      destination,
+    if (!reason || !destination || !exitDate || !returnDate) {
+      return res.status(400).json({ message: "Please provide purpose, destination, departure, and return time" })
+    }
+
+    if (!emergencyName || !emergencyContact) {
+      return res.status(400).json({ message: "Emergency contact name and phone are required" })
+    }
+
+    const validationError = validateOutpassWindow({
       exitDate,
       returnDate,
+      requestType,
     })
 
     if (validationError) {
@@ -93,6 +71,12 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
       })
     }
 
+    const logAction = requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT ? "outpass_long_visit" : "outpass_request"
+    const initialRemarks =
+      requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
+        ? requestRemarks || "Long visit request submitted. Physical warden approval required."
+        : requestRemarks || "Outpass request submitted"
+
     const outpass = await prisma.$transaction(async (tx) => {
       const createdOutpass = await tx.outpass.create({
         data: {
@@ -102,8 +86,9 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
           destination,
           outDate: exitDate,
           expectedReturnDate: returnDate,
-          emergencyContactName: emergencyName || null,
-          emergencyContactPhone: emergencyContact || null,
+          emergencyContactName: emergencyName,
+          emergencyContactPhone: emergencyContact,
+          requestType,
           status: "pending",
         },
         include: outpassInclude,
@@ -116,7 +101,7 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
           status: "pending",
           changedBy: req.user.userId,
           changedAt: new Date(),
-          remarks: requestRemarks || "Outpass request submitted",
+          remarks: initialRemarks,
         },
       })
 
@@ -124,11 +109,15 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
         data: {
           id: generateId(),
           userId: req.user.userId,
-          action: "outpass_request",
+          action: logAction,
           success: true,
           details: {
-            message: `Outpass requested for ${destination}`,
+            message:
+              requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
+                ? `Long visit request created for ${destination}`
+                : `Outpass requested for ${destination}`,
             outpassId: createdOutpass.id,
+            requestType,
             requestedExit: exitDate.toISOString(),
             requestedReturn: returnDate.toISOString(),
           },
@@ -143,7 +132,10 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
     })
 
     res.status(201).json({
-      message: "Outpass request submitted successfully",
+      message:
+        requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
+          ? "Long visit request submitted. Please visit the warden physically for approval."
+          : "Outpass request submitted successfully",
       outpass: buildOutpassResponse(outpass),
     })
   } catch (error) {
@@ -154,7 +146,7 @@ router.post("/generate", [authenticate, authorize("student")], async (req, res) 
 
 router.get("/history", [authenticate, authorize("student"), checkOutpassExpiry], async (req, res) => {
   try {
-    const { status, limit } = req.query
+    const { status, limit, requestType } = req.query
     const parsedLimit = Math.min(Number.parseInt(limit, 10) || 25, 100)
 
     const where = {
@@ -162,6 +154,11 @@ router.get("/history", [authenticate, authorize("student"), checkOutpassExpiry],
       ...(status && typeof status === "string" && status.trim().length > 0
         ? {
             status: status.trim().toLowerCase(),
+          }
+        : {}),
+      ...(requestType && typeof requestType === "string" && requestType.trim().length > 0
+        ? {
+            requestType: requestType.trim().toLowerCase(),
           }
         : {}),
     }
@@ -197,10 +194,24 @@ router.get("/today", [authenticate, authorize("student"), checkOutpassExpiry], a
     const outpass = await prisma.outpass.findFirst({
       where: {
         userId: req.user.userId,
-        outDate: {
-          gte: start,
-          lt: end,
-        },
+        OR: [
+          {
+            outDate: {
+              gte: start,
+              lt: end,
+            },
+          },
+          {
+            requestType: OUTPASS_REQUEST_TYPE.LONG_VISIT,
+            status: {
+              in: ["pending", "approved", "expired"],
+            },
+            actualReturnDate: null,
+            expectedReturnDate: {
+              gte: start,
+            },
+          },
+        ],
       },
       orderBy: {
         createdAt: "desc",
@@ -222,9 +233,12 @@ router.get("/today", [authenticate, authorize("student"), checkOutpassExpiry], a
 
     res.json({
       outpass: serializedOutpass,
-      isActive: ["approved"].includes(serializedOutpass.status),
-      isOngoing: serializedOutpass.monitoringState === "ongoing",
+      isActive: serializedOutpass.status === "approved" && !serializedOutpass.actualReturnDate,
+      isOngoing: ["ongoing", "yellow_alert", "danger", "long_visit_away"].includes(serializedOutpass.monitoringState),
       timeRemaining: serializedOutpass.timeRemainingMs,
+      canCancel: serializedOutpass.canCancel,
+      canUseOutpass: serializedOutpass.canUseOutpass,
+      campusRiskLevel: serializedOutpass.campusRiskLevel,
     })
   } catch (error) {
     console.error("Today's outpass fetch error:", error)
@@ -255,7 +269,7 @@ router.put("/:id", [authenticate, authorize("student"), checkOutpassExpiry], asy
     const movementMap = await getLatestMovementMap(prisma, [req.user.userId])
     const latestMovement = movementMap.get(req.user.userId)
 
-    if (!canStudentCancelOutpass(outpass, latestMovement)) {
+    if (!canCancelOutpass(outpass, latestMovement)) {
       return res.status(400).json({
         message: "This outpass can no longer be cancelled",
       })
@@ -281,6 +295,23 @@ router.put("/:id", [authenticate, authorize("student"), checkOutpassExpiry], asy
           changedBy: req.user.userId,
           changedAt: new Date(),
           remarks: cancellationRemarks,
+        },
+      })
+
+      await tx.log.create({
+        data: {
+          id: generateId(),
+          userId: req.user.userId,
+          action: "outpass_status_changed",
+          success: true,
+          details: {
+            outpassId: outpass.id,
+            requestType: outpass.requestType,
+            previousStatus: outpass.status,
+            nextStatus: "cancelled",
+            source: "student",
+          },
+          scanType: "manual",
         },
       })
 

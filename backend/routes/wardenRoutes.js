@@ -9,6 +9,7 @@ const {
   getLatestMovementMap,
   expireOldOutpasses,
   getDayRange,
+  canCancelOutpass,
 } = require("../utils/outpassLifecycle")
 
 const prisma = getPrismaClient()
@@ -98,21 +99,7 @@ const actionStatusMap = {
   cancel: "cancelled",
 }
 
-const canCancelByWarden = (outpass, latestMovement) => {
-  if (!["pending", "approved"].includes(outpass.status)) {
-    return false
-  }
-
-  if (outpass.actualReturnDate) {
-    return false
-  }
-
-  if (latestMovement?.action === "exit" && latestMovement.createdAt >= outpass.outDate) {
-    return false
-  }
-
-  return true
-}
+const canCancelByWarden = (outpass, latestMovement) => canCancelOutpass(outpass, latestMovement)
 
 router.get("/dashboard", [authenticate, authorize("warden")], async (req, res) => {
   try {
@@ -129,7 +116,7 @@ router.get("/dashboard", [authenticate, authorize("warden")], async (req, res) =
       totalStudents,
       pendingRequests,
       approvedRequests,
-      overdueRequests,
+      expiredRequests,
       returnedToday,
       recentOutpasses,
       activeOutpasses,
@@ -236,10 +223,19 @@ router.get("/dashboard", [authenticate, authorize("warden")], async (req, res) =
       }),
     )
 
-    const ongoingCount = serializedActiveOutpasses.filter((item) => item.monitoringState === "ongoing").length
+    const ongoingCount = serializedActiveOutpasses.filter((item) =>
+      ["ongoing", "yellow_alert", "danger", "long_visit_away"].includes(item.monitoringState),
+    ).length
+    const overdueRequests = serializedActiveOutpasses.filter((item) => item.monitoringState === "overdue").length
+    const yellowAlerts = serializedActiveOutpasses.filter((item) => item.monitoringState === "yellow_alert").length
+    const dangerAlerts = serializedActiveOutpasses.filter((item) => item.monitoringState === "danger").length
     const recentPending = serializedOutpasses.filter((item) => item.status === "pending").slice(0, 5)
     const activeMonitoring = serializedActiveOutpasses
-      .filter((item) => ["ongoing", "overdue", "awaiting_exit"].includes(item.monitoringState))
+      .filter((item) =>
+        ["ongoing", "yellow_alert", "danger", "overdue", "awaiting_exit", "long_visit_away"].includes(
+          item.monitoringState,
+        ),
+      )
       .slice(0, 5)
 
     res.json({
@@ -249,7 +245,10 @@ router.get("/dashboard", [authenticate, authorize("warden")], async (req, res) =
         pendingRequests,
         approvedRequests,
         ongoingCount,
+        expiredRequests,
         overdueRequests,
+        yellowAlerts,
+        dangerAlerts,
         returnedToday,
       },
       recentPending,
@@ -452,6 +451,24 @@ router.patch("/outpasses/:id/action", [authenticate, authorize("warden")], async
         },
       })
 
+      await tx.log.create({
+        data: {
+          id: generateId(),
+          userId: outpass.userId,
+          action: "outpass_status_changed",
+          success: true,
+          details: {
+            outpassId: outpass.id,
+            requestType: outpass.requestType,
+            previousStatus: outpass.status,
+            nextStatus,
+            source: "warden",
+            changedBy: req.user.userId,
+          },
+          scanType: "manual",
+        },
+      })
+
       return tx.outpass.findUnique({
         where: {
           id: outpass.id,
@@ -587,15 +604,18 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
     }
 
     const sortPriority = {
-      overdue: 1,
-      ongoing: 2,
-      pending_review: 3,
-      awaiting_exit: 4,
-      approved: 5,
-      returned_late: 6,
-      returned: 7,
-      inside: 8,
-      outside_without_outpass: 9,
+      outside_without_outpass: 1,
+      danger: 2,
+      yellow_alert: 3,
+      overdue: 4,
+      ongoing: 5,
+      long_visit_away: 6,
+      pending_review: 7,
+      awaiting_exit: 8,
+      approved: 9,
+      returned_late: 10,
+      returned: 11,
+      inside: 12,
     }
 
     monitoring.sort((left, right) => {

@@ -370,7 +370,7 @@ router.put("/admin/:id/status", [authenticate, adminAuth], async (req, res) => {
       data: {
         id: generateId(),
         userId: emergency.userId,
-        action: "emergency_alert",
+        action: "emergency_status_updated",
         success: true,
         details: {
           message: `Emergency marked as ${normalizedStatus} by admin${response ? `: ${response}` : ""}`,

@@ -6,6 +6,8 @@ import styles from "../styles/WardenStyles"
 import { COLORS } from "../utils/constants"
 
 const stateColors = {
+  danger: "#dc2626",
+  yellow_alert: "#f59e0b",
   overdue: "#dc2626",
   ongoing: "#7c3aed",
   pending_review: "#f59e0b",
@@ -13,6 +15,7 @@ const stateColors = {
   approved: "#10b981",
   returned: "#059669",
   returned_late: "#c2410c",
+  long_visit_away: "#0f766e",
   inside: "#6b7280",
   outside_without_outpass: "#b91c1c",
 }

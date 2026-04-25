@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext"
 import { Picker } from "@react-native-picker/picker"
 import QRCode from "react-native-qrcode-svg"
 import * as FileSystem from "expo-file-system/legacy"
+import { captureRef } from "react-native-view-shot"
 import styles from "../styles/DashboardStyles"
 import AllLocations from "../constants/SecuityLocations.json"
 import api from "../services/api"
@@ -21,14 +22,6 @@ const sanitizeFilePart = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
 
-const escapeXml = (value) =>
-  String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;")
-
 const formatDateStamp = (date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
@@ -39,32 +32,11 @@ const formatDateStamp = (date) => {
   return `${year}-${month}-${day}-${hours}${minutes}${seconds}`
 }
 
-const buildQrSvgMarkup = ({ qrBase64, location, generatedAt, guardName, guardId }) => {
-  const width = 640
-  const height = 860
-  const safeLocation = escapeXml(location)
-  const safeGeneratedAt = escapeXml(generatedAt)
-  const safeGuardName = escapeXml(guardName)
-  const safeGuardId = escapeXml(guardId)
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <rect width="100%" height="100%" fill="#ffffff" rx="28" ry="28" />
-  <text x="50%" y="86" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" font-weight="700" fill="#111827">Aegis Guard QR</text>
-  <text x="50%" y="138" text-anchor="middle" font-size="24" font-family="Arial, sans-serif" fill="#374151">Location: ${safeLocation}</text>
-  <text x="50%" y="178" text-anchor="middle" font-size="20" font-family="Arial, sans-serif" fill="#6b7280">Generated: ${safeGeneratedAt}</text>
-  <text x="50%" y="214" text-anchor="middle" font-size="20" font-family="Arial, sans-serif" fill="#6b7280">Guard: ${safeGuardName}${safeGuardId ? ` (${safeGuardId})` : ""}</text>
-  <rect x="120" y="260" width="400" height="400" rx="20" ry="20" fill="#f8fafc" />
-  <image href="data:image/png;base64,${qrBase64}" x="170" y="310" width="300" height="300" />
-  <text x="50%" y="738" text-anchor="middle" font-size="22" font-family="Arial, sans-serif" fill="#4b5563">Scan this QR at entry or exit</text>
-</svg>`
-}
-
 export default function GuardDashboardScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme()
   const { user, token, logout } = useAuth()
 
-  const qrRef = useRef(null)
+  const qrCardRef = useRef(null)
   const [profile, setProfile] = useState(null)
   const [loc, setLoc] = useState("")
   const [loading, setLoading] = useState(true)
@@ -136,23 +108,6 @@ export default function GuardDashboardScreen({ navigation }) {
     ])
   }
 
-  const getQrBase64 = () =>
-    new Promise((resolve, reject) => {
-      if (!qrRef.current?.toDataURL) {
-        reject(new Error("QR reference unavailable"))
-        return
-      }
-
-      qrRef.current.toDataURL((data) => {
-        if (!data) {
-          reject(new Error("Unable to generate QR image"))
-          return
-        }
-
-        resolve(data)
-      })
-    })
-
   const handleDownloadQr = async () => {
     if (!loc) {
       Alert.alert("Location Required", "Please select a location before downloading the QR.")
@@ -161,20 +116,16 @@ export default function GuardDashboardScreen({ navigation }) {
 
     try {
       setSavingQr(true)
-      const qrBase64 = await getQrBase64()
+      const capturedUri = await captureRef(qrCardRef.current, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+      })
       const now = new Date()
       const fileDate = formatDateStamp(now)
-      const fileName = `aegis-qr-${sanitizeFilePart(loc) || "location"}-${fileDate}.svg`
-      const svgMarkup = buildQrSvgMarkup({
-        qrBase64,
-        location: loc,
-        generatedAt: now.toLocaleString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-        guardName: user?.name || "Guard",
-        guardId: user?.guardId || "",
+      const fileName = `aegis-qr-${sanitizeFilePart(loc) || "location"}-${fileDate}.png`
+      const capturedBase64 = await FileSystem.readAsStringAsync(capturedUri, {
+        encoding: FileSystem.EncodingType.Base64,
       })
 
       if (Platform.OS === "android") {
@@ -188,11 +139,11 @@ export default function GuardDashboardScreen({ navigation }) {
         const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
           permissions.directoryUri,
           fileName,
-          "image/svg+xml",
+          "image/png",
         )
 
-        await FileSystem.writeAsStringAsync(fileUri, svgMarkup, {
-          encoding: FileSystem.EncodingType.UTF8,
+        await FileSystem.writeAsStringAsync(fileUri, capturedBase64, {
+          encoding: FileSystem.EncodingType.Base64,
         })
 
         Alert.alert("QR Saved", `Saved ${fileName}`)
@@ -200,8 +151,8 @@ export default function GuardDashboardScreen({ navigation }) {
       }
 
       const fallbackUri = `${FileSystem.documentDirectory}${fileName}`
-      await FileSystem.writeAsStringAsync(fallbackUri, svgMarkup, {
-        encoding: FileSystem.EncodingType.UTF8,
+      await FileSystem.writeAsStringAsync(fallbackUri, capturedBase64, {
+        encoding: FileSystem.EncodingType.Base64,
       })
 
       Alert.alert("QR Saved", `Saved to ${fallbackUri}`)
@@ -291,16 +242,13 @@ export default function GuardDashboardScreen({ navigation }) {
         </View>
 
         <View style={localStyles.qrWrapper}>
-          <View style={[localStyles.qrCardLarge, { backgroundColor: COLORS.white }]}>
+          <View ref={qrCardRef} collapsable={false} style={[localStyles.qrCardLarge, { backgroundColor: COLORS.white }]}>
             <Text style={localStyles.qrCardTitle}>Guard QR</Text>
             <Text style={localStyles.qrMeta}>Location: {loc || "-"}</Text>
             <Text style={localStyles.qrMeta}>Date: {generatedDateLabel}</Text>
             <Text style={localStyles.qrMeta}>Guard: {user?.name || "Guard"}</Text>
             <View style={localStyles.qrCanvas}>
               <QRCode
-                getRef={(ref) => {
-                  qrRef.current = ref
-                }}
                 value={qrPayload}
                 size={200}
                 color={COLORS.gray[800]}
@@ -445,3 +393,4 @@ const localStyles = StyleSheet.create({
     fontFamily: FONTS.bold,
   },
 })
+

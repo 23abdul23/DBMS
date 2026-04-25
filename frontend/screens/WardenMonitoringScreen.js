@@ -13,9 +13,12 @@ import styles from "../styles/WardenStyles"
 
 const filters = [
   { key: "all", label: "All" },
+  { key: "danger", label: "Danger" },
+  { key: "yellow_alert", label: "Yellow" },
   { key: "pending_review", label: "Pending" },
   { key: "awaiting_exit", label: "Awaiting Exit" },
   { key: "ongoing", label: "Outside" },
+  { key: "long_visit_away", label: "Long Visit" },
   { key: "overdue", label: "Overdue" },
   { key: "inside", label: "Inside" },
 ]
@@ -103,7 +106,7 @@ export default function WardenMonitoringScreen() {
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Student Monitoring</Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
-              Track who is waiting, outside, overdue, or back inside.
+              Track danger, yellow alerts, outside students, long visits, and returns.
             </Text>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>

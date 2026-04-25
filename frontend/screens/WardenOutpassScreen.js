@@ -15,6 +15,9 @@ const filterDefinitions = [
   { key: "all", label: "All" },
   { key: "pending", label: "Pending" },
   { key: "approved", label: "Approved" },
+  { key: "long_visit", label: "Long Visit" },
+  { key: "danger", label: "Danger" },
+  { key: "yellow_alert", label: "Yellow" },
   { key: "ongoing", label: "Ongoing" },
   { key: "expired", label: "Expired" },
   { key: "rejected", label: "Rejected" },
@@ -69,12 +72,13 @@ export default function WardenOutpassScreen() {
     return outpasses.reduce(
       (accumulator, item) => {
         accumulator[item.status] = (accumulator[item.status] || 0) + 1
-        if (item.monitoringState === "ongoing") {
-          accumulator.ongoing = (accumulator.ongoing || 0) + 1
+        accumulator[item.monitoringState] = (accumulator[item.monitoringState] || 0) + 1
+        if (item.requestType === "long_visit" || item.type === "long_visit") {
+          accumulator.long_visit = (accumulator.long_visit || 0) + 1
         }
         return accumulator
       },
-      { ongoing: 0 },
+      { ongoing: 0, danger: 0, yellow_alert: 0, long_visit: 0 },
     )
   }, [outpasses])
 
@@ -92,8 +96,12 @@ export default function WardenOutpassScreen() {
       return outpasses
     }
 
-    if (activeFilter === "ongoing") {
-      return outpasses.filter((item) => item.monitoringState === "ongoing")
+    if (["ongoing", "danger", "yellow_alert"].includes(activeFilter)) {
+      return outpasses.filter((item) => item.monitoringState === activeFilter)
+    }
+
+    if (activeFilter === "long_visit") {
+      return outpasses.filter((item) => (item.requestType || item.type) === "long_visit")
     }
 
     return outpasses.filter((item) => item.status === activeFilter)

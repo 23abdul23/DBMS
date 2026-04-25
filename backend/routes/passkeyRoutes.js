@@ -185,7 +185,7 @@ router.post("/validate", authenticate, async (req, res) => {
       data: {
         id: generateId(),
         userId: passkey.userId,
-        action: "scan_attempt",
+        action: "passkey_validated",
         location: location || null,
         guardId: req.user.guardId || null,
         guardName: req.user.name || null,
