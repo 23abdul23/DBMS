@@ -68,7 +68,7 @@ export default function WardenMonitoringCard({ entry, colors }) {
         </>
       ) : (
         <Text style={[styles.metaText, { color: colors.subText }]}>
-          Student is currently inside campus. Exact internal location is intentionally hidden.
+          Student is currently inside campus.
         </Text>
       )}
 
