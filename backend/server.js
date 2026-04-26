@@ -8,7 +8,11 @@ require("dotenv").config()
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
 const { generateDailyPasskeys } = require("./utils/hashGenerator")
 const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
-const { runLibraryVisitSimulation, runLibraryClosingSweep, LIBRARY_TIMEZONE } = require("./utils/libraryVisitSimulator")
+const {
+  runCampusActivitySimulation,
+  runCampusClosingSweep,
+  CAMPUS_TIMEZONE,
+} = require("./utils/campusActivitySimulation")
 
 // Import routes
 const authRoutes = require("./routes/authRoutes")
@@ -24,7 +28,9 @@ const forgotRoutes = require("./routes/forgotRoute")
 const app = express()
 const PORT = process.env.PORT || 5000
 const DB_MODE = getDatabaseMode()
-const ENABLE_LIBRARY_SIMULATION = String(process.env.ENABLE_LIBRARY_SIMULATION || "").toLowerCase() === "true"
+const ENABLE_CAMPUS_SIMULATION =
+  String(process.env.ENABLE_CAMPUS_SIMULATION || "").toLowerCase() === "true" ||
+  String(process.env.ENABLE_LIBRARY_SIMULATION || "").toLowerCase() === "true"
 
 // Security middleware
 app.use(helmet())
@@ -127,37 +133,37 @@ cron.schedule("*/5 * * * *", async () => {
   }
 })
 
-if (ENABLE_LIBRARY_SIMULATION) {
+if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(
-    "*/10 7-22 * * *",
+    "*/5 * * * *",
     async () => {
       try {
-        const result = await runLibraryVisitSimulation()
+        const result = await runCampusActivitySimulation()
         if (!result?.skipped) {
           console.log(
-            `Library simulation created ${result.createdCount} logs (${result.entryCount} entries, ${result.exitCount} exits) at hour ${result.localHour}.`,
+            `Campus simulation profile=${result.profile} internalMoves=${result.internalMoves} outpassRequests=${result.outpassRequests} departures=${result.gateDepartures} returns=${result.gateReturns}.`,
           )
         }
       } catch (error) {
-        console.error("Library simulation cron failed:", error)
+        console.error("Campus simulation cron failed:", error)
       }
     },
-    { timezone: LIBRARY_TIMEZONE },
+    { timezone: CAMPUS_TIMEZONE },
   )
 
   cron.schedule(
     "0 23 * * *",
     async () => {
       try {
-        const result = await runLibraryClosingSweep()
+        const result = await runCampusClosingSweep()
         if (!result?.skipped) {
-          console.log(`Library closing sweep created ${result.createdCount} exit logs.`)
+          console.log(`Campus closing sweep settled ${result.settledCount} student(s) back to hostels.`)
         }
       } catch (error) {
-        console.error("Library closing sweep cron failed:", error)
+        console.error("Campus closing sweep cron failed:", error)
       }
     },
-    { timezone: LIBRARY_TIMEZONE },
+    { timezone: CAMPUS_TIMEZONE },
   )
 }
 
