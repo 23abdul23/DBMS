@@ -135,7 +135,7 @@ cron.schedule("*/5 * * * *", async () => {
 
 if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(
-    "*/5 * * * *",
+    "*/15 * * * *",
     async () => {
       try {
         const result = await runCampusActivitySimulation()

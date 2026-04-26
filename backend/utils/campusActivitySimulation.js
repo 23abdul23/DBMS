@@ -309,7 +309,7 @@ const pickAcademicDestination = (profile) => {
   const classWeights = [
     { value: "CC1", weight: 3 },
     { value: "CC2", weight: 3 },
-    { value: "CC3", weight: 2 },
+    { value: "CC3", weight: 6 },
     { value: "AAA", weight: 2 },
     { value: "Lecture Theatre", weight: 2 },
     { value: "SAC", weight: profile.name === "lunch" ? 2 : 1 },
