@@ -2,19 +2,97 @@ import axios from "axios"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import Constants from 'expo-constants';
 
+const ACTIVE_API_BASE_URL_KEY = "activeApiBaseUrl"
+const normalizeBaseUrl = (url) => String(url || "").replace(/\/+$/, "")
 
-const configuredApiBaseUrl = Constants.expoConfig?.extra?.API_BASE_URL;
+const configuredApiBaseUrl = normalizeBaseUrl(Constants.expoConfig?.extra?.API_BASE_URL);
+const configuredPrimaryApiBaseUrl = normalizeBaseUrl(
+  Constants.expoConfig?.extra?.API_BASE_URL_PRIMARY || configuredApiBaseUrl,
+)
+const configuredSecondaryApiBaseUrl = normalizeBaseUrl(Constants.expoConfig?.extra?.API_BASE_URL_SECONDARY)
 const PORT = Constants.expoConfig?.extra?.PORT || 8080;
 const API_HOST = Constants.expoConfig?.extra?.API_HOST || "localhost";
-const API_BASE_URL = configuredApiBaseUrl || `http://${API_HOST}:${PORT}/api`;
+const fallbackLocalBaseUrl = `http://${API_HOST}:${PORT}/api`;
+const PRIMARY_API_BASE_URL = configuredPrimaryApiBaseUrl || fallbackLocalBaseUrl;
+const SECONDARY_API_BASE_URL = configuredSecondaryApiBaseUrl;
+const API_BASE_URL = PRIMARY_API_BASE_URL;
 
-console.log("Current URL: ", API_BASE_URL)
+let activeApiBaseUrl = API_BASE_URL
+
+const apiBaseUrlOptions = [PRIMARY_API_BASE_URL, SECONDARY_API_BASE_URL].filter(Boolean)
+const canFailover =
+  Boolean(SECONDARY_API_BASE_URL) && normalizeBaseUrl(PRIMARY_API_BASE_URL) !== normalizeBaseUrl(SECONDARY_API_BASE_URL)
+
+const setActiveApiBaseUrl = async (baseUrl, reason = "manual") => {
+  if (!baseUrl || activeApiBaseUrl === baseUrl) {
+    return
+  }
+
+  activeApiBaseUrl = baseUrl
+  api.defaults.baseURL = baseUrl
+
+  try {
+    await AsyncStorage.setItem(ACTIVE_API_BASE_URL_KEY, baseUrl)
+  } catch (storageError) {
+    console.warn("Failed to persist API base URL:", storageError?.message || storageError)
+  }
+
+  console.log(`API switched to ${baseUrl} (${reason})`)
+}
+
+const restoreActiveApiBaseUrl = async () => {
+  try {
+    const persistedBaseUrl = normalizeBaseUrl(await AsyncStorage.getItem(ACTIVE_API_BASE_URL_KEY))
+    if (!persistedBaseUrl) {
+      return
+    }
+
+    if (apiBaseUrlOptions.includes(persistedBaseUrl)) {
+      await setActiveApiBaseUrl(persistedBaseUrl, "restore")
+    }
+  } catch (storageError) {
+    console.warn("Failed to restore API base URL:", storageError?.message || storageError)
+  }
+}
+
+const shouldTriggerFailover = (error) => {
+  if (!canFailover) {
+    return false
+  }
+
+  if (normalizeBaseUrl(activeApiBaseUrl) === normalizeBaseUrl(SECONDARY_API_BASE_URL)) {
+    return false
+  }
+
+  const originalRequest = error?.config
+  if (!originalRequest || originalRequest.__retriedOnFailover) {
+    return false
+  }
+
+  if (error?.code === "ECONNABORTED") {
+    return true
+  }
+
+  if (!error?.response) {
+    return true
+  }
+
+  const status = error.response.status
+  return [500, 502, 503, 504].includes(status)
+}
+
+console.log("Primary API URL:", PRIMARY_API_BASE_URL)
+if (SECONDARY_API_BASE_URL) {
+  console.log("Secondary API URL:", SECONDARY_API_BASE_URL)
+}
 
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
 })
+
+restoreActiveApiBaseUrl()
 
 const requestWithFallback = async (requests) => {
   let lastError
@@ -51,6 +129,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (shouldTriggerFailover(error)) {
+      const originalRequest = error.config
+      await setActiveApiBaseUrl(SECONDARY_API_BASE_URL, "primary-unreachable")
+
+      return api.request({
+        ...originalRequest,
+        baseURL: activeApiBaseUrl,
+        __retriedOnFailover: true,
+      })
+    }
+
     if (error.response?.status === 401) {
       // Token expired, logout user
       await AsyncStorage.removeItem("authToken")
