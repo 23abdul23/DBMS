@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, Platform, StyleSheet, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
@@ -18,16 +18,33 @@ import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import { StackScreen } from 'react-native-screens';
 import GuardDashboardScreen from './screens/GuardScreen';
+import { useTheme } from './context/ThemeContext';
 const Stack = createStackNavigator();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const { isDarkMode, colors } = useTheme();
 
   if (loading) {
     return <LoadingScreen />;
   }
+
+  const navigationTheme = {
+    ...(isDarkMode ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDarkMode ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+      card: colors.header,
+      border: colors.border,
+      text: colors.text,
+      primary: colors.primary,
+      notification: colors.danger,
+    },
+  }
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
       {user ? (
         user.role == 'student' ? (
         <>
@@ -58,7 +75,8 @@ function RootNavigator() {
         </>
       )}
 
-    </Stack.Navigator>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
@@ -66,13 +84,11 @@ export default function App() {
   const content = (
     <LocationProvider>
       <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
+        <RootNavigator />
       </AuthProvider>
     </LocationProvider>
   );
-  
+
   if (Platform.OS === 'web') {
     return (
       <ThemeProvider>

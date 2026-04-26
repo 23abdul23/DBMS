@@ -6,7 +6,6 @@ import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { useFocusEffect, useNavigation } from "@react-navigation/native"
 import { outpass } from "../services/api"
-import { COLORS } from "../utils/constants"
 
 import styles from "../styles/OutpassStyles"
 
@@ -122,18 +121,18 @@ export default function OutpassScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="document-text-outline" size={64} color={COLORS.gray[400]} />
-      <Text style={styles.emptyTitle}>
+      <Ionicons name="document-text-outline" size={64} color={colors.textMuted} />
+      <Text style={[styles.emptyTitle, { color: colors.heading }]}>
         {activeFilter === "all" ? "No Outpasses Yet" : `No ${activeFilter} outpasses`}
       </Text>
-      <Text style={styles.emptyText}>
+      <Text style={[styles.emptyText, { color: colors.subText }]}>
         {activeFilter === "all"
           ? "Create your first outpass request to get started"
           : `You don't have any ${activeFilter} outpasses`}
       </Text>
       {activeFilter === "all" && (
-        <TouchableOpacity style={styles.createButton} onPress={handleCreateOutpass}>
-          <Text style={styles.createButtonText}>Create Outpass</Text>
+        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={handleCreateOutpass}>
+          <Text style={[styles.createButtonText, { color: colors.onPrimary }]}>Create Outpass</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -148,15 +147,18 @@ export default function OutpassScreen() {
       <View
         style={[
           styles.header,
-          { backgroundColor: colors.card, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+          { backgroundColor: colors.header, flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomColor: colors.border },
         ]}
       >
         <View style={{ flex: 1 }} />
-        <Text style={[styles.headerTitle, { color: colors.text, textAlign: "center", flex: 2 }]}>
+        <Text style={[styles.headerTitle, { color: colors.heading, textAlign: "center", flex: 2 }]}>
           Outpass Management
         </Text>
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={{ padding: 10, borderRadius: 14, backgroundColor: colors.cardElevated, borderWidth: 1, borderColor: colors.border }}
+          >
             <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -175,12 +177,12 @@ export default function OutpassScreen() {
       />
 
       <TouchableOpacity
-        style={styles.floatingCreateButton}
+        style={[styles.floatingCreateButton, { backgroundColor: colors.primary, shadowColor: colors.shadowStrong }]}
         onPress={handleCreateOutpass}
         activeOpacity={0.85}
       >
-        <Ionicons name="add" size={28} color={COLORS.white} />
-        <Text style={styles.floatingCreateLabel}>Create Outpass</Text>
+        <Ionicons name="add" size={28} color={colors.onPrimary} />
+        <Text style={[styles.floatingCreateLabel, { color: colors.onPrimary }]}>Create Outpass</Text>
       </TouchableOpacity>
     </View>
   )

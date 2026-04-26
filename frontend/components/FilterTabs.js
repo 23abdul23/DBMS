@@ -2,34 +2,40 @@
 
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native"
 import { useMemo } from "react"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { FONTS, SIZES, SPACING } from "../utils/constants"
+import { useTheme } from "../context/ThemeContext"
 
 export default function FilterTabs({ options, activeFilter, onFilterChange }) {
-  const totalWidth = useMemo(() => options.length * 120, [options.length])
+  const { colors } = useTheme()
+  const totalWidth = useMemo(() => options.length * 124, [options.length])
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { minWidth: totalWidth }]}
-      >
-        {options.map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={[styles.tab, activeFilter === option.key && styles.activeTab]}
-            onPress={() => onFilterChange(option.key)}
-          >
-            <Text style={[styles.tabText, activeFilter === option.key && styles.activeTabText]}>{option.label}</Text>
-            {option.count > 0 && (
-              <View style={[styles.badge, activeFilter === option.key && styles.activeBadge]}>
-                <Text style={[styles.badgeText, activeFilter === option.key && styles.activeBadgeText]}>
-                  {option.count}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+    <View style={[styles.container, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { minWidth: totalWidth }]}>
+        {options.map((option) => {
+          const active = activeFilter === option.key
+
+          return (
+            <TouchableOpacity
+              key={option.key}
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: active ? colors.primary : colors.cardMuted,
+                  borderColor: active ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => onFilterChange(option.key)}
+            >
+              <Text style={[styles.tabText, { color: active ? colors.onPrimary : colors.subText }]}>{option.label}</Text>
+              {option.count > 0 ? (
+                <View style={[styles.badge, { backgroundColor: active ? "rgba(255,255,255,0.18)" : colors.cardElevated }]}>
+                  <Text style={[styles.badgeText, { color: active ? colors.onPrimary : colors.text }]}>{option.count}</Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
     </View>
   )
@@ -38,9 +44,7 @@ export default function FilterTabs({ options, activeFilter, onFilterChange }) {
 const styles = StyleSheet.create({
   container: {
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
@@ -51,23 +55,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     marginRight: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.gray[100],
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
+    borderRadius: 999,
+    borderWidth: 1,
   },
   tabText: {
     fontSize: SIZES.sm,
-    fontFamily: FONTS.regular,
-    color: COLORS.gray[600],
-  },
-  activeTabText: {
-    color: COLORS.white,
     fontFamily: FONTS.bold,
   },
   badge: {
-    backgroundColor: COLORS.gray[300],
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
     borderRadius: 10,
@@ -75,15 +70,8 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: "center",
   },
-  activeBadge: {
-    backgroundColor: COLORS.white + "30",
-  },
   badgeText: {
     fontSize: SIZES.xs,
     fontFamily: FONTS.bold,
-    color: COLORS.gray[700],
-  },
-  activeBadgeText: {
-    color: COLORS.white,
   },
 })
