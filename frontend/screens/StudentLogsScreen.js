@@ -142,8 +142,8 @@ export default function StudentLogsScreen() {
 
   return (
     <View style={[localStyles.container, { backgroundColor: colors.background }]}>
-      <View style={[localStyles.header, { backgroundColor: colors.card, borderBottomColor: colors.border || COLORS.gray[200] }]}>
-        <Text style={[localStyles.headerTitle, { color: colors.text }]}>My Logs</Text>
+      <View style={[localStyles.header, { backgroundColor: colors.header, borderBottomColor: colors.border || COLORS.gray[200] }]}>
+        <Text style={[localStyles.headerTitle, { color: colors.heading }]}>My Logs</Text>
         <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
           Personal entry, exit, and outpass activity
         </Text>
@@ -167,16 +167,16 @@ export default function StudentLogsScreen() {
           onEndReached={onLoadMore}
           ListFooterComponent={
             loadingMore ? (
-              <View style={localStyles.footerLoader}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              </View>
-            ) : hasMore ? (
-              <TouchableOpacity style={localStyles.loadMoreButton} onPress={onLoadMore}>
-                <Text style={localStyles.loadMoreText}>Load More</Text>
-              </TouchableOpacity>
-            ) : null
-          }
-        />
+                  <View style={localStyles.footerLoader}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  </View>
+                ) : hasMore ? (
+                  <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>
+                    <Text style={[localStyles.loadMoreText, { color: colors.onPrimary }]}>Load More</Text>
+                  </TouchableOpacity>
+                ) : null
+              }
+            />
       )}
     </View>
   )
@@ -222,11 +222,16 @@ const localStyles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
     borderLeftWidth: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   cardHeader: {
     flexDirection: "row",

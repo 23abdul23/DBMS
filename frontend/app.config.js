@@ -58,7 +58,7 @@ const apiPrimaryBaseUrl = getConfigValue(
   "API_BASE_URL_PRIMARY",
   getConfigValue("API_BASE_URL", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api"),
 )
-const apiSecondaryBaseUrl = getConfigValue("API_BASE_URL_SECONDARY", "https://api.aegisid.app/api")
+const apiSecondaryBaseUrl = getConfigValue("API_BASE_URL_SECONDARY", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api")
 const apiHost = getConfigValue("API_HOST", "10.145.159.171")
 
 // const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
@@ -80,7 +80,7 @@ module.exports = {
     splash: {
       image: "./assets/aegisIdLogo_bg.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#ffffff00",
     },
     ios: {
       supportsTablet: true,

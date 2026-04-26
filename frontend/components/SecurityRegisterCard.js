@@ -15,38 +15,38 @@ const LOCATION_OPTIONS = [
 export default function SecurityRegisterCard({ formData, updateFormData, colors }) {
   return (
     <>
-      <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-        <Ionicons name="mail-outline" size={20} color={colors.text} style={styles.inputIcon} />
+      <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Ionicons name="mail-outline" size={20} color={colors.subText} style={styles.inputIcon} />
         <TextInput
-          style={[styles.input, { color: colors.text }]}
+          style={[styles.input, { color: colors.inputText }]}
           placeholder="Email Address *"
-          placeholderTextColor={colors.text}
+          placeholderTextColor={colors.placeholder}
           value={formData.email}
           onChangeText={value => updateFormData('email', value)}
           keyboardType="email-address"
           autoCapitalize="none"
         />
       </View>
-      <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-        <Ionicons name="school-outline" size={20} color={colors.text} style={styles.inputIcon} />
+      <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Ionicons name="school-outline" size={20} color={colors.subText} style={styles.inputIcon} />
         <TextInput
-          style={[styles.input, { color: colors.text }]}
+          style={[styles.input, { color: colors.inputText }]}
           placeholder="Guard ID*"
-          placeholderTextColor={colors.text}
+          placeholderTextColor={colors.placeholder}
           value={formData.guardId}
           onChangeText={value => updateFormData('guardId', value)}
           autoCapitalize="characters"
         />
       </View>
-      <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-        <Ionicons name="shield-outline" size={20} color={colors.text} style={styles.inputIcon} />
-        
-        
+      <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Ionicons name="shield-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+
+
 
         <Picker
           selectedValue={formData.securityPost}
           onValueChange={(value) => updateFormData('securityPost', value)}
-          style={{ width: 310 }}
+          style={{ width: 310, color: colors.inputText }}
         >
           {LOCATION_OPTIONS.map((loc, index) => <Picker.Item key={index} label={loc} value={loc} />)}
         </Picker>

@@ -7,23 +7,23 @@ import { Ionicons } from '@expo/vector-icons';
 export default function WardenRegisterCard({ formData, updateFormData, hostels, colors }) {
   return (
     <>
-      <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-        <Ionicons name="mail-outline" size={20} color={colors.text} style={styles.inputIcon} />
+      <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Ionicons name="mail-outline" size={20} color={colors.subText} style={styles.inputIcon} />
         <TextInput
-          style={[styles.input, { color: colors.text }]}
+          style={[styles.input, { color: colors.inputText }]}
           placeholder="Email Address *"
-          placeholderTextColor={colors.text}
+          placeholderTextColor={colors.placeholder}
           value={formData.email}
           onChangeText={value => updateFormData('email', value)}
           keyboardType="email-address"
           autoCapitalize="none"
         />
       </View>
-      <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-        <Ionicons name="home-outline" size={20} color={colors.text} style={styles.inputIcon} />
+      <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Ionicons name="home-outline" size={20} color={colors.subText} style={styles.inputIcon} />
         <Picker
           selectedValue={formData.hostel}
-          style={styles.picker}
+          style={[styles.picker, { color: colors.inputText }]}
           onValueChange={value => updateFormData('hostel', value)}>
           <Picker.Item label="Select Hostel Assigned *" value="" />
           {hostels.map(hostel => (
