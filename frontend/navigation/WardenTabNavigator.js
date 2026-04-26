@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from "@expo/vector-icons"
+import { useTheme } from "../context/ThemeContext"
 
 import WardenDashboardScreen from "../screens/WardenDashboardScreen"
 import WardenOutpassScreen from "../screens/WardenOutpassScreen"
@@ -9,6 +10,8 @@ import ProfileScreen from "../screens/ProfileScreen"
 const Tab = createBottomTabNavigator()
 
 export default function WardenTabNavigator() {
+  const { colors } = useTheme()
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -27,8 +30,19 @@ export default function WardenTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />
         },
-        tabBarActiveTintColor: "#2563eb",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.tabBarBorder,
+          height: 72,
+          paddingTop: 8,
+          paddingBottom: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
         headerShown: false,
       })}
     >

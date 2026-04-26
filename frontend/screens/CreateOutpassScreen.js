@@ -132,7 +132,7 @@ export default function CreateOutpassScreen({ navigation }) {
       Alert.alert("Success", successMessage, [
         { text: "OK", onPress: () => navigation.goBack() },
       ])
-    } 
+    }
     catch (error) {
       Alert.alert("Error Screen", error.response?.data?.message || "Failed to create outpass")
     } finally {
@@ -161,14 +161,14 @@ export default function CreateOutpassScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <View style={[styles.header, { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
-        
+      <View style={[styles.header, { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+
         <TouchableOpacity style={{ padding: 8 }} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: colors.text, flex: 1, textAlign: 'center' }]}>Create Outpass</Text>
-        
+        <Text style={[styles.headerTitle, { color: colors.heading, flex: 1, textAlign: 'center' }]}>Create Outpass</Text>
+
         <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
           <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={colors.text} />
         </TouchableOpacity>
@@ -177,55 +177,55 @@ export default function CreateOutpassScreen({ navigation }) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-            <Text style={[styles.label, { color: colors.text }]}>Purpose *</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.label, { color: colors.heading }]}>Purpose *</Text>
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="e.g., Medical appointment, Family visit"
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={colors.placeholder}
               value={formData.purpose}
               onChangeText={(value) => updateFormData("purpose", value)}
               multiline
             />
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-            <Text style={[styles.label, { color: colors.text }]}>Destination *</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.label, { color: colors.heading }]}>Destination *</Text>
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="e.g., City Hospital, Home"
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={colors.placeholder}
               value={formData.destination}
               onChangeText={(value) => updateFormData("destination", value)}
             />
           </View>
 
           <View style={styles.dateTimeContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Departure</Text>
+            <Text style={[styles.sectionTitle, { color: colors.heading }]}>Departure</Text>
             <View style={styles.dateTimeRow}>
-              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.text }]} onPress={() => setShowDatePicker("fromDate")}> 
+              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("fromDate")}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatDate(formData.fromDate)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatDate(formData.fromDate)}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.text }]} onPress={() => setShowDatePicker("fromTime")}> 
+              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("fromTime")}>
                 <Ionicons name="time-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatTime(formData.fromTime)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatTime(formData.fromTime)}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.dateTimeContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Return</Text>
+            <Text style={[styles.sectionTitle, { color: colors.heading }]}>Return</Text>
             <View style={styles.dateTimeRow}>
-              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.text }]} onPress={() => setShowDatePicker("toDate")}> 
+              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("toDate")}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatDate(formData.toDate)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatDate(formData.toDate)}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.card, borderColor: colors.text }]} onPress={() => setShowDatePicker("toTime")}> 
+              <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("toTime")}>
                 <Ionicons name="time-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatTime(formData.toTime)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatTime(formData.toTime)}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -233,7 +233,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <TouchableOpacity
             style={[
               localStyles.longVisitToggle,
-              { backgroundColor: colors.card, borderColor: formData.longVisit ? COLORS.warning : colors.text },
+              { backgroundColor: colors.cardElevated, borderColor: formData.longVisit ? colors.warning : colors.inputBorder },
             ]}
             onPress={() => updateFormData("longVisit", !formData.longVisit)}
             activeOpacity={0.85}
@@ -241,10 +241,10 @@ export default function CreateOutpassScreen({ navigation }) {
             <Ionicons
               name={formData.longVisit ? "checkbox" : "square-outline"}
               size={22}
-              color={formData.longVisit ? COLORS.warning : colors.text}
+              color={formData.longVisit ? colors.warning : colors.subText}
             />
             <View style={localStyles.longVisitCopy}>
-              <Text style={[localStyles.longVisitTitle, { color: colors.text }]}>Long Visit (Home / Relative Visit)</Text>
+              <Text style={[localStyles.longVisitTitle, { color: colors.heading }]}>Long Visit (Home / Relative Visit)</Text>
               <Text style={[localStyles.longVisitText, { color: colors.subText }]}>
                 Use this when you will not return on the same day.
               </Text>
@@ -252,52 +252,52 @@ export default function CreateOutpassScreen({ navigation }) {
           </TouchableOpacity>
 
           {formData.longVisit ? (
-            <View style={[localStyles.noticeCard, { backgroundColor: "#fff7ed", borderColor: "#fdba74" }]}>
-              <Text style={localStyles.noticeTitle}>Physical Warden Approval Required</Text>
-              <Text style={localStyles.noticeText}>
+            <View style={[localStyles.noticeCard, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
+              <Text style={[localStyles.noticeTitle, { color: colors.warning }]}>Physical Warden Approval Required</Text>
+              <Text style={[localStyles.noticeText, { color: colors.text }]}>
                 This outpass will be granted only by physically visiting the warden. Same-day and 10:30 PM rules do not
                 apply to this request.
               </Text>
             </View>
           ) : (
-            <View style={[localStyles.noticeCard, { backgroundColor: "#eff6ff", borderColor: "#93c5fd" }]}>
-              <Text style={[localStyles.noticeTitle, { color: "#1d4ed8" }]}>Regular Outpass Rule</Text>
-              <Text style={[localStyles.noticeText, { color: "#1e3a8a" }]}>
+            <View style={[localStyles.noticeCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
+              <Text style={[localStyles.noticeTitle, { color: colors.primary }]}>Regular Outpass Rule</Text>
+              <Text style={[localStyles.noticeText, { color: colors.text }]}>
                 Regular outpasses must start and end on the same day and return by 10:30 PM.
               </Text>
             </View>
           )}
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-            <Text style={[styles.label, { color: colors.text }]}>Emergency Name *</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.label, { color: colors.heading }]}>Emergency Name *</Text>
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Person to contact in emergency"
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={colors.placeholder}
               value={formData.emergencyName}
               onChangeText={(value) => updateFormData("emergencyName", value)}
               keyboardType="phone-pad"
             />
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-            <Text style={[styles.label, { color: colors.text }]}>Emergency Contact *</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.label, { color: colors.heading }]}>Emergency Contact *</Text>
             <TextInput
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Phone number to contact in emergency"
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={colors.placeholder}
               value={formData.emergencyContact}
               onChangeText={(value) => updateFormData("emergencyContact", value)}
               keyboardType="phone-pad"
             />
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.text }]}> 
-            <Text style={[styles.label, { color: colors.text }]}>Additional Remarks</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Text style={[styles.label, { color: colors.heading }]}>Additional Remarks</Text>
             <TextInput
-              style={[styles.input, styles.textArea, { color: colors.text }]}
+              style={[styles.input, styles.textArea, { color: colors.inputText }]}
               placeholder="Any additional information..."
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={colors.placeholder}
               value={formData.remarks}
               onChangeText={(value) => updateFormData("remarks", value)}
               multiline
@@ -305,8 +305,8 @@ export default function CreateOutpassScreen({ navigation }) {
             />
           </View>
 
-          <TouchableOpacity style={[styles.submitButton, { backgroundColor: isDarkMode ? '#2196f3' : '#2196f3' }]} onPress={handleSubmit}>
-            <Text style={[styles.submitButtonText, { color: colors.text }]}>Submit Request</Text>
+          <TouchableOpacity style={[styles.submitButton, { backgroundColor: colors.primary }]} onPress={handleSubmit}>
+            <Text style={[styles.submitButtonText, { color: colors.onPrimary }]}>Submit Request</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
