@@ -54,10 +54,11 @@ function getLocalIPAddress() {
 const backendEnv = readEnvFile(path.resolve(__dirname, "../backend/.env"))
 const getConfigValue = (key, fallback) => process.env[key] || backendEnv[key] || fallback
 
-const apiBaseUrl = getConfigValue(
-  "API_BASE_URL",
-  "https://api.aegisid.app/api" || "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api",
+const apiPrimaryBaseUrl = getConfigValue(
+  "API_BASE_URL_PRIMARY",
+  getConfigValue("API_BASE_URL", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api"),
 )
+const apiSecondaryBaseUrl = getConfigValue("API_BASE_URL_SECONDARY", "https://api.aegisid.app/api")
 const apiHost = getConfigValue("API_HOST", "10.145.159.171")
 
 // const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
@@ -106,7 +107,9 @@ module.exports = {
       favicon: "./assets/aegisIdLogo_bg.png",
     },
     extra: {
-      API_BASE_URL: apiBaseUrl,
+      API_BASE_URL: apiPrimaryBaseUrl,
+      API_BASE_URL_PRIMARY: apiPrimaryBaseUrl,
+      API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
       EMERGENCY_MEDICAL_PHONE: emergencyMedicalPhone,
