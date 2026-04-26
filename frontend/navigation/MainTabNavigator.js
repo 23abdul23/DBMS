@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from "@expo/vector-icons"
+import { useTheme } from "../context/ThemeContext"
 
 // Import screens
 import DashboardScreen from "../screens/DashboardScreen"
@@ -11,6 +12,8 @@ import StudentLogsScreen from "../screens/StudentLogsScreen"
 const Tab = createBottomTabNavigator()
 
 export default function MainTabNavigator() {
+  const { colors } = useTheme()
+
   return (
     <Tab.Navigator
       initialRouteName="Dashboard"
@@ -32,8 +35,19 @@ export default function MainTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />
         },
-        tabBarActiveTintColor: "#2563eb",
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.tabBarBorder,
+          height: 72,
+          paddingTop: 8,
+          paddingBottom: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
         headerShown: false,
       })}
     >

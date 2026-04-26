@@ -324,7 +324,7 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.text }]}>Full Name</Text>
               {editing ? (
                 <TextInput
-                  style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                   value={profile?.name || ""}
                   onChangeText={(value) => updateProfile("name", value)}
                   placeholderTextColor={colors.subText}
@@ -338,7 +338,7 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.text }]}>Email</Text>
               {editing ? (
                 <TextInput
-                  style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                   value={profile?.email || ""}
                   onChangeText={(value) => updateProfile("email", value)}
                   placeholderTextColor={colors.subText}
@@ -353,7 +353,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>{idLabel}</Text>
                 {editing ? (
                   <TextInput
-                    style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                    style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                     value={isSecurity ? profile?.guardId || "" : profile?.studentId || ""}
                     onChangeText={(value) => updateProfile(isSecurity ? "guardId" : "studentId", value)}
                     placeholderTextColor={colors.subText}
@@ -370,7 +370,7 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number</Text>
               {editing ? (
                 <TextInput
-                  style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                   value={profile?.phoneNumber || ""}
                   onChangeText={(value) => updateProfile("phoneNumber", value)}
                   keyboardType="phone-pad"
@@ -408,27 +408,27 @@ export default function ProfileScreen() {
               </>
             ) : isStudent && editing ? (
               <>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-                  <Ionicons name="library-outline" size={20} color={colors.text} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.department || ""} style={styles.picker} onValueChange={(value) => updateProfile("department", value)}>
+                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="library-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <Picker selectedValue={profile.department || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("department", value)}>
                     <Picker.Item label="Select Department *" value="" />
                     {departments.map((dept) => (
                       <Picker.Item key={dept} label={DepartmentMap[dept] || dept} value={dept} />
                     ))}
                   </Picker>
                 </View>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.text} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.year || ""} style={styles.picker} onValueChange={(value) => updateProfile("year", value)}>
+                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="calendar-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <Picker selectedValue={profile.year || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("year", value)}>
                     <Picker.Item label="Select Year *" value="" />
                     {years.map((year) => (
                       <Picker.Item key={year} label={AcademicYearMap[year] || year} value={year} />
                     ))}
                   </Picker>
                 </View>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.card, borderColor: colors.text }]}>
-                  <Ionicons name="home-outline" size={20} color={colors.text} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.hostel || ""} style={styles.picker} onValueChange={(value) => updateProfile("hostel", value)}>
+                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="home-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <Picker selectedValue={profile.hostel || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("hostel", value)}>
                     <Picker.Item label="Select Hostel *" value="" />
                     {hostels.map((hostel) => (
                       <Picker.Item key={hostel} label={hostel} value={hostel} />
@@ -447,7 +447,7 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.text }]}>Room Number</Text>
               {editing ? (
                 <TextInput
-                  style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                   value={profile?.roomNumber || ""}
                   onChangeText={(value) => updateProfile("roomNumber", value)}
                   placeholderTextColor={colors.subText}
@@ -467,7 +467,7 @@ export default function ProfileScreen() {
               <View style={styles.fieldContainer}>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>Current Password</Text>
                 <TextInput
-                  style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
                   secureTextEntry={!showCurrent}
@@ -484,7 +484,7 @@ export default function ProfileScreen() {
             <View style={styles.fieldContainer}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>New Password</Text>
               <TextInput
-                style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry={!showNew}
@@ -500,7 +500,7 @@ export default function ProfileScreen() {
             <View style={styles.fieldContainer}>
               <Text style={[styles.fieldLabel, { color: colors.text }]}>Confirm New Password</Text>
               <TextInput
-                style={[styles.fieldInput, { color: colors.text, borderBottomColor: colors.text }]}
+                style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirm}

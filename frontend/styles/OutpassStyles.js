@@ -39,6 +39,7 @@ export default StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
   },
   emptyTitle: {
     fontSize: SIZES.lg,
