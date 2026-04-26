@@ -16,13 +16,13 @@ export default function MainTabNavigator() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName
-
-          if (route.name === "Dashboard") {
-            iconName = focused ? "home" : "home-outline"
+          
+          if (route.name === "Emergency") {
+            iconName = focused ? "warning" : "warning-outline"
           } else if (route.name === "Outpass") {
             iconName = focused ? "document-text" : "document-text-outline"
-          } else if (route.name === "Emergency") {
-            iconName = focused ? "warning" : "warning-outline"
+          } else if (route.name === "Dashboard") {
+            iconName = focused ? "home" : "home-outline"
           } else if (route.name === "Logs") {
             iconName = focused ? "list" : "list-outline"
           } else if (route.name === "Profile") {
