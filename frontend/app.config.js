@@ -56,7 +56,7 @@ const getConfigValue = (key, fallback) => process.env[key] || backendEnv[key] ||
 
 const apiBaseUrl = getConfigValue(
   "API_BASE_URL",
-  "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api",
+  "https://api.aegisid.app/api" || "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api",
 )
 const apiHost = getConfigValue("API_HOST", "10.145.159.171")
 
