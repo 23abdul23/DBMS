@@ -50,6 +50,8 @@ export const ROLES = {
   SECURITY: "security",
   ADMIN: "admin",
   WARDEN: "warden",
+  SAC_ADMIN: "sac_admin",
+  LIBRARY_ADMIN: "library_admin",
 }
 
 export const OUTPASS_STATUS = {

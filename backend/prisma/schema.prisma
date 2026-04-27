@@ -80,10 +80,16 @@ enum LogAction {
   outpass_used
   outpass_long_visit
   outpass_status_changed
-  passkey_validated
   emergency_status_updated
   user_status_updated
   emergency_alert
+  sac_room_opened
+  sac_room_joined
+  sac_room_left
+  sac_equipment_taken
+  sac_equipment_returned
+  library_seat_taken
+  library_seat_released
 }
 
 enum ScanType {
@@ -122,13 +128,81 @@ model User {
   outpasses              Outpass[]   @relation("OutpassOwner")
   approvedOutpasses      Outpass[]   @relation("OutpassApprover")
   outpassAuditChanges    OutpassAuditTrail[]
-  passkeys               Passkey[]
   passwordUpdateOtps     PasswordUpdateOtp[]
   logs                   Log[]
+  sacRoomSessionsOpened  SacRoomSession[]       @relation("SacRoomOpenedBy")
+  sacRoomPresences       SacRoomPresence[]      @relation("SacRoomPresenceUser")
+  sacEquipmentCheckouts  SacEquipmentCheckout[] @relation("SacEquipmentCheckoutUser")
+  librarySeatSessions    LibrarySeatSession[]   @relation("LibrarySeatSessionUser")
 
   @@index([role])
   @@index([hostel])
   @@map("users")
+}
+
+model SacRoomSession {
+  id             String            @id @db.VarChar(24)
+  roomName       String            @map("room_name") @db.VarChar(100)
+  openedByUserId String            @map("opened_by_user_id") @db.VarChar(24)
+  openedAt       DateTime          @default(now()) @map("opened_at")
+  closedAt       DateTime?         @map("closed_at")
+  lastActivityAt DateTime          @default(now()) @map("last_activity_at")
+
+  openedBy  User              @relation("SacRoomOpenedBy", fields: [openedByUserId], references: [id], onDelete: Cascade)
+  presences SacRoomPresence[]
+
+  @@index([roomName, closedAt])
+  @@index([openedAt(sort: Desc)])
+  @@index([lastActivityAt(sort: Desc)])
+  @@map("sac_room_sessions")
+}
+
+model SacRoomPresence {
+  id        String   @id @db.VarChar(24)
+  sessionId String   @map("session_id") @db.VarChar(24)
+  userId    String   @map("user_id") @db.VarChar(24)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  session SacRoomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User           @relation("SacRoomPresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, leftAt])
+  @@index([userId, leftAt])
+  @@index([joinedAt(sort: Desc)])
+  @@map("sac_room_presences")
+}
+
+model SacEquipmentCheckout {
+  id            String    @id @db.VarChar(24)
+  equipmentName String    @map("equipment_name") @db.VarChar(100)
+  userId        String    @map("user_id") @db.VarChar(24)
+  checkedOutAt  DateTime  @default(now()) @map("checked_out_at")
+  returnedAt    DateTime? @map("returned_at")
+
+  user User @relation("SacEquipmentCheckoutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentName, returnedAt])
+  @@index([userId, returnedAt])
+  @@index([checkedOutAt(sort: Desc)])
+  @@map("sac_equipment_checkouts")
+}
+
+model LibrarySeatSession {
+  id             String    @id @db.VarChar(24)
+  userId         String    @map("user_id") @db.VarChar(24)
+  seatNumber     Int       @map("seat_number")
+  enteredAt      DateTime  @default(now()) @map("entered_at")
+  leftAt         DateTime? @map("left_at")
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at")
+
+  user User @relation("LibrarySeatSessionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, leftAt])
+  @@index([seatNumber, leftAt])
+  @@index([enteredAt(sort: Desc)])
+  @@index([lastActivityAt(sort: Desc)])
+  @@map("library_seat_sessions")
 }
 
 model StudentProfile {
@@ -264,23 +338,6 @@ model OutpassAuditTrail {
 
   @@index([outpassId])
   @@map("outpass_audit_trail")
-}
-
-model Passkey {
-  id        String   @id @db.VarChar(24)
-  userId    String   @map("user_id") @db.VarChar(24)
-  hash      String   @unique @db.VarChar(256)
-  date      DateTime
-  expiresAt DateTime @map("expires_at")
-  isUsed    Boolean  @default(false) @map("is_used")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, date])
-  @@index([expiresAt])
-  @@map("passkeys")
 }
 
 model PasswordUpdateOtp {

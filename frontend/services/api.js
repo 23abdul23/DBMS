@@ -111,6 +111,8 @@ const requestWithFallback = async (requests) => {
   throw lastError
 }
 
+const allowOpenClosedStatus = (status) => status === 200 || status === 403
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
@@ -159,7 +161,6 @@ export const commonAPI = {
 
   getProfile: () => api.get("/auth/profile"),
   updateProfile: (data) => api.put("/auth/profile", data),
-  getDailyPasskey: () => api.get("/passkey/today"),
   changePassword: (currentPassword, newPassword, confirmPassword) => {
     if (typeof currentPassword === "object" && currentPassword !== null) {
       return api.put("/student/passwordUpdate", currentPassword)
@@ -169,7 +170,6 @@ export const commonAPI = {
   },
   requestPasswordOtp: (data) => api.post("/student/password-update/request-otp", data),
   verifyPasswordOtp: (data) => api.post("/student/password-update/verify-otp", data),
-  getDailyPasskeyGuard: () => api.get("/passkey/todayGuard"),
 }
 
 export const studentAPI = {
@@ -214,7 +214,6 @@ export const emergencyAPI = {
 
 // Security API endpoints
 export const securityAPI = {
-  validatePasskey: (data) => api.post("/security/validate", data),
   logEntry: (data) => api.post("/security/log", data),
   logStudentScan: (data) => api.post("/security/student-log", data),
   getLogs: (params = {}, token) =>
@@ -222,6 +221,23 @@ export const securityAPI = {
       params,
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     }),
+}
+
+export const sacAPI = {
+  getOverview: () => api.get("/sac/overview"),
+  getSacStatus: () => api.get("/sac/status", { validateStatus: allowOpenClosedStatus }),
+  selectRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
+  leaveRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
+  selectEquipment: (equipmentName) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
+  returnEquipment: (equipmentName, data = {}) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/return`, data),
+}
+
+export const libraryAPI = {
+  getOverview: () => api.get("/library/overview"),
+  getStatus: () => api.get("/library/status", { validateStatus: allowOpenClosedStatus }),
+  claimSeat: (seatNumber) => api.post("/library/claim-seat", { seatNumber }),
+  releaseSeat: () => api.post("/library/release-seat"),
+  adminReleaseSeat: (data = {}) => api.post("/library/admin/release-seat", data),
 }
 
 export default api

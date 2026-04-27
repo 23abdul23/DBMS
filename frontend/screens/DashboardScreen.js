@@ -1,20 +1,59 @@
 "use client"
 
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native"
-import { useState, useEffect } from "react"
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ImageBackground } from "react-native"
+import { useState, useEffect, useMemo } from "react"
 import { useTheme } from "../context/ThemeContext"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../context/AuthContext"
-import { outpass, commonAPI } from "../services/api"
+import { outpass } from "../services/api"
 import styles from "../styles/DashboardStyles"
-
 import LoadingSpinner from "../components/LoadingSpinner"
-import PasskeyCard from "../components/PasskeyCard"
+
+const QUICK_ACTIONS = [
+  {
+    key: "scan",
+    title: "Scan",
+    subtitle: "Verify movement, QR checkpoints, and entry flow.",
+    icon: "scan",
+    arrowColorKey: "success",
+    iconBgKey: "successSoft",
+    iconFgKey: "success",
+    onPress: (navigation) => navigation.navigate("Scan"),
+  },
+  {
+    key: "library",
+    title: "Library",
+    subtitle: "Track occupancy, tokens, and your own live library status.",
+    icon: "book",
+    arrowColorKey: "primary",
+    iconBgKey: "primarySoft",
+    iconFgKey: "primary",
+    onPress: (navigation) => navigation.navigate("Library"),
+  },
+  {
+    key: "sac",
+    title: "SAC",
+    subtitle: "Club rooms and equipment counts with privacy-safe activity access.",
+    icon: "color-wand-outline",
+    arrowColorKey: "warning",
+    iconBgKey: "warningSoft",
+    iconFgKey: "warning",
+    onPress: (navigation) => navigation.navigate("SAC"),
+  },
+  {
+    key: "outpass",
+    title: "Use Outpass",
+    subtitle: "Start the approved exit flow when your pass is active.",
+    icon: "log-out-outline",
+    arrowColorKey: "accent",
+    iconBgKey: "accentSoft",
+    iconFgKey: "accent",
+  },
+]
 
 export default function DashboardScreen({ navigation }) {
-  const { isDarkMode, toggleTheme, colors } = useTheme();
+  const { isDarkMode, toggleTheme, colors } = useTheme()
   const { user, logout } = useAuth()
-  const [passkey, setPasskey] = useState(null)
   const [currentOutpass, setCurrentOutpass] = useState(null)
   const [stats, setStats] = useState({
     totalOutpasses: 0,
@@ -30,20 +69,23 @@ export default function DashboardScreen({ navigation }) {
 
   const loadDashboardData = async () => {
     try {
-      const [passkeyResponse, outpassesResponse] = await Promise.all([
-        commonAPI.getDailyPasskey(),
-        outpass.getOutpasses(),
-      ])
+      const outpassesResponse = await outpass.getOutpasses()
+      const nextOutpass = outpassesResponse.data?.outpass || null
 
-      setPasskey(passkeyResponse.data)
-      setCurrentOutpass(outpassesResponse.data?.outpass || null)
+      setCurrentOutpass(nextOutpass)
 
-      if (outpassesResponse.data.outpass){
-        const outpasses = outpassesResponse.data.outpass.auditTrail
+      if (nextOutpass?.auditTrail) {
+        const auditTrail = nextOutpass.auditTrail
         setStats({
-          totalOutpasses: outpasses.length,
-          activeOutpasses: outpasses.filter((op) => op.status === "approved").length,
-          pendingOutpasses: outpasses.filter((op) => op.status === "pending").length,
+          totalOutpasses: auditTrail.length,
+          activeOutpasses: auditTrail.filter((entry) => entry.status === "approved").length,
+          pendingOutpasses: auditTrail.filter((entry) => entry.status === "pending").length,
+        })
+      } else {
+        setStats({
+          totalOutpasses: 0,
+          activeOutpasses: 0,
+          pendingOutpasses: 0,
         })
       }
     } catch (error) {
@@ -96,85 +138,229 @@ export default function DashboardScreen({ navigation }) {
     }
   }
 
+  const quickActions = useMemo(
+    () =>
+      QUICK_ACTIONS.map((action) => ({
+        ...action,
+        onPress:
+          action.key === "outpass"
+            ? handleUseOutpass
+            : () => action.onPress?.(navigation),
+      })),
+    [navigation, currentOutpass],
+  )
+
+  const announcements = useMemo(
+    () => [
+      {
+        id: "dbms-project-vacancy",
+        title: "10/10 DBMS project group vacancy open",
+        message: "Due to betrayal issues by a group memeber, a team member was fired...",
+        time: "1m ago",
+        toneKey: "success",
+      },
+      {
+        id: "cn-update",
+        title: "112 students recieve course drop notice",
+        message: "Kya ye sasish ahi ya sirf ek aur din hai IIITians ki zindagi mein? Stay tuned for more updates.",
+        time: "6m ago",
+        toneKey: "warning",
+      },
+      {
+        id: "gh-incident-review",
+        title: "Ande wala headshot",
+        message: "Due to reason unknown, a student was hit by an egg in GH1",
+        time: "21m ago",
+        toneKey: "primary",
+      },
+      {
+        id: "bh3-security-briefing",
+        title: "BH3 Brawl Night feat. Guards",
+        message: "Cycle chori hetu, guards pe uthaya gaya ungli. Students ka kehna, kya yahi hai apka duty ?",
+        time: "58m ago",
+        toneKey: "success",
+      },
+    ],
+    [],
+  )
+
+  const outpassStatus = currentOutpass
+    ? currentOutpass.canUseOutpass
+      ? "Ready to use"
+      : currentOutpass.status === "pending"
+        ? "Pending approval"
+        : currentOutpass.status === "approved"
+          ? "Approved"
+          : "Inactive"
+    : "No active pass"
+
+  const outpassMeta = currentOutpass
+    ? currentOutpass.destination || currentOutpass.reason || "Current outpass available"
+    : "Generate one from the Outpass tab when needed."
+
   if (loading) {
     return <LoadingSpinner />
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
     >
-      <View style={[styles.header, { backgroundColor: colors.header }]}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: "transparent" }]}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+      <View style={styles.heroShell}>
+        <View
+          style={[
+            styles.heroCard,
+            {
+              backgroundColor: colors.cardElevated,
+              borderColor: colors.border,
+              shadowColor: colors.shadowStrong,
+            },
+          ]}
+        >
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroCopy}>
+              <Text style={[styles.greeting, { color: isDarkMode ? "rgba(248,251,255,0.74)" : colors.subText }]}>
+                Good {getGreeting()}
+              </Text>
+              <Text style={[styles.userName, { color: isDarkMode ? "#ffffff" : colors.heading }]}>{user?.name}</Text>
+              <Text style={[styles.studentId, { color: isDarkMode ? "rgba(248,251,255,0.72)" : colors.subText }]}>
+                {user?.studentId || "Student"}{user?.hostel ? `  |  ${user.hostel}` : ""}
+              </Text>
+            </View>
 
+            <View style={styles.heroRightRail}>
+              <TouchableOpacity
+                onPress={toggleTheme}
+                style={[
+                  styles.roundIconButton,
+                  {
+                    backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : colors.cardMuted,
+                    borderColor: isDarkMode ? "rgba(255,255,255,0.12)" : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={isDarkMode ? "#ffffff" : colors.text} />
+              </TouchableOpacity>
 
-        <View style={styles.headerContent}>
-
-          <View>
-            <Text style={[styles.greeting, { color: colors.subText }]}>Good {getGreeting()}</Text>
-            <Text style={[styles.userName, { color: colors.heading }]}>{user?.name}</Text>
-            <Text style={[styles.studentId, { color: colors.subText }]}>{user?.studentId}</Text>
+              <TouchableOpacity
+                style={[
+                  styles.roundIconButton,
+                  styles.logoutButton,
+                  {
+                    backgroundColor: isDarkMode ? "rgba(220,38,38,0.14)" : colors.dangerSoft,
+                    borderColor: isDarkMode ? "rgba(248,113,113,0.22)" : colors.border,
+                  },
+                ]}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={24} color={isDarkMode ? "#fda4af" : colors.danger} />
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <View>
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={{ padding: 10, borderRadius: 14, backgroundColor: colors.cardElevated, borderWidth: 1, borderColor: colors.border }}
-            >
-              <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={colors.text} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.dangerSoft }]} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={24} color={colors.danger} />
-            </TouchableOpacity>
-          </View>
-
         </View>
       </View>
 
-      <View style={styles.content}>
-        {/* Daily Passkey Card */}
-        <PasskeyCard passkey={passkey?.passkey} onRefresh={loadDashboardData} />
-
-        {/* Quick Actions */}
+      <View style={styles.body}>
         <View style={styles.quickActions}>
-          <Text style={[styles.sectionTitle, { color: colors.heading }]}>Quick Actions</Text>
+          <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: "#F5F5F5" }]}>Quick Actions</Text> 
+          </View>
+
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("Scan")}>
-              <View style={[styles.actionIcon, { backgroundColor: colors.successSoft }]}>
-                <Ionicons name="scan" size={24} color={colors.success} />
-              </View>
-              <Text style={[styles.actionText, { color: colors.heading }]}>Scan</Text>
-              <Text style={[styles.actionSubText, { color: colors.subText }]}>Verify movement</Text>
-            </TouchableOpacity>
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.key}
+                style={[
+                  styles.actionCard,
+                  {
+                    backgroundColor: colors.cardElevated + "E0",
+                    borderColor: colors.border,
+                    shadowColor: colors.shadow,
+                    borderRadius: 18,
+                    shadowOpacity: 0.08,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    elevation: 3,
+                  },
+                ]}
+                onPress={action.onPress}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={[styles.actionIcon, { backgroundColor: colors[action.iconBgKey] }]}>
+                    <Ionicons name={action.icon} size={22} color={colors[action.iconFgKey]} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.actionText, { color: colors.heading, fontWeight: "800" }]}>{action.title}</Text>
+                    <Text style={[styles.actionSubText, { color: colors.subText }]} numberOfLines={1}>{action.subtitle}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("Library")}>
-              <View style={[styles.actionIcon, { backgroundColor: colors.primarySoft }]}>
-                <Ionicons name="book" size={24} color={colors.primary} />
-              </View>
-              <Text style={[styles.actionText, { color: colors.heading }]}>Library</Text>
-              <Text style={[styles.actionSubText, { color: colors.subText }]}>Campus resources</Text>
-            </TouchableOpacity>
+        <View
+          style={[
+            styles.announcementCard,
+            {
+              backgroundColor: colors.cardElevated + "E4",
+              borderColor: colors.border,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
+          <View style={styles.announcementHeader}>
+            <View>
+              <Text style={[styles.announcementTitle, { color: isDarkMode ? "#FFFFFF" : colors.heading }]}>News & Announcements</Text>
+              <Text style={[styles.announcementSubtitle, { color: isDarkMode ? "rgba(248,251,255,0.72)" : colors.subText }]}>
+                Fast updates for all students
+              </Text>
+            </View>
 
-            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={() => navigation.navigate("SAC")}>
-              <View style={[styles.actionIcon, { backgroundColor: colors.warningSoft }]}>
-                <Ionicons name="bicycle" size={24} color={colors.warning} />
-              </View>
-              <Text style={[styles.actionText, { color: colors.heading }]}>SAC</Text>
-              <Text style={[styles.actionSubText, { color: colors.subText }]}>Recreation access</Text>
-            </TouchableOpacity>
+            <View style={[styles.announcementPill, { backgroundColor: colors.primarySoft }]}> 
+              <Ionicons name="megaphone-outline" size={14} color={colors.primary} />
+              <Text style={[styles.announcementPillText, { color: colors.primary }]}>Broadcast</Text>
+            </View>
+          </View>
 
-            <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.cardElevated, borderColor: colors.border, shadowColor: colors.shadow }]} onPress={handleUseOutpass}>
-              <View style={[styles.actionIcon, { backgroundColor: colors.accentSoft }]}>
-                <Ionicons name="log-out-outline" size={24} color={colors.accent} />
+          <View style={{ marginTop: 14 }}>
+            {announcements.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.announcementRow,
+                  index !== announcements.length - 1 && { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+                ]}
+              >
+                <View style={[styles.announcementTone, { backgroundColor: colors[`${item.toneKey}Soft`] }]}> 
+                  <Ionicons name="newspaper-outline" size={18} color={colors[item.toneKey]} />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.announcementRowTitle, { color: isDarkMode ? "#FFFFFF" : colors.heading }]}>{item.title}</Text>
+                  <Text style={[styles.announcementRowMessage, { color: isDarkMode ? "rgba(248,251,255,0.72)" : colors.subText }]}>
+                    {item.message}
+                  </Text>
+                </View>
+
+                <Text style={[styles.announcementTime, { color: isDarkMode ? "rgba(248,251,255,0.58)" : colors.subText }]}>{item.time}</Text>
               </View>
-              <Text style={[styles.actionText, { color: colors.heading }]}>Use Outpass</Text>
-              <Text style={[styles.actionSubText, { color: colors.subText }]}>Approved exit flow</Text>
-            </TouchableOpacity>
+            ))}
           </View>
         </View>
       </View>
+
     </ScrollView>
+    </ImageBackground>
   )
 }
 
@@ -184,4 +370,3 @@ const getGreeting = () => {
   if (hour < 17) return "Afternoon"
   return "Evening"
 }
-

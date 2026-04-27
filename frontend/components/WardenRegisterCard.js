@@ -12,7 +12,7 @@ export default function WardenRegisterCard({ formData, updateFormData, hostels, 
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Email Address *"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.email}
           onChangeText={value => updateFormData('email', value)}
           keyboardType="email-address"

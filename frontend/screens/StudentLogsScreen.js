@@ -1,10 +1,11 @@
 "use client"
 
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
+import LoadingSpinner from "../components/LoadingSpinner"
 import { studentAPI } from "../services/api"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 
@@ -18,6 +19,13 @@ const ACTION_META = {
   outpass_long_visit: { label: "Long Visit Request", color: "#0f766e" },
   outpass_used: { label: "Outpass Used", color: COLORS.primary },
   outpass_status_changed: { label: "Outpass Status Changed", color: "#f59e0b" },
+  sac_room_opened: { label: "SAC Room Opened", color: "#d97706" },
+  sac_room_joined: { label: "SAC Room Joined", color: "#2563eb" },
+  sac_room_left: { label: "SAC Room Left", color: "#64748b" },
+  sac_equipment_taken: { label: "SAC Equipment Taken", color: "#059669" },
+  sac_equipment_returned: { label: "SAC Equipment Returned", color: "#0f766e" },
+  library_seat_taken: { label: "Library Token Taken", color: "#7c3aed" },
+  library_seat_released: { label: "Library Token Released", color: "#6b7280" },
 }
 
 const isOutpassAction = (action) =>
@@ -130,6 +138,9 @@ export default function StudentLogsScreen() {
         {item.details?.reason ? (
           <Text style={[localStyles.cardMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text>
         ) : null}
+        {item.details?.description ? (
+          <Text style={[localStyles.cardMeta, { color: colors.text }]}>Description: {item.details.description}</Text>
+        ) : null}
       </View>
     )
   }
@@ -148,16 +159,22 @@ export default function StudentLogsScreen() {
     <View style={[localStyles.container, { backgroundColor: colors.background }]}>
       <View style={[localStyles.header, { backgroundColor: colors.header, borderBottomColor: colors.border || COLORS.gray[200] }]}>
         <Text style={[localStyles.headerTitle, { color: colors.heading }]}>My Logs</Text>
-        <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
+        {/* <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
           Personal entry, exit, and outpass activity
-        </Text>
+        </Text> */}
         <Text style={[localStyles.headerSummary, { color: colors.subText }]}>{summaryText}</Text>
         {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
       </View>
 
       {loading ? (
         <View style={localStyles.loader}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <LoadingSpinner
+            variant="panel"
+            label="Loading your movement logs"
+            sublabel="Pulling entry, exit, and outpass activity from Aegis."
+            statusText="Records are being synced and sorted for this timeline."
+            showThemeToggle={false}
+          />
         </View>
       ) : (
         <FlatList
@@ -172,7 +189,7 @@ export default function StudentLogsScreen() {
           ListFooterComponent={
             loadingMore ? (
                   <View style={localStyles.footerLoader}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <LoadingSpinner variant="inline" label="Loading more logs" />
                   </View>
                 ) : hasMore ? (
                   <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>

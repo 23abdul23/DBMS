@@ -44,9 +44,8 @@ router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const [totalStudents, activePasskeys, pendingOutpasses, activeEmergencies, todayLogs] = await Promise.all([
+    const [totalStudents, pendingOutpasses, activeEmergencies, todayLogs] = await Promise.all([
       prisma.user.count({ where: { role: "student" } }),
-      prisma.passkey.count({ where: { createdAt: { gte: today, lt: tomorrow } } }),
       prisma.outpass.count({ where: { status: "pending" } }),
       prisma.emergency.count({ where: { status: "active" } }),
       prisma.log.count({ where: { createdAt: { gte: today, lt: tomorrow } } }),
@@ -54,7 +53,6 @@ router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
 
     res.json({
       totalStudents,
-      activePasskeys,
       pendingOutpasses,
       activeEmergencies,
       todayLogs,

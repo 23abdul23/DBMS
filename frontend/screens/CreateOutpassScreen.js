@@ -26,8 +26,8 @@ export default function CreateOutpassScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const { user, logout } = useAuth()
   const [formData, setFormData] = useState({
-    purpose: "Going out",
-    destination: "Cafe",
+    purpose: "",
+    destination: "",
     fromDate: new Date(),
     fromTime: new Date(),
     toDate: new Date(),
@@ -185,7 +185,7 @@ export default function CreateOutpassScreen({ navigation }) {
           <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
             <Text style={[styles.label, { color: colors.heading }]}>Purpose</Text>
             <TextInput
-              style={[styles.input, { color: colors.inputText }]}
+              style={[styles.input, { color: colors.heading2 }]}
               placeholder="e.g., Medical appointment, Family visit"
               placeholderTextColor={colors.placeholder}
               value={formData.purpose}
@@ -260,8 +260,8 @@ export default function CreateOutpassScreen({ navigation }) {
             <View style={[localStyles.noticeCard, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
               <Text style={[localStyles.noticeTitle, { color: colors.warning }]}>Physical Warden Approval Required</Text>
               <Text style={[localStyles.noticeText, { color: colors.text }]}>
-                This outpass will be granted only by physically visiting the warden. Same-day and 10:30 PM rules do not
-                apply to this request.
+                Submit this request and visit the warden for approval. Once approved, it can be used through the normal
+                gate scan flow. Same-day and 10:30 PM rules do not apply to this request.
               </Text>
             </View>
           ) : (

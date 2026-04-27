@@ -197,7 +197,7 @@ const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
 }
 
 const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
-  if (!outpass || isLongVisitOutpass(outpass)) {
+  if (!outpass) {
     return false
   }
 
@@ -506,6 +506,40 @@ const getLatestGateMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
+const getRecentMovementTrailMap = async (prisma, userIds = [], limitPerUser = 3) => {
+  const distinctUserIds = [...new Set(userIds.filter(Boolean))]
+
+  if (distinctUserIds.length === 0) {
+    return new Map()
+  }
+
+  const logs = await prisma.log.findMany({
+    where: {
+      userId: {
+        in: distinctUserIds,
+      },
+      action: {
+        in: ["entry", "exit"],
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  })
+
+  const movementMap = new Map()
+
+  for (const log of logs) {
+    const existing = movementMap.get(log.userId) || []
+    if (existing.length >= limitPerUser) {
+      continue
+    }
+
+    existing.push(log)
+    movementMap.set(log.userId, existing)
+  }
+
+  return movementMap
+}
+
 const expireOldOutpasses = async (prisma) => {
   const now = new Date()
 
@@ -608,5 +642,6 @@ module.exports = {
   deriveMonitoringState,
   getLatestMovementMap,
   getLatestGateMovementMap,
+  getRecentMovementTrailMap,
   expireOldOutpasses,
 }

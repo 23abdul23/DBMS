@@ -18,7 +18,7 @@ export default function EmergencyScreen() {
   const { location, locationLoading, permissionStatus, refreshLocation } = useAppLocation()
   const appState = useRef(AppState.currentState)
   const pendingSmsRef = useRef(null)
-  const normalizePhoneNumber = (value) => String(value || "").replace(/\s+/g, "")
+  const normalizePhoneNumber = (value) => String(value || "").replace(/[^\d+]/g, "")
   const getEmergencyPhone = (key, fallback) => {
     const configuredValue = Constants.expoConfig?.extra?.[key] || fallback
 
@@ -124,18 +124,27 @@ export default function EmergencyScreen() {
 
   const openSmsComposer = async ({ emergency, location: currentLocation }) => {
     const smsBody = encodeURIComponent(buildSmsBody(emergency, currentLocation))
-    const separator = Platform.OS === "ios" ? "&" : "?"
-    const smsUrl = `sms:${emergency.phone}${separator}body=${smsBody}`
+    const smsUrls = Platform.select({
+      ios: [`sms:${emergency.phone}&body=${smsBody}`, `sms:${emergency.phone}`],
+      android: [`sms:${emergency.phone}?body=${smsBody}`, `smsto:${emergency.phone}?body=${smsBody}`, `sms:${emergency.phone}`],
+      default: [`sms:${emergency.phone}`],
+    }) || [`sms:${emergency.phone}`]
 
     try {
-      const supported = await Linking.canOpenURL(smsUrl)
-
-      if (supported) {
-        await Linking.openURL(smsUrl)
+      for (const smsUrl of smsUrls) {
+        try {
+          await Linking.openURL(smsUrl)
+          return true
+        } catch (error) {
+          console.log("SMS compose attempt failed:", smsUrl, error?.message || error)
+        }
       }
     } catch (error) {
       console.log("SMS compose error:", error)
     }
+
+    Alert.alert("Message Failed", `Unable to open the SMS app for ${emergency.formattedPhone}.`)
+    return false
   }
 
   const sendEmergencyAlert = async (emergency, currentLocation) => {
@@ -155,48 +164,59 @@ export default function EmergencyScreen() {
         },
       }
 
-      await emergencyAPI.createAlert(alertData)
+      if (currentLocation) {
+        await emergencyAPI.createAlert(alertData)
+      }
     } catch (error) {
       console.log("Emergency alert send error:", error)
     }
   }
 
   const placeCall = async (emergency, currentLocation) => {
-    const callUrl = `tel:${emergency.phone}`
+    const callUrls = Platform.select({
+      ios: [`telprompt:${emergency.phone}`, `tel:${emergency.phone}`],
+      android: [`tel:${emergency.phone}`],
+      default: [`tel:${emergency.phone}`],
+    }) || [`tel:${emergency.phone}`]
 
     try {
-      const supported = await Linking.canOpenURL(callUrl)
+      pendingSmsRef.current = { emergency, location: currentLocation }
 
-      if (!supported) {
-        Alert.alert("Call Unavailable", `This device cannot place a call to ${emergency.formattedPhone}.`)
-        await openSmsComposer({ emergency, location: currentLocation })
-        return
+      for (const callUrl of callUrls) {
+        try {
+          await Linking.openURL(callUrl)
+          return true
+        } catch (error) {
+          console.log("Call attempt failed:", callUrl, error?.message || error)
+        }
       }
 
-      pendingSmsRef.current = { emergency, location: currentLocation }
-      await Linking.openURL(callUrl)
+      pendingSmsRef.current = null
+      Alert.alert("Call Unavailable", `This device cannot place a call to ${emergency.formattedPhone}.`)
+      await openSmsComposer({ emergency, location: currentLocation })
+      return false
     } catch (error) {
       pendingSmsRef.current = null
       console.log("Call error:", error)
       Alert.alert("Call Failed", `Unable to start the call to ${emergency.formattedPhone}.`)
+      return false
     }
   }
 
   const handleEmergencyPress = async (emergency) => {
     const currentLocation = (await refreshLocation()) || location
 
+    await sendEmergencyAlert(emergency, currentLocation)
+    await placeCall(emergency, currentLocation)
+
     if (!currentLocation) {
       const permissionMessage =
         permissionStatus === "denied"
-          ? "Location access is denied. Enable location permission to send your live location."
-          : "Current location is required before calling emergency services from the app."
+          ? "Location permission is denied, so the emergency alert was sent without live coordinates."
+          : "Live coordinates were unavailable, so the emergency alert used call and message only."
 
-      Alert.alert("Location Required", permissionMessage)
-      return
+      Alert.alert("Location Unavailable", permissionMessage)
     }
-
-    await sendEmergencyAlert(emergency, currentLocation)
-    await placeCall(emergency, currentLocation)
   }
 
   return (
@@ -231,7 +251,7 @@ export default function EmergencyScreen() {
                 key={index}
                 emergency={emergency}
                 onPress={() => handleEmergencyPress(emergency)}
-                disabled={locationLoading}
+                disabled={false}
                 disabledText="Getting location..."
               />
             ))}

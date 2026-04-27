@@ -119,6 +119,8 @@ export default function LoginScreen({ navigation }) {
               <Picker.Item label="Student" value="student" />
               <Picker.Item label="Warden" value="warden" />
               <Picker.Item label="Security" value="security" />
+              <Picker.Item label="SAC Administrator" value="sac_admin" />
+              <Picker.Item label="Library Administrator" value="library_admin" />
             </Picker>
           </View>
 
@@ -129,7 +131,7 @@ export default function LoginScreen({ navigation }) {
               <TextInput
                 style={[styles.input, { color: colors.inputText }]}
                 placeholder="Email Address"
-                placeholderTextColor={colors.placeholder}
+                placeholderTextColor={colors.inputText}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"

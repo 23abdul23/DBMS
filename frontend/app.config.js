@@ -67,6 +67,7 @@ const emergencyMedicalPhone = getConfigValue("EMERGENCY_MEDICAL_PHONE", "9329594
 const emergencySecurityPhone = getConfigValue("EMERGENCY_SECURITY_PHONE", "7217492629")
 const emergencyFirePhone = getConfigValue("EMERGENCY_FIRE_PHONE", "8618275578")
 const emergencyOtherPhone = getConfigValue("EMERGENCY_OTHER_PHONE", "7909069340")
+const libraryLimit = Number(getConfigValue("LIBRARY_LIMIT", 60))
 
 module.exports = {
   expo: {
@@ -74,27 +75,28 @@ module.exports = {
     slug: "aegis-id",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/aegisIdLogo_bg.png",
     userInterfaceStyle: "light",
     newArchEnabled: false,
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/aegisIdLogo.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff00",
+      backgroundColor: "#08111f",
     },
     ios: {
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
-          "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+          "Aegis uses your camera to scan QR codes for entry and exit verification.",
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
+        LSApplicationQueriesSchemes: ["tel", "telprompt", "sms", "smsto"],
       },
     },
     android: {
       package: "com.abdul.aegis",
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
+        foregroundImage: "./assets/aegisIdLogo_bg.png",
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
@@ -104,7 +106,7 @@ module.exports = {
       ],
     },
     web: {
-      favicon: "./assets/favicon.png",
+      favicon: "./assets/aegisIdLogo_bg.png",
     },
     extra: {
       API_BASE_URL: apiPrimaryBaseUrl,
@@ -112,6 +114,7 @@ module.exports = {
       API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
+      LIBRARY_LIMIT: libraryLimit,
       EMERGENCY_MEDICAL_PHONE: emergencyMedicalPhone,
       EMERGENCY_SECURITY_PHONE: emergencySecurityPhone,
       EMERGENCY_FIRE_PHONE: emergencyFirePhone,
@@ -127,7 +130,7 @@ module.exports = {
         "expo-camera",
         {
           cameraPermission:
-            "Aegis uses your camera to scan QR codes and barcodes for entry and exit verification.",
+            "Aegis uses your camera to scan QR codes for entry and exit verification.",
         },
       ],
       [

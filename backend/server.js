@@ -6,17 +6,17 @@ const cron = require("node-cron")
 require("dotenv").config()
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
-const { generateDailyPasskeys } = require("./utils/hashGenerator")
 const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
 const {
   runCampusActivitySimulation,
   runCampusClosingSweep,
   CAMPUS_TIMEZONE,
 } = require("./utils/campusActivitySimulation")
+const { getPrismaClient } = require("./config/prisma")
+const { expireOldOutpasses } = require("./utils/outpassLifecycle")
 
 // Import routes
 const authRoutes = require("./routes/authRoutes")
-const passkeyRoutes = require("./routes/passkeyRoutes")
 const outpassRoutes = require("./routes/outpassRoutes")
 const emergencyRoutes = require("./routes/emergencyRoutes")
 const adminRoutes = require("./routes/adminRoutes")
@@ -24,10 +24,13 @@ const securityRoutes = require("./routes/securityRoutes")
 const studentRoutes = require("./routes/studentRoutes")
 const wardenRoutes = require("./routes/wardenRoutes")
 const forgotRoutes = require("./routes/forgotRoute")
+const sacRoutes = require("./routes/sacRoutes")
+const libraryRoutes = require("./routes/libraryRoutes")
 
 const app = express()
 const PORT = process.env.PORT || 5000
 const DB_MODE = getDatabaseMode()
+const prisma = getPrismaClient()
 const ENABLE_CAMPUS_SIMULATION =
   String(process.env.ENABLE_CAMPUS_SIMULATION || "").toLowerCase() === "true" ||
   String(process.env.ENABLE_LIBRARY_SIMULATION || "").toLowerCase() === "true"
@@ -79,7 +82,6 @@ app.use(express.urlencoded({ extended: true }))
 
 // Routes
 app.use("/api/auth", authRoutes)
-app.use("/api/passkey", passkeyRoutes)
 app.use("/api/outpass", outpassRoutes)
 app.use("/api/outpass/warden", wardenRoutes)
 app.use("/api/emergency", emergencyRoutes)
@@ -88,6 +90,8 @@ app.use("/api/security", securityRoutes)
 app.use("/api/student", studentRoutes)
 app.use("/api/warden", wardenRoutes)
 app.use("/api/forgot", forgotRoutes)
+app.use("/api/sac", sacRoutes)
+app.use("/api/library", libraryRoutes)
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -108,20 +112,6 @@ if (app._router && app._router.stack) {
     }
   })
 }
-
-
-
-// Daily passkey generation cron job (runs at midnight)
-cron.schedule("0 0 * * *", async () => {
-  console.log("Generating daily passkeys...")
-  try {
-    await generateDailyPasskeys()
-    console.log("Daily passkeys generated successfully")
-  } catch (error) {
-    console.error("Error generating daily passkeys:", error)
-  }
-})
-
 cron.schedule("*/5 * * * *", async () => {
   try {
     const result = await cleanupExpiredPasswordOtps()
@@ -132,6 +122,21 @@ cron.schedule("*/5 * * * *", async () => {
     console.error("Password OTP cleanup failed:", error)
   }
 })
+
+cron.schedule(
+  "0 2 * * *",
+  async () => {
+    try {
+      const expiredCount = await expireOldOutpasses(prisma)
+      if (expiredCount > 0) {
+        console.log(`Nightly outpass expiry marked ${expiredCount} outpass(es) as expired.`)
+      }
+    } catch (error) {
+      console.error("Nightly outpass expiry cron failed:", error)
+    }
+  },
+  { timezone: CAMPUS_TIMEZONE },
+)
 
 if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(

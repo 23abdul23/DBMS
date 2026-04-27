@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   TextInput,
   ScrollView,
@@ -15,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Picker } from "@react-native-picker/picker"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
+import LoadingSpinner from "../components/LoadingSpinner"
 import { securityAPI } from "../services/api"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 
@@ -189,16 +189,28 @@ export default function LogBook({ navigation, route }) {
         exit: "Exit",
         without_outpass: "Exit Attempted",
         outpass_used: "Outpass Used",
-        passkey_validated: "Passkey Validated",
         outpass_status_changed: "Outpass Status Changed",
+        sac_room_opened: "SAC Room Opened",
+        sac_room_joined: "SAC Room Joined",
+        sac_room_left: "SAC Room Left",
+        sac_equipment_taken: "SAC Equipment Taken",
+        sac_equipment_returned: "SAC Equipment Returned",
+        library_seat_taken: "Library Token Taken",
+        library_seat_released: "Library Token Released",
       }
       const actionColors = {
         entry: COLORS.success,
         exit: COLORS.error,
         without_outpass: COLORS.warning,
         outpass_used: "#7c3aed",
-        passkey_validated: "#2563eb",
         outpass_status_changed: "#f59e0b",
+        sac_room_opened: "#d97706",
+        sac_room_joined: "#2563eb",
+        sac_room_left: "#64748b",
+        sac_equipment_taken: "#059669",
+        sac_equipment_returned: "#0f766e",
+        library_seat_taken: "#7c3aed",
+        library_seat_released: "#6b7280",
       }
       const actionLabel = actionLabels[item.action] || item.action
       const residentName = item?.user?.name || item?.details?.scannedUserName || "Resident"
@@ -220,6 +232,9 @@ export default function LogBook({ navigation, route }) {
           <Text style={[styles.logMeta, { color: colors.text }]}>Guard: {guardOnDuty}</Text>
           <Text style={[styles.logMeta, { color: colors.text }]}>Location: {item.location || "-"}</Text>
           {item?.details?.reason ? <Text style={[styles.logMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text> : null}
+          {item?.details?.description ? (
+            <Text style={[styles.logMeta, { color: colors.text }]}>Description: {item.details.description}</Text>
+          ) : null}
         </View>
       )
     },
@@ -320,7 +335,13 @@ export default function LogBook({ navigation, route }) {
 
       {loading ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <LoadingSpinner
+            variant="panel"
+            label="Loading entry and exit logs"
+            sublabel="Fetching the latest campus movement records for this view."
+            statusText="Aegis is assembling the filtered logbook feed."
+            showThemeToggle={false}
+          />
         </View>
       ) : (
         <FlatList
@@ -336,7 +357,7 @@ export default function LogBook({ navigation, route }) {
           ListFooterComponent={
             loadingMore ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <LoadingSpinner variant="inline" label="Loading more logs" />
               </View>
             ) : hasMore ? (
               <TouchableOpacity onPress={onLoadMore} style={styles.loadMoreButton}>
@@ -523,3 +544,4 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
   },
 })
+

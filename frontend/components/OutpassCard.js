@@ -120,7 +120,7 @@ export default function OutpassCard({ outpass, onUpdate }) {
         {isLongVisit ? (
           <View style={[styles.requestTypeChip, { backgroundColor: colors.warningSoft }]}>
             <Text style={[styles.requestTypeText, { color: colors.warning }]}>
-              Long Visit: physical warden approval and family stay flow
+              Long Visit: multi-day outpass with warden approval
             </Text>
           </View>
         ) : null}

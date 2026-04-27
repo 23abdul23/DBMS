@@ -5,6 +5,14 @@ import { createContext, useContext, useState, useEffect } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { authAPI } from "../services/api"
 
+const normalizeLoginRole = (role) => {
+  if (role === "sac_admin" || role === "library_admin") {
+    return "admin"
+  }
+
+  return role
+}
+
 const AuthContext = createContext()
 
 export const useAuth = () => {
@@ -44,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, role) => {
     try {
-      const response = await authAPI.login(email, password, role)
+      const response = await authAPI.login(email, password, normalizeLoginRole(role))
       const { token: authToken, user: userData } = response.data
 
       await AsyncStorage.setItem("authToken", authToken)

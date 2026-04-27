@@ -175,7 +175,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Full Name *"
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={colors.inputText}
               value={formData.name}
               onChangeText={(value) => updateFormData("name", value)}
               autoCapitalize="words"
@@ -225,7 +225,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Phone Number *"
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={colors.inputText}
               value={formData.phone}
               onChangeText={(value) => updateFormData("phone", value)}
               keyboardType="phone-pad"
@@ -250,7 +250,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Password *"
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={colors.inputText}
               value={formData.password}
               onChangeText={(value) => updateFormData("password", value)}
               secureTextEntry={!showPassword}
@@ -264,7 +264,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Confirm Password *"
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={colors.inputText}
               value={formData.confirmPassword}
               onChangeText={(value) => updateFormData("confirmPassword", value)}
               secureTextEntry={!showConfirmPassword}
