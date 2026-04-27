@@ -172,6 +172,11 @@ export default function SACScreen({ navigation, route }) {
                 <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
                   Start with club rooms or equipments. Each section opens its own screen with the full SAC features.
                 </Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 6 }}>
+                  {overview?.meta?.isOpenNow
+                    ? `Open now. Closes at ${overview?.meta?.closesAt || "10:30 PM"}.`
+                    : `Closed now. Opens again tomorrow. Closing time is ${overview?.meta?.closesAt || "10:30 PM"}.`}
+                </Text>
               </View>
             </View>
           </View>

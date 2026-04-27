@@ -46,6 +46,13 @@ const STUDENT_LOG_ACTIONS = [
   "outpass_long_visit",
   "outpass_used",
   "outpass_status_changed",
+  "sac_room_opened",
+  "sac_room_joined",
+  "sac_room_left",
+  "sac_equipment_taken",
+  "sac_equipment_returned",
+  "library_seat_taken",
+  "library_seat_released",
 ]
 
 const parsePositiveInteger = (value, fallback) => {

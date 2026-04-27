@@ -67,6 +67,7 @@ const emergencyMedicalPhone = getConfigValue("EMERGENCY_MEDICAL_PHONE", "9329594
 const emergencySecurityPhone = getConfigValue("EMERGENCY_SECURITY_PHONE", "7217492629")
 const emergencyFirePhone = getConfigValue("EMERGENCY_FIRE_PHONE", "8618275578")
 const emergencyOtherPhone = getConfigValue("EMERGENCY_OTHER_PHONE", "7909069340")
+const libraryLimit = Number(getConfigValue("LIBRARY_LIMIT", 60))
 
 module.exports = {
   expo: {
@@ -112,6 +113,7 @@ module.exports = {
       API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
+      LIBRARY_LIMIT: libraryLimit,
       EMERGENCY_MEDICAL_PHONE: emergencyMedicalPhone,
       EMERGENCY_SECURITY_PHONE: emergencySecurityPhone,
       EMERGENCY_FIRE_PHONE: emergencyFirePhone,

@@ -1,270 +1,356 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Platform, StatusBar } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../context/ThemeContext";
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants";
+import React, { useCallback, useState } from "react"
+import {
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
+import Constants from "expo-constants"
+import { useFocusEffect } from "@react-navigation/native"
+import { Ionicons } from "@expo/vector-icons"
+import { useTheme } from "../context/ThemeContext"
+import { FONTS } from "../utils/constants"
+import LoadingSpinner from "../components/LoadingSpinner"
+import { libraryAPI } from "../services/api"
+
+const LIBRARY_LIMIT = Number(Constants.expoConfig?.extra?.LIBRARY_LIMIT || 60)
+
+const formatTime = (value) => {
+  if (!value) {
+    return "-"
+  }
+
+  return new Date(value).toLocaleString([], {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
 
 export default function LibraryScreen({ navigation }) {
-  const { isDarkMode, toggleTheme, colors } = useTheme();
+  const { colors, isDarkMode, toggleTheme } = useTheme()
+  const [overview, setOverview] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const libraryStats = { capacity: 120, current: 75 };
-  const issuedBooks = [
-    { id: 1, name: "The Hitchhiker's Guide to the Galaxy", issueDate: "2025-08-20", isDue: false },
-    { id: 2, name: "The Lord of the Rings: The Fellowship of the Ring", issueDate: "2025-08-21", isDue: true },
-    { id: 3, name: "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe", issueDate: "2025-08-18", isDue: false },
-  ];
+  const loadOverview = useCallback(async (nextLoading = false) => {
+    try {
+      if (nextLoading) {
+        setLoading(true)
+      }
 
-  const [notify, setNotify] = useState(false);
-  const tokenNumber = "42";
-  const isFull = libraryStats.current >= libraryStats.capacity;
-  const availableSeats = libraryStats.capacity - libraryStats.current;
+      const response = await libraryAPI.getOverview()
+      setOverview(response?.data?.overview || null)
+    } catch (error) {
+      console.log("Library overview error:", error?.response?.data || error)
+    } finally {
+      if (nextLoading) {
+        setLoading(false)
+      }
+    }
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadOverview(true)
+    }, [loadOverview]),
+  )
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true)
+      await loadOverview(false)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  if (loading) {
+    return <LoadingSpinner />
+  }
+
+  const summary = overview?.summary || {}
+  const activeSeat = overview?.myStatus?.activeSeat || null
+  const occupants = overview?.occupants || []
+  const activityFeed = overview?.activityFeed || []
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: colors.background,
-        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 8 : 0,
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: SPACING.lg }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: SPACING.lg,
+            paddingHorizontal: 18,
+            paddingTop: 18,
+            paddingBottom: 22,
+            backgroundColor: colors.header,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
           }}
         >
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.cardElevated,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Ionicons name="arrow-back" size={22} color={colors.text} />
+            </TouchableOpacity>
 
-          <Text
-            style={{
-              fontSize: SIZES.lg,
-              fontFamily: FONTS.bold,
-              color: colors.text,
-            }}
-          >
-            Library
-          </Text>
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Library</Text>
 
-          <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
-            <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Current Status Card */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            padding: SPACING.lg,
-            marginBottom: SPACING.lg,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: SIZES.lg,
-              fontFamily: FONTS.bold,
-              color: colors.text,
-              marginBottom: SPACING.sm,
-            }}
-          >
-            Current Status
-          </Text>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.cardElevated,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
 
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
+              marginTop: 18,
+              borderRadius: 28,
+              padding: 20,
+              backgroundColor: colors.cardElevated,
+              borderWidth: 1,
+              borderColor: colors.border,
             }}
           >
-            <Text
-              style={{
-                fontSize: 48,
-                fontFamily: FONTS.bold,
-                color: colors.primary,
-              }}
-            >
-              {libraryStats.current}
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live Library Occupancy</Text>
+            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
+              Current strength, available tokens, and who is inside from when.
             </Text>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: SIZES.md, color: colors.subText }}>Readers</Text>
-              <Text style={{ fontSize: SIZES.md, color: colors.subText }}>
-                Available: {availableSeats}
-              </Text>
-            </View>
           </View>
+        </View>
 
-          {isFull && (
-            <TouchableOpacity
-              onPress={() => setNotify(!notify)}
-              style={{
-                marginTop: SPACING.md,
-                backgroundColor: isDarkMode ? "#4caf5030" : "#4caf5020",
-                borderRadius: 10,
-                paddingVertical: 10,
-                alignItems: "center",
-              }}
-            >
-              <Text
+        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
+            {[
+              {
+                label: "Current",
+                value: summary.occupiedCount || 0,
+                icon: "people-outline",
+                toneBg: colors.primarySoft,
+                toneFg: colors.primary,
+              },
+              {
+                label: "Available",
+                value: summary.availableCount ?? LIBRARY_LIMIT,
+                icon: "albums-outline",
+                toneBg: colors.successSoft,
+                toneFg: colors.success,
+              },
+              {
+                label: "Capacity",
+                value: summary.capacity || LIBRARY_LIMIT,
+                icon: "library-outline",
+                toneBg: colors.warningSoft,
+                toneFg: colors.warning,
+              },
+            ].map((stat) => (
+              <View
+                key={stat.label}
                 style={{
-                  color: colors.text,
-                  fontFamily: FONTS.medium,
+                  width: "31%",
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 24,
+                  padding: 14,
                 }}
               >
-                🔔 Notify when empty?
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Seat Number Card */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            padding: SPACING.lg,
-            marginBottom: SPACING.lg,
-            alignItems: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: SIZES.lg,
-              fontFamily: FONTS.bold,
-              color: colors.text,
-              marginBottom: SPACING.sm,
-            }}
-          >
-            Your Seat
-          </Text>
-          <Text
-            style={{
-              fontSize: 42,
-              fontFamily: FONTS.bold,
-              color: colors.primary,
-            }}
-          >
-            #{tokenNumber}
-          </Text>
-        </View>
-
-        {/* Issued Books Card */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            padding: SPACING.lg,
-            marginBottom: SPACING.xl,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 4,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: SPACING.sm,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: SIZES.lg,
-                fontFamily: FONTS.bold,
-                color: colors.text,
-              }}
-            >
-              Issued Books
-            </Text>
-            <Text
-              style={{
-                fontSize: SIZES.md,
-                fontFamily: FONTS.bold,
-                color: colors.primary,
-              }}
-            >
-              {issuedBooks.length}
-            </Text>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: stat.toneBg,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Ionicons name={stat.icon} size={18} color={stat.toneFg} />
+                </View>
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>{stat.value}</Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 }}>
+                  {stat.label}
+                </Text>
+              </View>
+            ))}
           </View>
 
-          {/* Table Header */}
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              borderBottomWidth: 1,
-              borderBottomColor: colors.subText + "30",
-              paddingBottom: 6,
-              marginBottom: 6,
+              backgroundColor: colors.cardElevated,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 18,
+              marginBottom: 16,
             }}
           >
-            <Text style={{ color: colors.subText, flex: 0.2 }}>No.</Text>
-            <Text style={{ color: colors.subText, flex: 1 }}>Name</Text>
-            <Text
-              style={{
-                color: colors.subText,
-                flex: 0.6,
-                textAlign: "right",
-              }}
-            >
-              Date
-            </Text>
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Your Token</Text>
+            {activeSeat ? (
+              <>
+                <Text style={{ color: colors.primary, fontFamily: FONTS.bold, fontSize: 34, marginTop: 10 }}>
+                  #{activeSeat.seatNumber}
+                </Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
+                  Seated from {formatTime(activeSeat.enteredAt)}
+                </Text>
+              </>
+            ) : (
+              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 10 }}>
+                No active library token. Scan the Library QR to take one.
+              </Text>
+            )}
           </View>
 
-          {issuedBooks.map((book, index) => (
-            <View
-              key={book.id}
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                paddingVertical: 8,
-                backgroundColor: book.isDue
-                  ? isDarkMode
-                    ? "#f4433620"
-                    : "#ffebee"
-                  : "transparent",
-                borderRadius: 8,
-                paddingHorizontal: 4,
-                marginBottom: 4,
-              }}
-            >
-              <Text style={{ color: colors.text, flex: 0.2 }}>{index + 1}.</Text>
-              <Text style={{ color: colors.text, flex: 1 }}>
-                {book.name}
-                {book.isDue && (
-                  <Text style={{ color: "#f44336", fontFamily: FONTS.bold }}> (DUE)</Text>
-                )}
+          <View
+            style={{
+              backgroundColor: colors.cardElevated,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 18,
+              marginBottom: 16,
+            }}
+          >
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginBottom: 12 }}>
+              Students Inside
+            </Text>
+            {occupants.length ? (
+              occupants.map((entry, index) => (
+                <View
+                  key={entry.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 12,
+                    borderBottomWidth: index === occupants.length - 1 ? 0 : 1,
+                    borderBottomColor: colors.divider,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 }}>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 14,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: colors.primarySoft,
+                        marginRight: 12,
+                      }}
+                    >
+                      <Text style={{ color: colors.primary, fontFamily: FONTS.bold }}>#{entry.seatNumber}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{entry.user?.name}</Text>
+                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
+                        {entry.user?.studentId || "Student"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
+                    From {formatTime(entry.enteredAt)}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
+                Nobody is currently marked inside the library.
               </Text>
-              <Text style={{ color: colors.text, flex: 0.6, textAlign: "right" }}>
-                {book.issueDate}
+            )}
+          </View>
+
+          <View
+            style={{
+              backgroundColor: colors.cardElevated,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 18,
+            }}
+          >
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginBottom: 12 }}>
+              Library Activity
+            </Text>
+            {activityFeed.length ? (
+              activityFeed.map((activity, index) => (
+                <View
+                  key={activity.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    paddingVertical: 10,
+                    borderBottomWidth: index === activityFeed.length - 1 ? 0 : 1,
+                    borderBottomColor: colors.divider,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 14,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor:
+                        activity.type === "library_seat_released" ? colors.warningSoft : colors.successSoft,
+                      marginRight: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name={activity.type === "library_seat_released" ? "log-out-outline" : "log-in-outline"}
+                      size={18}
+                      color={activity.type === "library_seat_released" ? colors.warning : colors.success}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{activity.title}</Text>
+                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
+                      {formatTime(activity.timestamp)}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
+                No recent library activity yet.
               </Text>
-            </View>
-          ))}
+            )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import {
   Alert,
-  ImageBackground,
+  Image,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -270,38 +270,75 @@ export default function ClubRoomScreen({ navigation, route }) {
                   overflow: "hidden",
                 }}
               >
-                <ImageBackground source={room.imageSource} style={{ height: 132 }} imageStyle={{ opacity: 0.32 }}>
-                  <View style={{ flex: 1, backgroundColor: colors.overlay, padding: 18, justifyContent: "space-between" }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={{ color: "#ffffff", fontFamily: FONTS.bold, fontSize: 22 }}>{room.name}</Text>
-                        <Text style={{ color: "rgba(255,255,255,0.82)", fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
+                <View
+                  style={{
+                    padding: 18,
+                    backgroundColor: colors.cardMuted,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <View style={{ flexDirection: "row", flex: 1, paddingRight: 10 }}>
+                      <View
+                        style={{
+                          width: 68,
+                          height: 68,
+                          borderRadius: 999,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          overflow: "hidden",
+                          marginRight: 14,
+                        }}
+                      >
+                        <Image
+                          source={room.imageSource}
+                          style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: 999,
+                          }}
+                          resizeMode="cover"
+                        />
+                      </View>
+                      <View style={{ flex: 1, justifyContent: "center" }}>
+                        <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>{room.name}</Text>
+                        <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
                           {room.subtitle}
                         </Text>
                       </View>
-                      <View
+                    </View>
+                    <View
+                      style={{
+                        borderRadius: 999,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        backgroundColor: roomState?.isOpen ? colors.successSoft : colors.cardElevated,
+                        borderWidth: 1,
+                        borderColor: roomState?.isOpen ? colors.success : colors.border,
+                      }}
+                    >
+                      <Text
                         style={{
-                          borderRadius: 999,
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          backgroundColor: roomState?.isOpen ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.16)",
-                          borderWidth: 1,
-                          borderColor: roomState?.isOpen ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.28)",
+                          color: roomState?.isOpen ? colors.success : colors.heading,
+                          fontFamily: FONTS.bold,
+                          fontSize: 12,
                         }}
                       >
-                        <Text style={{ color: "#ffffff", fontFamily: FONTS.bold, fontSize: 12 }}>
-                          {roomState?.isOpen ? "Open Now" : "Closed"}
-                        </Text>
-                      </View>
+                        {roomState?.isOpen ? "Open Now" : "Closed"}
+                      </Text>
                     </View>
-
-                    <Text style={{ color: "rgba(255,255,255,0.82)", fontFamily: FONTS.regular, fontSize: 13 }}>
-                      {roomState?.isOpen
-                        ? `${roomState.presentCount} inside${roomState.openedBy ? ` | opened by ${roomState.openedBy.name}` : ""}`
-                        : "No active session yet"}
-                    </Text>
                   </View>
-                </ImageBackground>
+
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 14 }}>
+                    {roomState?.isOpen
+                      ? `${roomState.presentCount} inside${roomState.openedBy ? ` | opened by ${roomState.openedBy.name}` : ""}`
+                      : "No active session yet"}
+                  </Text>
+                </View>
 
                 <View style={{ padding: 18 }}>
                   {roomState?.isOpen ? (

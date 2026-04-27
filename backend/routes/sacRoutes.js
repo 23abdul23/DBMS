@@ -3,6 +3,7 @@ const { getPrismaClient } = require("../config/prisma")
 const { authenticate, authorize } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
 const { SAC_CLUB_ROOMS, SAC_EQUIPMENT, resolveClubRoom, resolveEquipment } = require("../utils/sacCatalog")
+const { isSacOpenAt, SAC_CLOSE_LABEL } = require("../utils/campusActivityRules")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -79,6 +80,24 @@ const buildEquipmentState = (equipmentName, checkouts) => ({
     user: buildStudentSummary(checkout.user),
   })),
 })
+
+const createSacLog = async (client, { userId, action, description, details = {} }) =>
+  client.log.create({
+    data: {
+      id: generateId(),
+      userId,
+      action,
+      location: "SAC",
+      success: true,
+      details: {
+        description,
+        ...details,
+      },
+      scanType: "manual",
+    },
+  })
+
+const getSacClosedMessage = () => `SAC is closed. It remains open till ${SAC_CLOSE_LABEL}.`
 
 const getOverview = async (userId) => {
   const [activeSessions, activeCheckouts, myActivePresences, myActiveEquipment] = await prisma.$transaction([
@@ -187,6 +206,10 @@ const getOverview = async (userId) => {
       })),
     },
     activityFeed,
+    meta: {
+      isOpenNow: isSacOpenAt(),
+      closesAt: SAC_CLOSE_LABEL,
+    },
   }
 }
 
@@ -208,6 +231,10 @@ router.get("/overview", authenticate, async (req, res) => {
 
 router.post("/rooms/:roomName/select", [authenticate, authorize("student")], async (req, res) => {
   try {
+    if (!isSacOpenAt()) {
+      return res.status(403).json({ message: getSacClosedMessage(), code: "SAC_CLOSED" })
+    }
+
     const roomName = resolveClubRoom(req.params.roomName)
 
     if (!roomName) {
@@ -268,6 +295,15 @@ router.post("/rooms/:roomName/select", [authenticate, authorize("student")], asy
             joinedAt: now,
           },
         })
+
+        await createSacLog(tx, {
+          userId: req.user.userId,
+          action: "sac_room_opened",
+          description: `Opened ${roomName} room`,
+          details: {
+            roomName,
+          },
+        })
       })
 
       message = `${roomName} opened successfully.`
@@ -295,6 +331,15 @@ router.post("/rooms/:roomName/select", [authenticate, authorize("student")], asy
             },
             data: {
               lastActivityAt: now,
+            },
+          })
+
+          await createSacLog(tx, {
+            userId: req.user.userId,
+            action: "sac_room_joined",
+            description: `Joined ${roomName} room`,
+            details: {
+              roomName,
             },
           })
         })
@@ -363,6 +408,15 @@ router.post("/rooms/:roomName/leave", [authenticate, authorize("student")], asyn
         },
         data: remainingOccupants === 0 ? { closedAt: now, lastActivityAt: now } : { lastActivityAt: now },
       })
+
+      await createSacLog(tx, {
+        userId: req.user.userId,
+        action: "sac_room_left",
+        description: `Left ${roomName} room`,
+        details: {
+          roomName,
+        },
+      })
     })
 
     const overview = await getOverview(req.user.userId)
@@ -375,6 +429,10 @@ router.post("/rooms/:roomName/leave", [authenticate, authorize("student")], asyn
 
 router.post("/equipment/:equipmentName/select", [authenticate, authorize("student")], async (req, res) => {
   try {
+    if (!isSacOpenAt()) {
+      return res.status(403).json({ message: getSacClosedMessage(), code: "SAC_CLOSED" })
+    }
+
     const equipmentName = resolveEquipment(req.params.equipmentName)
 
     if (!equipmentName) {
@@ -391,12 +449,23 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
     })
 
     if (!existingCheckout) {
-      await prisma.sacEquipmentCheckout.create({
-        data: {
-          id: generateId(),
-          equipmentName,
+      await prisma.$transaction(async (tx) => {
+        await tx.sacEquipmentCheckout.create({
+          data: {
+            id: generateId(),
+            equipmentName,
+            userId: req.user.userId,
+          },
+        })
+
+        await createSacLog(tx, {
           userId: req.user.userId,
-        },
+          action: "sac_equipment_taken",
+          description: `Took ${equipmentName}`,
+          details: {
+            equipmentName,
+          },
+        })
       })
     }
 
@@ -432,13 +501,24 @@ router.post("/equipment/:equipmentName/return", [authenticate, authorize("studen
       return res.status(404).json({ message: `You do not have ${equipmentName} checked out.` })
     }
 
-    await prisma.sacEquipmentCheckout.update({
-      where: {
-        id: activeCheckout.id,
-      },
-      data: {
-        returnedAt: new Date(),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.sacEquipmentCheckout.update({
+        where: {
+          id: activeCheckout.id,
+        },
+        data: {
+          returnedAt: new Date(),
+        },
+      })
+
+      await createSacLog(tx, {
+        userId: req.user.userId,
+        action: "sac_equipment_returned",
+        description: `Returned ${equipmentName}`,
+        details: {
+          equipmentName,
+        },
+      })
     })
 
     const overview = await getOverview(req.user.userId)

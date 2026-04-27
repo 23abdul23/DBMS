@@ -2,27 +2,27 @@ export const SAC_CLUB_ROOMS = [
   {
     name: "Virtuosi",
     subtitle: "Music and performance room",
-    imageSource: require("../assets/aegisIdLogo_bg.png"),
+    imageSource: require("../assets/clubs/Virtuosi.jpeg"),
   },
   {
     name: "Sarasva",
     subtitle: "Literary and discussion room",
-    imageSource: require("../assets/aegisIdLogo_bg.png"),
+    imageSource: require("../assets/clubs/Sarasva.jpeg"),
   },
   {
     name: "Genetics",
     subtitle: "Innovation and project room",
-    imageSource: require("../assets/aegisIdLogo_bg.png"),
+    imageSource: require("../assets/clubs/Geneticx.jpeg"),
   },
   {
     name: "Rangtarangni",
     subtitle: "Culture and arts room",
-    imageSource: require("../assets/aegisIdLogo_bg.png"),
+    imageSource: require("../assets/clubs/Rangtarangni.jpeg"),
   },
   {
     name: "AMS",
     subtitle: "Accoustic Media Society room",
-    imageSource: require("../assets/aegisIdLogo_bg.png"),
+    imageSource: require("../assets/clubs/AMS.jpeg"),
   },
 ]
 

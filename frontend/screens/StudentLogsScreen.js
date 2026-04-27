@@ -18,6 +18,13 @@ const ACTION_META = {
   outpass_long_visit: { label: "Long Visit Request", color: "#0f766e" },
   outpass_used: { label: "Outpass Used", color: COLORS.primary },
   outpass_status_changed: { label: "Outpass Status Changed", color: "#f59e0b" },
+  sac_room_opened: { label: "SAC Room Opened", color: "#d97706" },
+  sac_room_joined: { label: "SAC Room Joined", color: "#2563eb" },
+  sac_room_left: { label: "SAC Room Left", color: "#64748b" },
+  sac_equipment_taken: { label: "SAC Equipment Taken", color: "#059669" },
+  sac_equipment_returned: { label: "SAC Equipment Returned", color: "#0f766e" },
+  library_seat_taken: { label: "Library Token Taken", color: "#7c3aed" },
+  library_seat_released: { label: "Library Token Released", color: "#6b7280" },
 }
 
 const isOutpassAction = (action) =>
@@ -129,6 +136,9 @@ export default function StudentLogsScreen() {
         ) : null}
         {item.details?.reason ? (
           <Text style={[localStyles.cardMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text>
+        ) : null}
+        {item.details?.description ? (
+          <Text style={[localStyles.cardMeta, { color: colors.text }]}>Description: {item.details.description}</Text>
         ) : null}
       </View>
     )

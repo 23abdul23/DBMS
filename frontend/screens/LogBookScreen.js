@@ -191,6 +191,13 @@ export default function LogBook({ navigation, route }) {
         outpass_used: "Outpass Used",
         passkey_validated: "Passkey Validated",
         outpass_status_changed: "Outpass Status Changed",
+        sac_room_opened: "SAC Room Opened",
+        sac_room_joined: "SAC Room Joined",
+        sac_room_left: "SAC Room Left",
+        sac_equipment_taken: "SAC Equipment Taken",
+        sac_equipment_returned: "SAC Equipment Returned",
+        library_seat_taken: "Library Token Taken",
+        library_seat_released: "Library Token Released",
       }
       const actionColors = {
         entry: COLORS.success,
@@ -199,6 +206,13 @@ export default function LogBook({ navigation, route }) {
         outpass_used: "#7c3aed",
         passkey_validated: "#2563eb",
         outpass_status_changed: "#f59e0b",
+        sac_room_opened: "#d97706",
+        sac_room_joined: "#2563eb",
+        sac_room_left: "#64748b",
+        sac_equipment_taken: "#059669",
+        sac_equipment_returned: "#0f766e",
+        library_seat_taken: "#7c3aed",
+        library_seat_released: "#6b7280",
       }
       const actionLabel = actionLabels[item.action] || item.action
       const residentName = item?.user?.name || item?.details?.scannedUserName || "Resident"
@@ -220,6 +234,9 @@ export default function LogBook({ navigation, route }) {
           <Text style={[styles.logMeta, { color: colors.text }]}>Guard: {guardOnDuty}</Text>
           <Text style={[styles.logMeta, { color: colors.text }]}>Location: {item.location || "-"}</Text>
           {item?.details?.reason ? <Text style={[styles.logMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text> : null}
+          {item?.details?.description ? (
+            <Text style={[styles.logMeta, { color: colors.text }]}>Description: {item.details.description}</Text>
+          ) : null}
         </View>
       )
     },
