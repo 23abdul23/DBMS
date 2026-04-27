@@ -74,6 +74,7 @@ enum LogAction {
   entry
   exit
   scan_attempt
+  without_outpass
   outpass_request
   outpass_generated
   outpass_used

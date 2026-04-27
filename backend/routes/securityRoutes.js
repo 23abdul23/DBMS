@@ -25,6 +25,7 @@ const scannedUserSelect = {
   name: true,
   studentId: true,
   role: true,
+  gender: true,
   hostel: true,
   roomNumber: true,
 }
@@ -45,9 +46,13 @@ const buildOutpassSummary = (outpass) =>
         requestType: outpass.requestType,
         type: outpass.requestType,
         status: outpass.status,
+        reason: outpass.reason,
+        purpose: outpass.reason,
+        destination: outpass.destination,
         outDate: outpass.outDate,
         expectedReturnDate: outpass.expectedReturnDate,
         actualReturnDate: outpass.actualReturnDate,
+        rejectionReason: outpass.rejectionReason || null,
       }
     : null
 
@@ -66,7 +71,10 @@ const buildMovementLogPayload = ({
   guardId,
   guardName,
   scannedByUserId,
+  success = true,
   details = {},
+  errorCode = null,
+  errorMessage = null,
 }) => ({
   id: generateId(),
   userId: scannedUser.id,
@@ -74,9 +82,9 @@ const buildMovementLogPayload = ({
   location: location || null,
   guardId: guardId || null,
   guardName: guardName || null,
-  success: true,
+  success,
   details: {
-    message: "Security log created successfully",
+    message: success ? "Security log created successfully" : "Security warning created",
     scannedUserId: scannedUser.id,
     scannedStudentId: scannedUser.studentId || null,
     scannedUserName: scannedUser.name,
@@ -84,12 +92,118 @@ const buildMovementLogPayload = ({
     ...details,
   },
   scanType: "qr",
+  errorCode,
+  errorMessage,
 })
 
 const createStandardMovementLog = async (client, options) =>
   client.log.create({
     data: buildMovementLogPayload(options),
   })
+
+const getWithoutOutpassReason = (outpass, timestamp) => {
+  if (!outpass) {
+    return {
+      reasonCode: "no_outpass_request",
+      reason: "No outpass request was found for this student.",
+    }
+  }
+
+  if (outpass.status === "pending") {
+    return {
+      reasonCode: "pending_approval",
+      reason: "Outpass request is still pending approval.",
+    }
+  }
+
+  if (outpass.status === "rejected") {
+    return {
+      reasonCode: "rejected",
+      reason: outpass.rejectionReason
+        ? `Outpass request was rejected: ${outpass.rejectionReason}`
+        : "Outpass request was rejected.",
+    }
+  }
+
+  if (outpass.status === "cancelled") {
+    return {
+      reasonCode: "cancelled",
+      reason: "Outpass request was cancelled.",
+    }
+  }
+
+  if (outpass.status === "expired" || outpass.expectedReturnDate <= timestamp) {
+    return {
+      reasonCode: "expired",
+      reason: "Approved outpass is no longer valid because the allowed time window has expired.",
+    }
+  }
+
+  if (outpass.actualReturnDate) {
+    return {
+      reasonCode: "already_used",
+      reason: "Approved outpass has already been used for a completed trip.",
+    }
+  }
+
+  if (outpass.status === "approved" && outpass.outDate > timestamp) {
+    return {
+      reasonCode: "not_active_yet",
+      reason: "Approved outpass exists, but its exit window has not started yet.",
+    }
+  }
+
+  return {
+    reasonCode: "not_approved",
+    reason: "This student does not have an approved outpass for this exit attempt.",
+  }
+}
+
+const createWithoutOutpassWarning = async ({
+  scannedUser,
+  location,
+  guardId,
+  guardName,
+  scannedByUserId,
+  timestamp,
+}) => {
+  const latestOutpass = await prisma.outpass.findFirst({
+    where: {
+      userId: scannedUser.id,
+      requestType: OUTPASS_REQUEST_TYPE.REGULAR,
+    },
+    orderBy: [{ outDate: "desc" }, { createdAt: "desc" }],
+    include: outpassInclude,
+  })
+
+  const { reasonCode, reason } = getWithoutOutpassReason(latestOutpass, timestamp)
+  const log = await createStandardMovementLog(prisma, {
+    scannedUser,
+    action: "without_outpass",
+    location,
+    guardId,
+    guardName,
+    scannedByUserId,
+    success: false,
+    details: {
+      direction: "exit",
+      attemptedAction: "exit",
+      warningType: "outpass_required",
+      reasonCode,
+      reason,
+      title: "Exit Attempted",
+      outpassId: latestOutpass?.id || null,
+      requestType: latestOutpass?.requestType || OUTPASS_REQUEST_TYPE.REGULAR,
+    },
+    errorCode: "WITHOUT_OUTPASS",
+    errorMessage: reason,
+  })
+
+  return {
+    log,
+    outpass: latestOutpass,
+  }
+}
 
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10)
@@ -330,6 +444,17 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
       }
 
       if (requiresOutpassForExit(resolvedLocation, timestamp)) {
+        if (scannedUser.gender === "female") {
+          return createWithoutOutpassWarning({
+            scannedUser,
+            location: resolvedLocation,
+            guardId,
+            guardName,
+            scannedByUserId,
+            timestamp,
+          })
+        }
+
         throw createHttpError(400, "An approved outpass is required to exit campus after 6:00 PM")
       }
     }
@@ -547,7 +672,10 @@ router.post("/log", authenticate, async (req, res) => {
     })
 
     res.status(200).json({
-      message: "Security log created successfully",
+      message:
+        log.action === "without_outpass"
+          ? "Exit attempt recorded without approved outpass"
+          : "Security log created successfully",
       log,
       user: scannedUser,
       outpass: buildOutpassSummary(outpass),
@@ -618,7 +746,10 @@ router.post("/student-log", authenticate, async (req, res) => {
     })
 
     res.status(200).json({
-      message: "Student movement logged successfully",
+      message:
+        log.action === "without_outpass"
+          ? "Exit attempt recorded without approved outpass"
+          : "Student movement logged successfully",
       log,
       user: scannedUser,
       outpass: buildOutpassSummary(outpass),

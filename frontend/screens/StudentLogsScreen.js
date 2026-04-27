@@ -13,6 +13,7 @@ const PAGE_SIZE = 20
 const ACTION_META = {
   entry: { label: "Entry", color: COLORS.success },
   exit: { label: "Exit", color: COLORS.warning },
+  without_outpass: { label: "Exit Attempted", color: COLORS.error },
   outpass_request: { label: "Outpass Requested", color: "#7c3aed" },
   outpass_long_visit: { label: "Long Visit Request", color: "#0f766e" },
   outpass_used: { label: "Outpass Used", color: COLORS.primary },
@@ -20,7 +21,7 @@ const ACTION_META = {
 }
 
 const isOutpassAction = (action) =>
-  ["outpass_request", "outpass_long_visit", "outpass_used", "outpass_status_changed"].includes(action)
+  ["without_outpass", "outpass_request", "outpass_long_visit", "outpass_used", "outpass_status_changed"].includes(action)
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -125,6 +126,9 @@ export default function StudentLogsScreen() {
         ) : null}
         {item.details?.nextStatus ? (
           <Text style={[localStyles.cardMeta, { color: colors.text }]}>Status: {item.details.nextStatus}</Text>
+        ) : null}
+        {item.details?.reason ? (
+          <Text style={[localStyles.cardMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text>
         ) : null}
       </View>
     )

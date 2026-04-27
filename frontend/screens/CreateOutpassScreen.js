@@ -36,8 +36,8 @@ export default function CreateOutpassScreen({ navigation }) {
     // fromTime: new Date("2025-08-01T09:30:00"), // 9:30 AM
     // toDate: new Date("2025-08-05"),            // 5th Aug 2025
     // toTime: new Date("2025-08-05T18:00:00"),
-    emergencyName: "Abdul",
-    emergencyContact: "8909627048",
+    emergencyName: user.emergencyContact.split(' - ')[0],
+    emergencyContact: user.emergencyContact.split(' - ')[1],
     remarks: "Nothing",
     longVisit: false,
   })
@@ -177,8 +177,13 @@ export default function CreateOutpassScreen({ navigation }) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
+
+          <View style={[styles.inputContainer, {borderColor: colors.inputBorder, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={[styles.label, { color: colors.heading, textAlign: 'center', fontSize: 22, fontWeight: '500' }]}>{user.hostel} Outpass</Text>
+          </View>
+
           <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Text style={[styles.label, { color: colors.heading }]}>Purpose *</Text>
+            <Text style={[styles.label, { color: colors.heading }]}>Purpose</Text>
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="e.g., Medical appointment, Family visit"
@@ -190,7 +195,7 @@ export default function CreateOutpassScreen({ navigation }) {
           </View>
 
           <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Text style={[styles.label, { color: colors.heading }]}>Destination *</Text>
+            <Text style={[styles.label, { color: colors.heading }]}>Destination</Text>
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="e.g., City Hospital, Home"
@@ -205,12 +210,12 @@ export default function CreateOutpassScreen({ navigation }) {
             <View style={styles.dateTimeRow}>
               <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("fromDate")}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatDate(formData.fromDate)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputTextInv }]}>{formatDate(formData.fromDate)}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("fromTime")}>
                 <Ionicons name="time-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatTime(formData.fromTime)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputTextInv }]}>{formatTime(formData.fromTime)}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -220,12 +225,12 @@ export default function CreateOutpassScreen({ navigation }) {
             <View style={styles.dateTimeRow}>
               <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("toDate")}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatDate(formData.toDate)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputTextInv }]}>{formatDate(formData.toDate)}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.dateTimeButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]} onPress={() => setShowDatePicker("toTime")}>
                 <Ionicons name="time-outline" size={20} color={colors.text} />
-                <Text style={[styles.dateTimeText, { color: colors.inputText }]}>{formatTime(formData.toTime)}</Text>
+                <Text style={[styles.dateTimeText, { color: colors.inputTextInv }]}>{formatTime(formData.toTime)}</Text>
               </TouchableOpacity>
             </View>
           </View>
