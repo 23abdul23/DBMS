@@ -232,4 +232,10 @@ export const sacAPI = {
   returnEquipment: (equipmentName) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/return`),
 }
 
+export const libraryAPI = {
+  getOverview: () => api.get("/library/overview"),
+  claimSeat: (seatNumber) => api.post("/library/claim-seat", { seatNumber }),
+  releaseSeat: () => api.post("/library/release-seat"),
+}
+
 export default api

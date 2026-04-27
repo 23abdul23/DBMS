@@ -84,6 +84,13 @@ enum LogAction {
   emergency_status_updated
   user_status_updated
   emergency_alert
+  sac_room_opened
+  sac_room_joined
+  sac_room_left
+  sac_equipment_taken
+  sac_equipment_returned
+  library_seat_taken
+  library_seat_released
 }
 
 enum ScanType {
@@ -128,6 +135,7 @@ model User {
   sacRoomSessionsOpened  SacRoomSession[]       @relation("SacRoomOpenedBy")
   sacRoomPresences       SacRoomPresence[]      @relation("SacRoomPresenceUser")
   sacEquipmentCheckouts  SacEquipmentCheckout[] @relation("SacEquipmentCheckoutUser")
+  librarySeatSessions    LibrarySeatSession[]   @relation("LibrarySeatSessionUser")
 
   @@index([role])
   @@index([hostel])
@@ -180,6 +188,23 @@ model SacEquipmentCheckout {
   @@index([userId, returnedAt])
   @@index([checkedOutAt(sort: Desc)])
   @@map("sac_equipment_checkouts")
+}
+
+model LibrarySeatSession {
+  id             String    @id @db.VarChar(24)
+  userId         String    @map("user_id") @db.VarChar(24)
+  seatNumber     Int       @map("seat_number")
+  enteredAt      DateTime  @default(now()) @map("entered_at")
+  leftAt         DateTime? @map("left_at")
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at")
+
+  user User @relation("LibrarySeatSessionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, leftAt])
+  @@index([seatNumber, leftAt])
+  @@index([enteredAt(sort: Desc)])
+  @@index([lastActivityAt(sort: Desc)])
+  @@map("library_seat_sessions")
 }
 
 model StudentProfile {
