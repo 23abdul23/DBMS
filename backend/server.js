@@ -24,6 +24,7 @@ const securityRoutes = require("./routes/securityRoutes")
 const studentRoutes = require("./routes/studentRoutes")
 const wardenRoutes = require("./routes/wardenRoutes")
 const forgotRoutes = require("./routes/forgotRoute")
+const sacRoutes = require("./routes/sacRoutes")
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -88,6 +89,7 @@ app.use("/api/security", securityRoutes)
 app.use("/api/student", studentRoutes)
 app.use("/api/warden", wardenRoutes)
 app.use("/api/forgot", forgotRoutes)
+app.use("/api/sac", sacRoutes)
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

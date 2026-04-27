@@ -11,6 +11,8 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
 import SACScreen from './screens/SACScreen';
+import ClubRoomScreen from './screens/ClubRoomScreen';
+import EquipmentScreen from './screens/EquipmentScreen';
 import CreateOutpassScreen from "./screens/CreateOutpassScreen"
 import Scanner from './screens/ScannerScreen';
 import LibraryScreen from './screens/LibraryScreen';
@@ -50,6 +52,8 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen name="SAC" component={SACScreen} />
+          <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
+          <Stack.Screen name="Equipments" component={EquipmentScreen} />
           <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
           <Stack.Screen name="Scan" component={Scanner} />  
           <Stack.Screen name="Library" component={LibraryScreen} /> 
@@ -63,6 +67,8 @@ function RootNavigator() {
           <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="SAC" component={SACScreen} />
+          <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
+          <Stack.Screen name="Equipments" component={EquipmentScreen} />
           <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
           <Stack.Screen name="Scan" component={Scanner} />  
           <Stack.Screen name="Library" component={LibraryScreen} />
