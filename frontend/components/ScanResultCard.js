@@ -32,8 +32,23 @@ export default function ScanResultCard({ scanResult, location, onClose }) {
   const outpass = scanResult?.outpass || {}
   const action = log?.action
   const direction = log?.details?.direction
+  const isWithoutOutpass = action === "without_outpass"
 
   const variant = useMemo(() => {
+    if (isWithoutOutpass) {
+      return {
+        key: "without_outpass",
+        icon: "warning",
+        eyebrow: "Exit Attempted",
+        title: "Do not have an outpass",
+        subtitle:
+          log?.details?.reason || "This student cannot leave campus after 6:00 PM without an approved outpass.",
+        accent: colors.warning,
+        soft: colors.warningSoft,
+        badgeText: "Warning issued",
+      }
+    }
+
     if (action === "outpass_used" && direction === "exit") {
       return {
         key: "outpass_exit",
@@ -83,7 +98,7 @@ export default function ScanResultCard({ scanResult, location, onClose }) {
       soft: colors.successSoft,
       badgeText: "Entered campus",
     }
-  }, [action, colors, direction])
+  }, [action, colors, direction, isWithoutOutpass, log?.details?.reason])
 
   useEffect(() => {
     Animated.parallel([
@@ -117,9 +132,12 @@ export default function ScanResultCard({ scanResult, location, onClose }) {
   const resolvedLocation = log?.location || location || "Campus gate"
   const purpose = outpass?.purpose || outpass?.reason || "-"
   const destination = outpass?.destination || "-"
-  const outpassStatus = formatStatusLabel(outpass?.status || "approved")
+  const outpassStatus = outpass?.status ? formatStatusLabel(outpass.status) : "No Request"
   const requestedWindow = outpass?.fromDate || outpass?.outDate
   const returnWindow = outpass?.toDate || outpass?.expectedReturnDate
+  const warningReason = log?.details?.reason || "This student does not have an approved outpass."
+  const rejectionReason = outpass?.rejectionReason || null
+  const showOutpassDetails = action === "outpass_used" || isWithoutOutpass
 
   return (
     <Animated.View
@@ -189,26 +207,36 @@ export default function ScanResultCard({ scanResult, location, onClose }) {
             <Text style={[styles.summaryValue, { color: colors.text }]}>{studentId}</Text>
           </View>
         </View>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Timestamp</Text>
-            <Text style={[styles.summaryValue, { color: colors.text }]}>{formatDateTime(log?.createdAt)}</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Status</Text>
-            <Text style={[styles.summaryValue, { color: variant.accent }]}>
-              {action === "outpass_used" ? "Verified" : "Success"}
-            </Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Timestamp</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{formatDateTime(log?.createdAt)}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Status</Text>
+              <Text style={[styles.summaryValue, { color: variant.accent }]}>
+                {isWithoutOutpass ? "Exit Attempted" : action === "outpass_used" ? "Verified" : "Success"}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {action === "outpass_used" ? (
+      {isWithoutOutpass ? (
+        <View style={[styles.warningCard, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
+          <View style={styles.warningHeader}>
+            <Ionicons name="alert-circle" size={18} color={colors.warning} />
+            <Text style={[styles.warningTitle, { color: colors.warning }]}>Outpass warning</Text>
+          </View>
+          <Text style={[styles.warningText, { color: colors.text }]}>{warningReason}</Text>
+        </View>
+      ) : null}
+
+      {showOutpassDetails ? (
         <View style={[styles.outpassCard, { backgroundColor: colors.cardElevated, borderColor: colors.border }]}>
           <View style={styles.outpassHeader}>
             <Text style={[styles.outpassTitle, { color: colors.heading }]}>Outpass details</Text>
             <View style={[styles.statusPill, { backgroundColor: variant.soft }]}>
-              <Ionicons name="checkmark-circle" size={14} color={variant.accent} />
+              <Ionicons name={isWithoutOutpass ? "alert-circle" : "checkmark-circle"} size={14} color={variant.accent} />
               <Text style={[styles.statusPillText, { color: variant.accent }]}>{outpassStatus}</Text>
             </View>
           </View>
@@ -230,6 +258,12 @@ export default function ScanResultCard({ scanResult, location, onClose }) {
               <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Expected return</Text>
               <Text style={[styles.detailValue, { color: colors.text }]}>{formatDateTime(returnWindow)}</Text>
             </View>
+            {rejectionReason ? (
+              <View style={styles.detailBlockFull}>
+                <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Reason</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{rejectionReason}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -346,6 +380,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
   },
+  warningCard: {
+    marginTop: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+  },
+  warningHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  warningTitle: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+    marginLeft: 8,
+  },
+  warningText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.regular,
+    lineHeight: 20,
+  },
   outpassHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -376,6 +431,10 @@ const styles = StyleSheet.create({
   detailBlock: {
     width: "48%",
     marginBottom: 14,
+  },
+  detailBlockFull: {
+    width: "100%",
+    marginBottom: 4,
   },
   detailLabel: {
     fontSize: SIZES.xs,

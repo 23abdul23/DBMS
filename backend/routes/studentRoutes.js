@@ -41,6 +41,7 @@ const requireStudent = (req, res) => {
 const STUDENT_LOG_ACTIONS = [
   "entry",
   "exit",
+  "without_outpass",
   "outpass_request",
   "outpass_long_visit",
   "outpass_used",

@@ -38,7 +38,7 @@ export default function Scanner({ navigation, route }) {
   }, [permission]);
 
   useEffect(() => {
-    if (action === "exit" || action === "entry" || action === "outpass_used") {
+    if (action === "exit" || action === "entry" || action === "outpass_used" || action === "without_outpass") {
       setShowPopup(true);
       setScanned(true); // Close camera
     }

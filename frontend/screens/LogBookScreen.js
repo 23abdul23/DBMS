@@ -187,6 +187,7 @@ export default function LogBook({ navigation, route }) {
       const actionLabels = {
         entry: "Entry",
         exit: "Exit",
+        without_outpass: "Exit Attempted",
         outpass_used: "Outpass Used",
         passkey_validated: "Passkey Validated",
         outpass_status_changed: "Outpass Status Changed",
@@ -194,6 +195,7 @@ export default function LogBook({ navigation, route }) {
       const actionColors = {
         entry: COLORS.success,
         exit: COLORS.error,
+        without_outpass: COLORS.warning,
         outpass_used: "#7c3aed",
         passkey_validated: "#2563eb",
         outpass_status_changed: "#f59e0b",
@@ -217,6 +219,7 @@ export default function LogBook({ navigation, route }) {
           <Text style={[styles.logMeta, { color: colors.text }]}>User ID: {residentSystemId}</Text>
           <Text style={[styles.logMeta, { color: colors.text }]}>Guard: {guardOnDuty}</Text>
           <Text style={[styles.logMeta, { color: colors.text }]}>Location: {item.location || "-"}</Text>
+          {item?.details?.reason ? <Text style={[styles.logMeta, { color: colors.text }]}>Reason: {item.details.reason}</Text> : null}
         </View>
       )
     },
