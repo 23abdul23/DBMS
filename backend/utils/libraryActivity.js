@@ -120,20 +120,6 @@ const getLibraryOverview = async (client, userId) => {
   }
 }
 
-const createMovementLog = async (client, { userId, action, createdAt, details = {} }) =>
-  client.log.create({
-    data: {
-      id: generateId(),
-      userId,
-      action,
-      location: LIBRARY_LOCATION,
-      success: true,
-      details,
-      scanType: "manual",
-      createdAt,
-    },
-  })
-
 const createSeatLog = async (client, { userId, action, seatNumber, createdAt, description, details = {} }) =>
   client.log.create({
     data: {
@@ -152,10 +138,7 @@ const createSeatLog = async (client, { userId, action, seatNumber, createdAt, de
     },
   })
 
-const claimLibrarySeat = async (
-  client,
-  { userId, seatNumber, timestamp = new Date(), details = {}, createMovement = true },
-) => {
+const claimLibrarySeat = async (client, { userId, seatNumber, timestamp = new Date(), details = {} }) => {
   const sessionId = generateId()
 
   await client.librarySeatSession.create({
@@ -167,18 +150,6 @@ const claimLibrarySeat = async (
       lastActivityAt: timestamp,
     },
   })
-
-  if (createMovement) {
-    await createMovementLog(client, {
-      userId,
-      action: "entry",
-      createdAt: timestamp,
-      details: {
-        source: details.source || "library_claim",
-        seatNumber,
-      },
-    })
-  }
 
   await createSeatLog(client, {
     userId,
@@ -192,7 +163,7 @@ const claimLibrarySeat = async (
   return sessionId
 }
 
-const releaseLibrarySeat = async (client, { session, timestamp = new Date(), details = {}, createMovement = true }) => {
+const releaseLibrarySeat = async (client, { session, timestamp = new Date(), details = {} }) => {
   if (!session) {
     return null
   }
@@ -206,18 +177,6 @@ const releaseLibrarySeat = async (client, { session, timestamp = new Date(), det
       lastActivityAt: timestamp,
     },
   })
-
-  if (createMovement) {
-    await createMovementLog(client, {
-      userId: session.userId,
-      action: "exit",
-      createdAt: timestamp,
-      details: {
-        source: details.source || "library_release",
-        seatNumber: session.seatNumber,
-      },
-    })
-  }
 
   await createSeatLog(client, {
     userId: session.userId,

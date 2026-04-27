@@ -73,6 +73,26 @@ export default function LibraryScreen({ navigation }) {
     return <LoadingSpinner />
   }
 
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const past = new Date(date);
+
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) {
+      return `${diffMins} Min${diffMins > 1 ? "s" : ""}`;
+    }
+
+    if (diffHours < 24) {
+      return `${diffHours} Hr${diffHours > 1 ? "s" : ""}`;
+    }
+
+    return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
+  };
+
   const summary = overview?.summary || {}
   const activeSeat = overview?.myStatus?.activeSeat || null
   const occupants = overview?.occupants || []
@@ -282,70 +302,13 @@ export default function LibraryScreen({ navigation }) {
                     </View>
                   </View>
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
-                    From {formatTime(entry.enteredAt)}
+                    From {getTimeAgo(entry.enteredAt)}
                   </Text>
                 </View>
               ))
             ) : (
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
                 Nobody is currently marked inside the library.
-              </Text>
-            )}
-          </View>
-
-          <View
-            style={{
-              backgroundColor: colors.cardElevated,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: 18,
-            }}
-          >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginBottom: 12 }}>
-              Library Activity
-            </Text>
-            {activityFeed.length ? (
-              activityFeed.map((activity, index) => (
-                <View
-                  key={activity.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    paddingVertical: 10,
-                    borderBottomWidth: index === activityFeed.length - 1 ? 0 : 1,
-                    borderBottomColor: colors.divider,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor:
-                        activity.type === "library_seat_released" ? colors.warningSoft : colors.successSoft,
-                      marginRight: 12,
-                    }}
-                  >
-                    <Ionicons
-                      name={activity.type === "library_seat_released" ? "log-out-outline" : "log-in-outline"}
-                      size={18}
-                      color={activity.type === "library_seat_released" ? colors.warning : colors.success}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{activity.title}</Text>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
-                      {formatTime(activity.timestamp)}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
-                No recent library activity yet.
               </Text>
             )}
           </View>

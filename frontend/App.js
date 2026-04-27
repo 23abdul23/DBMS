@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, Platform, StyleSheet, View } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -20,6 +20,7 @@ import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import { StackScreen } from 'react-native-screens';
 import GuardDashboardScreen from './screens/GuardScreen';
+import AppStartupSplash from './components/AppStartupSplash';
 import { useTheme } from './context/ThemeContext';
 const Stack = createStackNavigator();
 
@@ -87,6 +88,16 @@ function RootNavigator() {
 }
 
 export default function App() {
+  const [showStartupSplash, setShowStartupSplash] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowStartupSplash(false)
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   const content = (
     <LocationProvider>
       <AuthProvider>
@@ -98,16 +109,20 @@ export default function App() {
   if (Platform.OS === 'web') {
     return (
       <ThemeProvider>
+        {showStartupSplash ? (
+          <AppStartupSplash />
+        ) : (
         <ScrollView contentContainerStyle={styles.webContainer} style={{ flex: 1 }}>
           <View style={styles.inner}>{content}</View>
         </ScrollView>
+        )}
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider>
-      {content}
+      {showStartupSplash ? <AppStartupSplash /> : content}
     </ThemeProvider>
   );
 }

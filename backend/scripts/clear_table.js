@@ -29,8 +29,6 @@ const TABLE_MAP = {
   outpass: "outpasses",
   outpass_audit_trail: "outpass_audit_trail",
   outpassaudittrail: "outpass_audit_trail",
-  passkeys: "passkeys",
-  passkey: "passkeys",
   locations: "locations",
   location: "locations",
   logs: "logs",

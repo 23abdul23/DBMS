@@ -7,18 +7,7 @@ const { classifyLocation, isExitGate, requiresOutpassForExit } = require("../uti
 
 const prisma = getPrismaClient()
 const router = express.Router()
-
-const userSelect = {
-  id: true,
-  name: true,
-  email: true,
-  role: true,
-  studentId: true,
-  hostel: true,
-  roomNumber: true,
-  phoneNumber: true,
-  emergencyContact: true,
-}
+const ACTIVITY_MANAGED_LOCATIONS = new Set(["Library", "SAC"])
 
 const scannedUserSelect = {
   id: true,
@@ -29,15 +18,6 @@ const scannedUserSelect = {
   hostel: true,
   roomNumber: true,
 }
-
-const buildPasskeyResponse = (passkey) => ({
-  id: passkey.id,
-  hash: passkey.hash,
-  userId: passkey.userId,
-  createdAt: passkey.createdAt,
-  expiresAt: passkey.expiresAt,
-  isActive: !passkey.isUsed && passkey.expiresAt > new Date(),
-})
 
 const buildOutpassSummary = (outpass) =>
   outpass
@@ -292,7 +272,7 @@ const getResolvedAction = async ({ userId, action, location }) => {
   return previousLog?.action === "entry" ? "exit" : "entry"
 }
 
-const findScannedUser = async ({ userId, studentId, hash }) => {
+const findScannedUser = async ({ userId, studentId }) => {
   if (userId) {
     const user = await prisma.user.findUnique({
       where: { id: String(userId) },
@@ -315,30 +295,20 @@ const findScannedUser = async ({ userId, studentId, hash }) => {
     }
   }
 
-  if (hash) {
-    const passkey = await prisma.passkey.findFirst({
-      where: {
-        hash: String(hash),
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      include: {
-        user: {
-          select: scannedUserSelect,
-        },
-      },
-    })
-
-    return passkey?.user || null
-  }
-
   return null
 }
 
 const createMovementLog = async ({ scannedUser, action, location, guardId, guardName, scannedByUserId }) => {
   const locationInfo = classifyLocation(location)
   const resolvedLocation = locationInfo.name || null
+
+  if (resolvedLocation && ACTIVITY_MANAGED_LOCATIONS.has(resolvedLocation)) {
+    throw createHttpError(
+      400,
+      `${resolvedLocation} uses its own activity flow. Do not create entry or exit logs there.`,
+    )
+  }
+
   const resolvedAction = await getResolvedAction({ userId: scannedUser.id, action, location: resolvedLocation })
   const timestamp = new Date()
 
@@ -580,71 +550,6 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
   })
 }
 
-router.post("/validate", authenticate, async (req, res) => {
-  try {
-    const { hash, location } = req.body
-
-    if (!hash) {
-      return res.status(400).json({ message: "Passkey hash is required" })
-    }
-
-    const passkey = await prisma.passkey.findFirst({
-      where: {
-        hash,
-        isUsed: false,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      include: {
-        user: {
-          select: userSelect,
-        },
-      },
-    })
-
-    if (!passkey) {
-      return res.status(400).json({ message: "Invalid or expired passkey" })
-    }
-
-    await prisma.passkey.update({
-      where: { id: passkey.id },
-      data: {
-        isUsed: true,
-      },
-    })
-
-    await prisma.log.create({
-      data: {
-        id: generateId(),
-        userId: passkey.userId,
-        action: "passkey_validated",
-        location: location || null,
-        success: true,
-        details: {
-          message: `Passkey validated at ${location || "unknown location"}`,
-        },
-        scanType: "manual",
-      },
-    })
-
-    res.json({
-      message: "Passkey validated successfully",
-      student: {
-        name: passkey.user.name,
-        studentId: passkey.user.studentId,
-        hostel: passkey.user.hostel,
-        roomNumber: passkey.user.roomNumber,
-      },
-      passkey: buildPasskeyResponse(passkey),
-      timestamp: new Date(),
-    })
-  } catch (error) {
-    console.error("Passkey validation error:", error)
-    res.status(500).json({ message: "Server error validating passkey" })
-  }
-})
-
 router.post("/log", authenticate, async (req, res) => {
   try {
     if (req.user.role !== "security") {
@@ -653,8 +558,8 @@ router.post("/log", authenticate, async (req, res) => {
       })
     }
 
-    const { action, location, guardId, guardName, userId, studentId, hash } = req.body
-    const scannedUser = await findScannedUser({ userId, studentId, hash })
+    const { action, location, guardId, guardName, userId, studentId } = req.body
+    const scannedUser = await findScannedUser({ userId, studentId })
 
     if (!scannedUser) {
       return res.status(400).json({

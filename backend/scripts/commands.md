@@ -44,7 +44,7 @@ Clear a whole table:
 
 Replace `users` with one of:
 
-`users`, `student_profiles`, `warden_profiles`, `security_profiles`, `emergencies`, `emergency_media`, `emergency_contact_calls`, `outpasses`, `outpass_audit_trail`, `passkeys`, `locations`, `logs`
+`users`, `student_profiles`, `warden_profiles`, `security_profiles`, `emergencies`, `emergency_media`, `emergency_contact_calls`, `outpasses`, `outpass_audit_trail`, `locations`, `logs`
 
 Note:
 

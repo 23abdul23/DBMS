@@ -143,7 +143,6 @@ export default function Scanner({ navigation, route }) {
       const normalizedLocation = typeof location === "string" ? location.trim().toLowerCase() : ""
       const isGuardLocationQr =
         Boolean(parsed?.guardId || parsed?.guardName || parsed?.location) &&
-        !parsed?.hash &&
         !parsed?.studentId &&
         !parsed?.userId
 
@@ -168,7 +167,6 @@ export default function Scanner({ navigation, route }) {
             })
           : await securityAPI.logEntry({
               location,
-              hash: parsed?.hash,
               studentId: parsed?.studentId,
               userId: parsed?.userId,
             })
