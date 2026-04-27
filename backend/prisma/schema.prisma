@@ -80,7 +80,6 @@ enum LogAction {
   outpass_used
   outpass_long_visit
   outpass_status_changed
-  passkey_validated
   emergency_status_updated
   user_status_updated
   emergency_alert
@@ -129,7 +128,6 @@ model User {
   outpasses              Outpass[]   @relation("OutpassOwner")
   approvedOutpasses      Outpass[]   @relation("OutpassApprover")
   outpassAuditChanges    OutpassAuditTrail[]
-  passkeys               Passkey[]
   passwordUpdateOtps     PasswordUpdateOtp[]
   logs                   Log[]
   sacRoomSessionsOpened  SacRoomSession[]       @relation("SacRoomOpenedBy")
@@ -340,23 +338,6 @@ model OutpassAuditTrail {
 
   @@index([outpassId])
   @@map("outpass_audit_trail")
-}
-
-model Passkey {
-  id        String   @id @db.VarChar(24)
-  userId    String   @map("user_id") @db.VarChar(24)
-  hash      String   @unique @db.VarChar(256)
-  date      DateTime
-  expiresAt DateTime @map("expires_at")
-  isUsed    Boolean  @default(false) @map("is_used")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, date])
-  @@index([expiresAt])
-  @@map("passkeys")
 }
 
 model PasswordUpdateOtp {

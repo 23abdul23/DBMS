@@ -79,9 +79,9 @@ module.exports = {
     userInterfaceStyle: "light",
     newArchEnabled: false,
     splash: {
-      image: "./assets/aegisIdLogo_bg.png",
+      image: "./assets/aegisIdLogo.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff00",
+      backgroundColor: "#08111f",
     },
     ios: {
       supportsTablet: true,

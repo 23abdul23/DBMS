@@ -1,4 +1,3 @@
-```powershell
 Write-Host "========================================="
 Write-Host "Starting Android APK Build..."
 Write-Host "========================================="
@@ -35,4 +34,3 @@ Write-Host "BUILD SUCCESSFUL"
 Write-Host "APK Location:"
 Write-Host ".\app\build\outputs\apk\release\app-release.apk"
 Write-Host "========================================="
-```

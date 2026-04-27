@@ -6,7 +6,6 @@ const cron = require("node-cron")
 require("dotenv").config()
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
-const { generateDailyPasskeys } = require("./utils/hashGenerator")
 const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
 const {
   runCampusActivitySimulation,
@@ -16,7 +15,6 @@ const {
 
 // Import routes
 const authRoutes = require("./routes/authRoutes")
-const passkeyRoutes = require("./routes/passkeyRoutes")
 const outpassRoutes = require("./routes/outpassRoutes")
 const emergencyRoutes = require("./routes/emergencyRoutes")
 const adminRoutes = require("./routes/adminRoutes")
@@ -81,7 +79,6 @@ app.use(express.urlencoded({ extended: true }))
 
 // Routes
 app.use("/api/auth", authRoutes)
-app.use("/api/passkey", passkeyRoutes)
 app.use("/api/outpass", outpassRoutes)
 app.use("/api/outpass/warden", wardenRoutes)
 app.use("/api/emergency", emergencyRoutes)
@@ -112,20 +109,6 @@ if (app._router && app._router.stack) {
     }
   })
 }
-
-
-
-// Daily passkey generation cron job (runs at midnight)
-cron.schedule("0 0 * * *", async () => {
-  console.log("Generating daily passkeys...")
-  try {
-    await generateDailyPasskeys()
-    console.log("Daily passkeys generated successfully")
-  } catch (error) {
-    console.error("Error generating daily passkeys:", error)
-  }
-})
-
 cron.schedule("*/5 * * * *", async () => {
   try {
     const result = await cleanupExpiredPasswordOtps()

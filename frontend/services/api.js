@@ -159,7 +159,6 @@ export const commonAPI = {
 
   getProfile: () => api.get("/auth/profile"),
   updateProfile: (data) => api.put("/auth/profile", data),
-  getDailyPasskey: () => api.get("/passkey/today"),
   changePassword: (currentPassword, newPassword, confirmPassword) => {
     if (typeof currentPassword === "object" && currentPassword !== null) {
       return api.put("/student/passwordUpdate", currentPassword)
@@ -169,7 +168,6 @@ export const commonAPI = {
   },
   requestPasswordOtp: (data) => api.post("/student/password-update/request-otp", data),
   verifyPasswordOtp: (data) => api.post("/student/password-update/verify-otp", data),
-  getDailyPasskeyGuard: () => api.get("/passkey/todayGuard"),
 }
 
 export const studentAPI = {
@@ -214,7 +212,6 @@ export const emergencyAPI = {
 
 // Security API endpoints
 export const securityAPI = {
-  validatePasskey: (data) => api.post("/security/validate", data),
   logEntry: (data) => api.post("/security/log", data),
   logStudentScan: (data) => api.post("/security/student-log", data),
   getLogs: (params = {}, token) =>
