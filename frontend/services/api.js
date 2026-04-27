@@ -224,4 +224,12 @@ export const securityAPI = {
     }),
 }
 
+export const sacAPI = {
+  getOverview: () => api.get("/sac/overview"),
+  selectRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
+  leaveRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
+  selectEquipment: (equipmentName) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
+  returnEquipment: (equipmentName) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/return`),
+}
+
 export default api

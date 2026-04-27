@@ -50,6 +50,7 @@ export default function Scanner({ navigation, route }) {
       try {
         const parsed = JSON.parse(data);
         const location = parsed?.location || fallbackLocation || "";
+        const normalizedLocation = typeof location === "string" ? location.trim().toLowerCase() : "";
         const isGuardLocationQr =
           Boolean(parsed?.guardId || parsed?.guardName || parsed?.location) &&
           !parsed?.hash &&
@@ -57,6 +58,11 @@ export default function Scanner({ navigation, route }) {
           !parsed?.userId;
 
         setLoc(location);
+
+        if (user?.role === "student" && normalizedLocation === "sac") {
+          navigation.replace("SAC", { entrySource: "qr", location: "SAC" });
+          return;
+        }
 
         const response =
           user?.role === "student" && isGuardLocationQr

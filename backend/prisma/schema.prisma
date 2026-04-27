@@ -125,10 +125,61 @@ model User {
   passkeys               Passkey[]
   passwordUpdateOtps     PasswordUpdateOtp[]
   logs                   Log[]
+  sacRoomSessionsOpened  SacRoomSession[]       @relation("SacRoomOpenedBy")
+  sacRoomPresences       SacRoomPresence[]      @relation("SacRoomPresenceUser")
+  sacEquipmentCheckouts  SacEquipmentCheckout[] @relation("SacEquipmentCheckoutUser")
 
   @@index([role])
   @@index([hostel])
   @@map("users")
+}
+
+model SacRoomSession {
+  id             String            @id @db.VarChar(24)
+  roomName       String            @map("room_name") @db.VarChar(100)
+  openedByUserId String            @map("opened_by_user_id") @db.VarChar(24)
+  openedAt       DateTime          @default(now()) @map("opened_at")
+  closedAt       DateTime?         @map("closed_at")
+  lastActivityAt DateTime          @default(now()) @map("last_activity_at")
+
+  openedBy  User              @relation("SacRoomOpenedBy", fields: [openedByUserId], references: [id], onDelete: Cascade)
+  presences SacRoomPresence[]
+
+  @@index([roomName, closedAt])
+  @@index([openedAt(sort: Desc)])
+  @@index([lastActivityAt(sort: Desc)])
+  @@map("sac_room_sessions")
+}
+
+model SacRoomPresence {
+  id        String   @id @db.VarChar(24)
+  sessionId String   @map("session_id") @db.VarChar(24)
+  userId    String   @map("user_id") @db.VarChar(24)
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  session SacRoomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User           @relation("SacRoomPresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, leftAt])
+  @@index([userId, leftAt])
+  @@index([joinedAt(sort: Desc)])
+  @@map("sac_room_presences")
+}
+
+model SacEquipmentCheckout {
+  id            String    @id @db.VarChar(24)
+  equipmentName String    @map("equipment_name") @db.VarChar(100)
+  userId        String    @map("user_id") @db.VarChar(24)
+  checkedOutAt  DateTime  @default(now()) @map("checked_out_at")
+  returnedAt    DateTime? @map("returned_at")
+
+  user User @relation("SacEquipmentCheckoutUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentName, returnedAt])
+  @@index([userId, returnedAt])
+  @@index([checkedOutAt(sort: Desc)])
+  @@map("sac_equipment_checkouts")
 }
 
 model StudentProfile {
