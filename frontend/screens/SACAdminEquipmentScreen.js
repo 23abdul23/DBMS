@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   Alert,
   RefreshControl,
@@ -37,10 +37,8 @@ export default function EquipmentScreen({ navigation, route }) {
   const [submittingKey, setSubmittingKey] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
-  const myEquipmentSet = useMemo(
-    () => new Set((overview?.myStatus?.activeEquipment || []).map((item) => item.name)),
-    [overview?.myStatus?.activeEquipment],
-  )
+  const isStudent = user?.role === "student"
+
   const equipmentActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
   )
@@ -178,9 +176,9 @@ export default function EquipmentScreen({ navigation, route }) {
                 />
               </View>
               <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Shared equipment, private identities</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                  Counts remain live, but the student view no longer reveals who currently holds each item.
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Equipment activity</Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
+                  Mark sports equipment as taken or returned, and see who currently has each item.
                 </Text>
               </View>
             </View>
@@ -246,8 +244,7 @@ export default function EquipmentScreen({ navigation, route }) {
 
           {SAC_EQUIPMENT.map((item) => {
             const equipmentState = equipmentStateMap.get(item.name)
-            const userHasItem =
-              equipmentState?.isCheckedOutByCurrentUser || myEquipmentSet.has(item.name) || false
+            const userHasItem = Boolean(equipmentState?.checkedOutBy?.some((entry) => entry.user?.id === user?.id))
             const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}`
 
             return (
@@ -300,29 +297,37 @@ export default function EquipmentScreen({ navigation, route }) {
                   </View>
                 </View>
 
-                <View
-                  style={{
-                    marginTop: 14,
-                    borderRadius: 18,
-                    padding: 14,
-                    backgroundColor: userHasItem ? colors.successSoft : colors.cardMuted,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13 }}>
-                    {userHasItem ? "This item is currently assigned to you." : "Holder identities are hidden in student view."}
-                  </Text>
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
-                    {userHasItem
-                      ? `Assigned since ${formatTime(
-                          (overview?.myStatus?.activeEquipment || []).find((entry) => entry.name === item.name)?.checkedOutAt,
-                        )}`
-                      : "Only scoped SAC observers can see who has taken each item."}
-                  </Text>
-                </View>
+                {Boolean(equipmentState?.checkedOutBy?.length) && (
+                  <View style={{ marginTop: 14 }}>
+                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13, marginBottom: 8 }}>
+                      Taken by
+                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                      {equipmentState.checkedOutBy.map((entry) => (
+                        <View
+                          key={entry.id}
+                          style={{
+                            marginRight: 8,
+                            marginBottom: 8,
+                            borderRadius: 999,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            backgroundColor: colors.cardMuted,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                          }}
+                        >
+                          <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>{entry.user?.name}</Text>
+                          <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 11 }}>
+                            {formatTime(entry.checkedOutAt)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
 
-                {user?.role === "student" ? (
+                {isStudent && (
                   <TouchableOpacity
                     disabled={isBusy}
                     onPress={() =>
@@ -359,7 +364,7 @@ export default function EquipmentScreen({ navigation, route }) {
                       {userHasItem ? "Return Equipment" : "Take Equipment"}
                     </Text>
                   </TouchableOpacity>
-                ) : null}
+                )}
               </View>
             )
           })}
@@ -379,7 +384,7 @@ export default function EquipmentScreen({ navigation, route }) {
             {equipmentActivity.length ? (
               equipmentActivity.map((activity, index) => (
                 <View
-                  key={`${activity.id || activity.type}-${activity.timestamp}-${index}`}
+                  key={`${activity.type}-${activity.timestamp}-${index}`}
                   style={{
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -395,8 +400,7 @@ export default function EquipmentScreen({ navigation, route }) {
                       borderRadius: 14,
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor:
-                        activity.type === "equipment_returned" ? colors.successSoft : colors.primarySoft,
+                      backgroundColor: activity.type === "equipment_returned" ? colors.successSoft : colors.primarySoft,
                       marginRight: 12,
                     }}
                   >

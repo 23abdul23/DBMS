@@ -27,6 +27,8 @@ export const UserRoleMap = {
   warden: "Warden",
   security: "Security",
   admin: "Admin",
+  sac_admin: "SAC Administrator",
+  library_admin: "Library Administrator",
 };
 
 export const GenderMap = {

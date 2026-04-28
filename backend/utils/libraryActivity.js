@@ -1,5 +1,6 @@
 const { generateId } = require("./hashGenerator")
 const { getLibraryLimit } = require("./campusActivityRules")
+const { canViewFullLibraryActivity } = require("./adminScopes")
 
 const LIBRARY_LOCATION = "Library"
 
@@ -51,7 +52,15 @@ const getSeatSessionByNumber = async (client, seatNumber) =>
     orderBy: [{ enteredAt: "asc" }, { id: "asc" }],
   })
 
-const getLibraryOverview = async (client, userId) => {
+const sanitizeLibraryActivityItem = (item, includeUserDetails) => ({
+  ...item,
+  title: includeUserDetails ? item.title : item.seatNumber ? `Token ${item.seatNumber} activity` : item.title,
+  user: includeUserDetails ? item.user : null,
+})
+
+const getLibraryOverview = async (client, viewer) => {
+  const includeUserDetails = canViewFullLibraryActivity(viewer)
+  const viewerUserId = viewer?.userId || viewer?.id || null
   const limit = getLibraryLimit()
   const [activeSeats, activityLogs, myActiveSeat] = await Promise.all([
     client.librarySeatSession.findMany({
@@ -76,7 +85,7 @@ const getLibraryOverview = async (client, userId) => {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 15,
     }),
-    userId ? getActiveSeatSession(client, userId) : Promise.resolve(null),
+    viewerUserId ? getActiveSeatSession(client, viewerUserId) : Promise.resolve(null),
   ])
 
   return {
@@ -99,23 +108,27 @@ const getLibraryOverview = async (client, userId) => {
       id: seat.id,
       seatNumber: seat.seatNumber,
       enteredAt: seat.enteredAt,
-      user: buildLibraryStudentSummary(seat.user),
+      user: includeUserDetails ? buildLibraryStudentSummary(seat.user) : null,
+      isCurrentUserSeat: Boolean(viewerUserId) && seat.userId === viewerUserId,
     })),
-    activityFeed: activityLogs.map((log) => ({
-      id: log.id,
-      type: log.action,
-      timestamp: log.createdAt,
-      title:
-        log.details?.description ||
-        (log.action === "library_seat_released"
-          ? `${log.user?.name || "Student"} released seat ${log.details?.seatNumber || ""}`.trim()
-          : `${log.user?.name || "Student"} took seat ${log.details?.seatNumber || ""}`.trim()),
-      subtitle: log.action === "library_seat_released" ? "Seat released" : "Seat occupied",
-      seatNumber: log.details?.seatNumber || null,
-      user: log.user ? buildLibraryStudentSummary(log.user) : null,
-    })),
+    activityFeed: activityLogs
+      .map((log) => ({
+        id: log.id,
+        type: log.action,
+        timestamp: log.createdAt,
+        title:
+          log.details?.description ||
+          (log.action === "library_seat_released"
+            ? `${log.user?.name || "Student"} released seat ${log.details?.seatNumber || ""}`.trim()
+            : `${log.user?.name || "Student"} took seat ${log.details?.seatNumber || ""}`.trim()),
+        subtitle: log.action === "library_seat_released" ? "Seat released" : "Seat occupied",
+        seatNumber: log.details?.seatNumber || null,
+        user: log.user ? buildLibraryStudentSummary(log.user) : null,
+      }))
+      .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails)),
     meta: {
       limit,
+      viewerCanSeeDetails: includeUserDetails,
     },
   }
 }

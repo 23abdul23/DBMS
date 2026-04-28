@@ -4,6 +4,7 @@ const { authenticate, authorize } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
 const { SAC_CLUB_ROOMS, SAC_EQUIPMENT, resolveClubRoom, resolveEquipment } = require("../utils/sacCatalog")
 const { isSacOpenAt, SAC_CLOSE_LABEL } = require("../utils/campusActivityRules")
+const { canViewFullSacActivity } = require("../utils/adminScopes")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -42,6 +43,17 @@ const activeEquipmentInclude = {
   },
 }
 
+const sacLogUserSelect = {
+  id: true,
+  name: true,
+  studentId: true,
+  hostel: true,
+  roomNumber: true,
+  department: true,
+  year: true,
+  profilePhoto: true,
+}
+
 const buildStudentSummary = (user) => ({
   id: user.id,
   name: user.name,
@@ -53,7 +65,7 @@ const buildStudentSummary = (user) => ({
   profilePhoto: user.profilePhoto || null,
 })
 
-const buildRoomState = (roomName, session) => {
+const buildRoomState = (roomName, session, viewerUserId = null) => {
   const occupants = session?.presences?.map((presence) => ({
     id: presence.id,
     joinedAt: presence.joinedAt,
@@ -67,18 +79,105 @@ const buildRoomState = (roomName, session) => {
     lastActivityAt: session?.lastActivityAt || null,
     openedBy: session?.openedBy ? buildStudentSummary(session.openedBy) : null,
     presentCount: occupants.length,
+    isCurrentUserInside: Boolean(viewerUserId) && occupants.some((occupant) => occupant.user?.id === viewerUserId),
     occupants,
   }
 }
 
-const buildEquipmentState = (equipmentName, checkouts) => ({
-  name: equipmentName,
-  activeCount: checkouts.length,
-  checkedOutBy: checkouts.map((checkout) => ({
+const buildEquipmentState = (equipmentName, checkouts, viewerUserId = null) => {
+  const checkedOutBy = checkouts.map((checkout) => ({
     id: checkout.id,
     checkedOutAt: checkout.checkedOutAt,
     user: buildStudentSummary(checkout.user),
-  })),
+  }))
+
+  return {
+    name: equipmentName,
+    activeCount: checkouts.length,
+    isCheckedOutByCurrentUser: Boolean(viewerUserId) && checkedOutBy.some((entry) => entry.user?.id === viewerUserId),
+    checkedOutBy,
+  }
+}
+
+const buildSacActivityFeed = (logs, includeUserDetails) =>
+  logs.map((log) => {
+    const roomName = log.details?.roomName || null
+    const equipmentName = log.details?.equipmentName || null
+    const actorName = includeUserDetails ? log.user?.name || "Student" : "A student"
+    const subtitle = includeUserDetails
+      ? log.user?.studentId
+        ? log.user.studentId
+        : "Student activity"
+      : "Student activity"
+
+    if (log.action === "sac_room_opened") {
+      return {
+        id: log.id,
+        type: "room_opened",
+        timestamp: log.createdAt,
+        title: includeUserDetails ? `${actorName} opened ${roomName}` : `${roomName} opened`,
+        subtitle,
+        roomName,
+        user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
+      }
+    }
+
+    if (log.action === "sac_room_joined") {
+      return {
+        id: log.id,
+        type: "room_joined",
+        timestamp: log.createdAt,
+        title: includeUserDetails ? `${actorName} joined ${roomName}` : `Someone joined ${roomName}`,
+        subtitle,
+        roomName,
+        user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
+      }
+    }
+
+    if (log.action === "sac_room_left") {
+      return {
+        id: log.id,
+        type: "room_left",
+        timestamp: log.createdAt,
+        title: includeUserDetails ? `${actorName} left ${roomName}` : `Someone left ${roomName}`,
+        subtitle,
+        roomName,
+        user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
+      }
+    }
+
+    if (log.action === "sac_equipment_returned") {
+      return {
+        id: log.id,
+        type: "equipment_returned",
+        timestamp: log.createdAt,
+        title: includeUserDetails ? `${actorName} returned ${equipmentName}` : `${equipmentName} returned`,
+        subtitle,
+        equipmentName,
+        user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
+      }
+    }
+
+    return {
+      id: log.id,
+      type: "equipment_checked_out",
+      timestamp: log.createdAt,
+      title: includeUserDetails ? `${actorName} took ${equipmentName}` : `${equipmentName} checked out`,
+      subtitle,
+      equipmentName,
+      user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
+    }
+  })
+
+const sanitizeRoomState = (room, includeUserDetails) => ({
+  ...room,
+  openedBy: includeUserDetails ? room.openedBy : null,
+  occupants: includeUserDetails ? room.occupants : [],
+})
+
+const sanitizeEquipmentState = (item, includeUserDetails) => ({
+  ...item,
+  checkedOutBy: includeUserDetails ? item.checkedOutBy : [],
 })
 
 const createSacLog = async (client, { userId, action, description, details = {} }) =>
@@ -99,8 +198,11 @@ const createSacLog = async (client, { userId, action, description, details = {} 
 
 const getSacClosedMessage = () => `SAC is closed. It remains open till ${SAC_CLOSE_LABEL}.`
 
-const getOverview = async (userId) => {
-  const [activeSessions, activeCheckouts, myActivePresences, myActiveEquipment] = await prisma.$transaction([
+const getOverview = async (viewer) => {
+  const includeUserDetails = canViewFullSacActivity(viewer)
+  const viewerUserId = viewer?.userId || viewer?.id || null
+
+  const [activeSessions, activeCheckouts, myActivePresences, myActiveEquipment, recentActivityLogs] = await prisma.$transaction([
     prisma.sacRoomSession.findMany({
       where: {
         closedAt: null,
@@ -117,7 +219,7 @@ const getOverview = async (userId) => {
     }),
     prisma.sacRoomPresence.findMany({
       where: {
-        userId,
+        userId: viewerUserId,
         leftAt: null,
         session: {
           closedAt: null,
@@ -132,11 +234,32 @@ const getOverview = async (userId) => {
     }),
     prisma.sacEquipmentCheckout.findMany({
       where: {
-        userId,
+        userId: viewerUserId,
         returnedAt: null,
       },
       orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
       include: activeEquipmentInclude,
+    }),
+    prisma.log.findMany({
+      where: {
+        location: "SAC",
+        action: {
+          in: [
+            "sac_room_opened",
+            "sac_room_joined",
+            "sac_room_left",
+            "sac_equipment_taken",
+            "sac_equipment_returned",
+          ],
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 20,
+      include: {
+        user: {
+          select: sacLogUserSelect,
+        },
+      },
     }),
   ])
 
@@ -151,42 +274,13 @@ const getOverview = async (userId) => {
     equipmentMap.get(checkout.equipmentName).push(checkout)
   }
 
-  const rooms = SAC_CLUB_ROOMS.map((roomName) => buildRoomState(roomName, activeSessionMap.get(roomName) || null))
-  const equipment = SAC_EQUIPMENT.map((equipmentName) =>
-    buildEquipmentState(equipmentName, equipmentMap.get(equipmentName) || []),
+  const rooms = SAC_CLUB_ROOMS.map((roomName) =>
+    buildRoomState(roomName, activeSessionMap.get(roomName) || null, viewerUserId),
   )
-
-  const activityFeed = [
-    ...activeSessions.map((session) => ({
-      type: "room_opened",
-      timestamp: session.openedAt,
-      title: `${session.roomName} opened`,
-      subtitle: `${session.openedBy.name} opened the room`,
-      roomName: session.roomName,
-    })),
-    ...activeSessions.flatMap((session) =>
-      session.presences
-        .filter((presence) => presence.userId !== session.openedByUserId)
-        .map((presence) => ({
-          type: "room_joined",
-          timestamp: presence.joinedAt,
-          title: `${presence.user.name} joined ${session.roomName}`,
-          subtitle: `${session.presences.length} student${session.presences.length === 1 ? "" : "s"} inside now`,
-          roomName: session.roomName,
-        })),
-    ),
-    ...activeCheckouts.map((checkout) => ({
-      type: "equipment_checked_out",
-      timestamp: checkout.checkedOutAt,
-      title: `${checkout.user.name} took ${checkout.equipmentName}`,
-      subtitle: `${(equipmentMap.get(checkout.equipmentName) || []).length} active checkout${
-        (equipmentMap.get(checkout.equipmentName) || []).length === 1 ? "" : "s"
-      }`,
-      equipmentName: checkout.equipmentName,
-    })),
-  ]
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-    .slice(0, 15)
+  const equipment = SAC_EQUIPMENT.map((equipmentName) =>
+    buildEquipmentState(equipmentName, equipmentMap.get(equipmentName) || [], viewerUserId),
+  )
+  const activityFeed = buildSacActivityFeed(recentActivityLogs, includeUserDetails).slice(0, 15)
 
   return {
     summary: {
@@ -195,10 +289,12 @@ const getOverview = async (userId) => {
       equipmentInUse: activeCheckouts.length,
       activeEquipmentTypes: equipment.filter((item) => item.activeCount > 0).length,
     },
-    rooms,
-    equipment,
+    rooms: rooms.map((room) => sanitizeRoomState(room, includeUserDetails)),
+    equipment: equipment.map((item) => sanitizeEquipmentState(item, includeUserDetails)),
     myStatus: {
-      activeRooms: myActivePresences.map((presence) => buildRoomState(presence.session.roomName, presence.session)),
+      activeRooms: myActivePresences
+        .map((presence) => buildRoomState(presence.session.roomName, presence.session, viewerUserId))
+        .map((room) => sanitizeRoomState(room, includeUserDetails)),
       activeEquipment: myActiveEquipment.map((checkout) => ({
         id: checkout.id,
         name: checkout.equipmentName,
@@ -209,13 +305,14 @@ const getOverview = async (userId) => {
     meta: {
       isOpenNow: isSacOpenAt(),
       closesAt: SAC_CLOSE_LABEL,
+      viewerCanSeeDetails: includeUserDetails,
     },
   }
 }
 
 router.get("/overview", authenticate, async (req, res) => {
   try {
-    const overview = await getOverview(req.user.userId)
+    const overview = await getOverview(req.user)
     res.json({
       overview,
       catalog: {
@@ -348,7 +445,7 @@ router.post("/rooms/:roomName/select", [authenticate, authorize("student")], asy
       }
     }
 
-    const overview = await getOverview(req.user.userId)
+    const overview = await getOverview(req.user)
     res.json({ message, overview })
   } catch (error) {
     console.error("SAC room select error:", error)
@@ -419,7 +516,7 @@ router.post("/rooms/:roomName/leave", [authenticate, authorize("student")], asyn
       })
     })
 
-    const overview = await getOverview(req.user.userId)
+    const overview = await getOverview(req.user)
     res.json({ message: `Left ${roomName}.`, overview })
   } catch (error) {
     console.error("SAC room leave error:", error)
@@ -469,7 +566,7 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
       })
     }
 
-    const overview = await getOverview(req.user.userId)
+    const overview = await getOverview(req.user)
     res.json({
       message: existingCheckout ? `You already have ${equipmentName}.` : `${equipmentName} marked as taken.`,
       overview,
@@ -521,7 +618,7 @@ router.post("/equipment/:equipmentName/return", [authenticate, authorize("studen
       })
     })
 
-    const overview = await getOverview(req.user.userId)
+    const overview = await getOverview(req.user)
     res.json({ message: `${equipmentName} returned.`, overview })
   } catch (error) {
     console.error("SAC equipment return error:", error)

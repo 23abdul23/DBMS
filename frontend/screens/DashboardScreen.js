@@ -23,7 +23,7 @@ const QUICK_ACTIONS = [
   {
     key: "library",
     title: "Library",
-    subtitle: "Track occupancy, tokens, and who is seated now.",
+    subtitle: "Track occupancy, tokens, and your own live library status.",
     icon: "book",
     arrowColorKey: "primary",
     iconBgKey: "primarySoft",
@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
   {
     key: "sac",
     title: "SAC",
-    subtitle: "Club rooms, activities, and sports equipment access.",
+    subtitle: "Club rooms and equipment counts with privacy-safe activity access.",
     icon: "color-wand-outline",
     arrowColorKey: "warning",
     iconBgKey: "warningSoft",

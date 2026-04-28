@@ -26,6 +26,12 @@ const formatDateTime = (value) => {
   return new Date(value).toLocaleString()
 }
 
+const formatMovementLine = (movement) => {
+  const action = movement?.action === "exit" ? "Exited" : movement?.action === "entry" ? "Entered" : prettify(movement?.action)
+  const location = movement?.location ? ` at ${movement.location}` : ""
+  return `${action}${location}`
+}
+
 export default function WardenMonitoringCard({ entry, colors }) {
   const badgeColor = stateColors[entry.monitoringState] || COLORS.gray[500]
   const badgeLabel =
@@ -73,11 +79,26 @@ export default function WardenMonitoringCard({ entry, colors }) {
       )}
 
       {entry.latestMovement ? (
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
-          <Ionicons name="scan-outline" size={16} color={colors.text} />
-          <Text style={[styles.metaText, { color: colors.text, marginTop: 0, marginLeft: 6 }]}>
-            Last movement: {prettify(entry.latestMovement.action)} at {formatDateTime(entry.latestMovement.createdAt)}
-          </Text>
+        <View style={{ marginTop: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Ionicons name="scan-outline" size={16} color={colors.text} />
+            <Text style={[styles.metaText, { color: colors.text, marginTop: 0, marginLeft: 6 }]}>
+              Last movement: {formatMovementLine(entry.latestMovement)} on {formatDateTime(entry.latestMovement.createdAt)}
+            </Text>
+          </View>
+
+          {entry.recentMovements?.length ? (
+            <View style={{ marginTop: 8 }}>
+              {entry.recentMovements.slice(0, 3).map((movement, index) => (
+                <Text
+                  key={movement.id || `${movement.action}-${movement.createdAt}-${index}`}
+                  style={[styles.metaText, { color: colors.subText, marginTop: index === 0 ? 0 : 4 }]}
+                >
+                  {index + 1}. {formatMovementLine(movement)} on {formatDateTime(movement.createdAt)}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
