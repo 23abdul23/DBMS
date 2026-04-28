@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react"
+import React, { useCallback, useState } from "react"
 import {
   RefreshControl,
   SafeAreaView,
@@ -29,28 +29,6 @@ const formatTime = (value) => {
     hour: "numeric",
     minute: "2-digit",
   })
-}
-
-const getTimeAgo = (date) => {
-  if (!date) {
-    return "-"
-  }
-
-  const now = new Date()
-  const past = new Date(date)
-  const diffMs = now - past
-  const diffMins = Math.max(0, Math.floor(diffMs / (1000 * 60)))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-
-  if (diffMins < 60) {
-    return `${diffMins} min`
-  }
-
-  if (diffHours < 24) {
-    return `${diffHours} hr`
-  }
-
-  return `${Math.floor(diffHours / 24)} day`
 }
 
 export default function LibraryScreen({ navigation }) {
@@ -91,21 +69,34 @@ export default function LibraryScreen({ navigation }) {
     }
   }
 
-  const summary = overview?.summary || {}
-  const activeSeat = overview?.myStatus?.activeSeat || null
-  const activityFeed = overview?.activityFeed || []
-  const occupiedPercent = useMemo(() => {
-    const capacity = summary.capacity || LIBRARY_LIMIT
-    if (!capacity) {
-      return 0
-    }
-
-    return Math.round(((summary.occupiedCount || 0) / capacity) * 100)
-  }, [summary.capacity, summary.occupiedCount])
-
   if (loading) {
     return <LoadingSpinner />
   }
+
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const past = new Date(date);
+
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) {
+      return `${diffMins} Min${diffMins > 1 ? "s" : ""}`;
+    }
+
+    if (diffHours < 24) {
+      return `${diffHours} Hr${diffHours > 1 ? "s" : ""}`;
+    }
+
+    return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
+  };
+
+  const summary = overview?.summary || {}
+  const activeSeat = overview?.myStatus?.activeSeat || null
+  const occupants = overview?.occupants || []
+  const activityFeed = overview?.activityFeed || []
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -172,43 +163,10 @@ export default function LibraryScreen({ navigation }) {
               borderColor: colors.border,
             }}
           >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live occupancy, private identities</Text>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-              Student view keeps token counts and your own token visible, while the list of students inside stays hidden.
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live Library Occupancy</Text>
+            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
+              Current strength, available tokens, and who is inside from when.
             </Text>
-
-            <View
-              style={{
-                marginTop: 18,
-                borderRadius: 20,
-                padding: 14,
-                backgroundColor: colors.cardMuted,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Capacity used</Text>
-              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 30, marginTop: 4 }}>
-                {occupiedPercent}%
-              </Text>
-              <View
-                style={{
-                  marginTop: 10,
-                  height: 10,
-                  borderRadius: 999,
-                  backgroundColor: colors.border,
-                  overflow: "hidden",
-                }}
-              >
-                <View
-                  style={{
-                    width: `${occupiedPercent}%`,
-                    height: "100%",
-                    backgroundColor: occupiedPercent >= 90 ? colors.warning : colors.primary,
-                  }}
-                />
-              </View>
-            </View>
           </View>
         </View>
 
@@ -288,9 +246,6 @@ export default function LibraryScreen({ navigation }) {
                 <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
                   Seated from {formatTime(activeSeat.enteredAt)}
                 </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 6 }}>
-                  Active for {getTimeAgo(activeSeat.enteredAt)}
-                </Text>
               </>
             ) : (
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 10 }}>
@@ -309,82 +264,51 @@ export default function LibraryScreen({ navigation }) {
               marginBottom: 16,
             }}
           >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Privacy-safe occupancy snapshot</Text>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 14 }}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Students inside</Text>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
-                  {summary.occupiedCount || 0}
-                </Text>
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Free tokens</Text>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
-                  {summary.availableCount ?? LIBRARY_LIMIT}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 12, lineHeight: 19 }}>
-              The student list is intentionally hidden here. Scoped library observers still get the detailed live roster.
-            </Text>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: colors.cardElevated,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: 18,
-            }}
-          >
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginBottom: 12 }}>
-              Recent Token Activity
+              Students Inside
             </Text>
-            {activityFeed.length ? (
-              activityFeed.map((activity, index) => (
+            {occupants.length ? (
+              occupants.map((entry, index) => (
                 <View
-                  key={`${activity.id || activity.type}-${activity.timestamp}-${index}`}
+                  key={entry.id}
                   style={{
                     flexDirection: "row",
-                    alignItems: "flex-start",
-                    paddingVertical: 10,
-                    borderBottomWidth: index === activityFeed.length - 1 ? 0 : 1,
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 12,
+                    borderBottomWidth: index === occupants.length - 1 ? 0 : 1,
                     borderBottomColor: colors.divider,
                   }}
                 >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor:
-                        activity.type === "library_seat_released" ? colors.successSoft : colors.primarySoft,
-                      marginRight: 12,
-                    }}
-                  >
-                    <Ionicons
-                      name={activity.type === "library_seat_released" ? "checkmark-circle-outline" : "book-outline"}
-                      size={20}
-                      color={activity.type === "library_seat_released" ? colors.success : colors.primary}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{activity.title}</Text>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 }}>
-                      {activity.subtitle}
-                    </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 }}>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 14,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: colors.primarySoft,
+                        marginRight: 12,
+                      }}
+                    >
+                      <Text style={{ color: colors.primary, fontFamily: FONTS.bold }}>#{entry.seatNumber}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{entry.user?.name}</Text>
+                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
+                        {entry.user?.studentId || "Student"}
+                      </Text>
+                    </View>
                   </View>
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
-                    {formatTime(activity.timestamp)}
+                    From {getTimeAgo(entry.enteredAt)}
                   </Text>
                 </View>
               ))
             ) : (
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
-                No recent library activity yet.
+                Nobody is currently marked inside the library.
               </Text>
             )}
           </View>

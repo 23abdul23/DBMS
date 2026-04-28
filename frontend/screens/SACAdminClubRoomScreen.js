@@ -50,14 +50,13 @@ export default function ClubRoomScreen({ navigation, route }) {
   const [submittingKey, setSubmittingKey] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
-  const myActiveRoomIds = useMemo(
-    () => new Set((overview?.myStatus?.activeRooms || []).map((room) => room.name)),
-    [overview?.myStatus?.activeRooms],
-  )
+  const isStudent = user?.role === "student"
+
   const roomStateMap = useMemo(
     () => new Map((overview?.rooms || []).map((room) => [room.name, room])),
     [overview?.rooms],
   )
+
   const roomActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "room_opened" || item.type === "room_joined" || item.type === "room_left",
   )
@@ -194,9 +193,9 @@ export default function ClubRoomScreen({ navigation, route }) {
                 />
               </View>
               <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Anonymous room occupancy</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                  Counts stay visible. Individual student names remain hidden unless you are a scoped SAC observer.
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Club room activity</Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
+                  Open a room, join an active room, and see who is currently inside each club room.
                 </Text>
               </View>
             </View>
@@ -262,7 +261,7 @@ export default function ClubRoomScreen({ navigation, route }) {
 
           {SAC_CLUB_ROOMS.map((room) => {
             const roomState = roomStateMap.get(room.name)
-            const userInside = roomState?.isCurrentUserInside || myActiveRoomIds.has(room.name) || false
+            const userInside = Boolean(roomState?.occupants?.some((occupant) => occupant.user?.id === user?.id))
             const isBusy = submittingKey === `room-select-${room.name}` || submittingKey === `room-leave-${room.name}`
 
             return (
@@ -339,45 +338,55 @@ export default function ClubRoomScreen({ navigation, route }) {
                       </Text>
                     </View>
                   </View>
+
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 14 }}>
+                    {roomState?.isOpen
+                      ? `${roomState.presentCount} inside${roomState.openedBy ? ` | opened by ${roomState.openedBy.name}` : ""}`
+                      : "No active session yet"}
+                  </Text>
                 </View>
 
                 <View style={{ padding: 18 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <View>
-                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Inside now</Text>
-                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
-                        {roomState?.presentCount || 0}
+                  {roomState?.isOpen ? (
+                    <>
+                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
+                        Opened at {formatTime(roomState.openedAt)}
                       </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Last opened</Text>
-                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 16, marginTop: 8 }}>
-                        {roomState?.openedAt ? formatTime(roomState.openedAt) : "-"}
+                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14, marginTop: 12, marginBottom: 8 }}>
+                        Students inside
                       </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={{
-                      marginTop: 14,
-                      borderRadius: 18,
-                      padding: 14,
-                      backgroundColor: userInside ? colors.primarySoft : colors.cardMuted,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13 }}>
-                      {userInside ? "You are currently marked inside this room." : "Student identities are hidden in this view."}
+                      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                        {roomState.occupants.map((occupant) => (
+                          <View
+                            key={occupant.id}
+                            style={{
+                              marginRight: 8,
+                              marginBottom: 8,
+                              borderRadius: 999,
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              backgroundColor: occupant.user?.id === roomState.openedBy?.id ? colors.warningSoft : colors.cardMuted,
+                              borderWidth: 1,
+                              borderColor: colors.border,
+                            }}
+                          >
+                            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>
+                              {occupant.user?.name}
+                            </Text>
+                            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 11 }}>
+                              {occupant.user?.id === roomState.openedBy?.id ? "Opened room" : `Joined ${formatTime(occupant.joinedAt)}`}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
+                      The first student to select this room will be marked as the opener.
                     </Text>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
-                      {roomState?.isOpen
-                        ? "Use the button below to update only your own room status."
-                        : "The first student to join this room will create the active session."}
-                    </Text>
-                  </View>
+                  )}
 
-                  {user?.role === "student" ? (
+                  {isStudent && (
                     <TouchableOpacity
                       disabled={isBusy}
                       onPress={() =>
@@ -414,7 +423,7 @@ export default function ClubRoomScreen({ navigation, route }) {
                         {userInside ? "Leave Room" : roomState?.isOpen ? "Join Room" : "Open Room"}
                       </Text>
                     </TouchableOpacity>
-                  ) : null}
+                  )}
                 </View>
               </View>
             )
@@ -438,7 +447,7 @@ export default function ClubRoomScreen({ navigation, route }) {
 
                 return (
                   <View
-                    key={`${activity.id || activity.type}-${activity.timestamp}-${index}`}
+                    key={`${activity.type}-${activity.timestamp}-${index}`}
                     style={{
                       flexDirection: "row",
                       alignItems: "flex-start",

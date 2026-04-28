@@ -90,6 +90,7 @@ module.exports = {
           "Aegis uses your camera to scan QR codes for entry and exit verification.",
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
+        LSApplicationQueriesSchemes: ["tel", "telprompt", "sms", "smsto"],
       },
     },
     android: {

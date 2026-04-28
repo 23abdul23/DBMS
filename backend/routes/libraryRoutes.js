@@ -27,7 +27,7 @@ const parseSeatNumber = (value) => {
 
 router.get("/overview", authenticate, async (req, res) => {
   try {
-    const overview = await getLibraryOverview(prisma, req.user.userId)
+    const overview = await getLibraryOverview(prisma, req.user)
     res.json({ overview })
   } catch (error) {
     console.error("Library overview error:", error)
@@ -50,7 +50,7 @@ router.post("/claim-seat", [authenticate, authorize("student")], async (req, res
     const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
     if (activeSeat) {
       if (activeSeat.seatNumber === seatNumber) {
-        const overview = await getLibraryOverview(prisma, req.user.userId)
+        const overview = await getLibraryOverview(prisma, req.user)
         return res.json({
           code: "ALREADY_SEATED",
           message: `You already have Token Number ${seatNumber}.`,
@@ -72,7 +72,7 @@ router.post("/claim-seat", [authenticate, authorize("student")], async (req, res
       })
     }
 
-    const currentOverview = await getLibraryOverview(prisma, req.user.userId)
+    const currentOverview = await getLibraryOverview(prisma, req.user)
     if (currentOverview.summary.isFull) {
       return res.status(409).json({
         code: "LIBRARY_FULL",
@@ -93,7 +93,7 @@ router.post("/claim-seat", [authenticate, authorize("student")], async (req, res
       })
     })
 
-    const overview = await getLibraryOverview(prisma, req.user.userId)
+    const overview = await getLibraryOverview(prisma, req.user)
     res.json({
       message: `Token Number ${seatNumber} assigned successfully.`,
       overview,
@@ -120,7 +120,7 @@ router.post("/release-seat", [authenticate, authorize("student")], async (req, r
     const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
 
     if (!activeSeat) {
-      const overview = await getLibraryOverview(prisma, req.user.userId)
+      const overview = await getLibraryOverview(prisma, req.user)
       return res.json({
         code: "NO_ACTIVE_SEAT",
         message: "No active library token to release.",
@@ -145,7 +145,7 @@ router.post("/release-seat", [authenticate, authorize("student")], async (req, r
       })
     })
 
-    const overview = await getLibraryOverview(prisma, req.user.userId)
+    const overview = await getLibraryOverview(prisma, req.user)
     res.json({
       message: `Token Number ${activeSeat.seatNumber} released successfully.`,
       overview,

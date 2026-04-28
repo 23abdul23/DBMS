@@ -19,6 +19,7 @@ import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 import { AcademicYearList, AcademicYearMap, DepartmentList, DepartmentMap } from "../utils/enumMappings"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { Picker } from "@react-native-picker/picker"
+import { getScopedAdminLabel, isLibraryAdministrator, isSacAdministrator } from "../utils/adminScopes"
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])(?=\S+$).{8,64}$/
 
@@ -272,9 +273,11 @@ export default function ProfileScreen() {
 
   const isStudent = profile?.role === "student"
   const isSecurity = profile?.role === "security"
-  const locationLabel = isSecurity ? "Assigned Post" : "Assigned Hostel"
+  const isScopedAdmin = profile?.role === "admin" && (isSacAdministrator(profile) || isLibraryAdministrator(profile))
+  const locationLabel = isSecurity ? "Assigned Post" : isScopedAdmin ? "Access Scope" : "Assigned Hostel"
   const idLabel = isSecurity ? "Guard ID" : "Student ID"
   const resendDisabled = otpCountdown > 0 || pwdSaving
+  const roleLabel = getScopedAdminLabel(profile) || profile?.role?.toUpperCase()
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -302,7 +305,7 @@ export default function ProfileScreen() {
               <Text style={[styles.avatarText, { color: colors.text }]}>{profile?.name?.charAt(0)?.toUpperCase() || "U"}</Text>
             </View>
             <Text style={[styles.userName, { color: colors.text }]}>{profile?.name}</Text>
-            <Text style={[styles.userRole, { color: colors.text, opacity: 0.8 }]}>{profile?.role?.toUpperCase()}</Text>
+            <Text style={[styles.userRole, { color: colors.text, opacity: 0.8 }]}>{roleLabel}</Text>
           </View>
         </View>
 
@@ -439,7 +442,13 @@ export default function ProfileScreen() {
             ) : (
               <View style={styles.fieldContainer}>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>{locationLabel}</Text>
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.hostel || "Not assigned"}</Text>
+                <Text style={[styles.fieldValue, { color: colors.text }]}>
+                  {isSacAdministrator(profile)
+                    ? "SAC activity observer"
+                    : isLibraryAdministrator(profile)
+                      ? "Library activity observer"
+                      : profile?.hostel || "Not assigned"}
+                </Text>
               </View>
             )}
 

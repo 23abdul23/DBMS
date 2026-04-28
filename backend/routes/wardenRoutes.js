@@ -7,6 +7,7 @@ const {
   buildOutpassResponse,
   getLatestMovementMap,
   getLatestGateMovementMap,
+  getRecentMovementTrailMap,
   expireOldOutpasses,
   getDayRange,
   canCancelOutpass,
@@ -547,15 +548,23 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
     }
 
     const studentIds = students.map((item) => item.id)
-    const [movementMap, gateMovementMap] = await Promise.all([
+    const [movementMap, gateMovementMap, movementTrailMap] = await Promise.all([
       getLatestMovementMap(prisma, studentIds),
       getLatestGateMovementMap(prisma, studentIds),
+      getRecentMovementTrailMap(prisma, studentIds),
     ])
 
     let monitoring = students.map((student) => {
       const latestOutpass = outpassMap.get(student.id) || null
       const latestMovement = movementMap.get(student.id) || null
       const latestGateMovement = gateMovementMap.get(student.id) || null
+      const recentMovements = (movementTrailMap.get(student.id) || []).map((movement) => ({
+        id: movement.id,
+        action: movement.action,
+        location: movement.location,
+        guardName: movement.guardName,
+        createdAt: movement.createdAt,
+      }))
       const outsideWithOutpass =
         Boolean(latestOutpass) &&
         ["approved", "expired"].includes(latestOutpass.status) &&
@@ -583,11 +592,14 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
         monitoringState,
         latestMovement: latestMovement
           ? {
+              id: latestMovement.id,
               action: latestMovement.action,
+              location: latestMovement.location,
               createdAt: latestMovement.createdAt,
               guardName: latestMovement.guardName,
             }
           : null,
+        recentMovements,
         exitGate: isOutsideCampus ? latestGateMovement.location : null,
         exitTime: isOutsideCampus ? latestGateMovement.createdAt : null,
         hasOutpass: isOutsideCampus ? outsideWithOutpass : false,

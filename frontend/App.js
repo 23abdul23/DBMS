@@ -7,21 +7,28 @@ import { LocationProvider } from './context/LocationContext';
 import { ThemeProvider } from './context/ThemeContext'; // Make sure to import ThemeProvider
 import MainTabNavigator from './navigation/MainTabNavigator';
 import WardenTabNavigator from './navigation/WardenTabNavigator';
+import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
+import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
 import SACScreen from './screens/SACScreen';
 import ClubRoomScreen from './screens/ClubRoomScreen';
 import EquipmentScreen from './screens/EquipmentScreen';
+import SACAdminScreen from './screens/SACAdminScreen';
+import SACAdminClubRoomScreen from './screens/SACAdminClubRoomScreen';
+import SACAdminEquipmentScreen from './screens/SACAdminEquipmentScreen';
 import CreateOutpassScreen from "./screens/CreateOutpassScreen"
 import Scanner from './screens/ScannerScreen';
 import LibraryScreen from './screens/LibraryScreen';
+import LibraryAdminScreen from './screens/LibraryAdminScreen';
 import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import { StackScreen } from 'react-native-screens';
 import GuardDashboardScreen from './screens/GuardScreen';
 import AppStartupSplash from './components/AppStartupSplash';
 import { useTheme } from './context/ThemeContext';
+import { isLibraryAdministrator, isSacAdministrator } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
 function RootNavigator() {
@@ -63,16 +70,24 @@ function RootNavigator() {
         <>
           <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
         </>
+        ) : isSacAdministrator(user) ? (
+        <>
+          <Stack.Screen name="SacAdminMain" component={SacAdminTabNavigator} />
+        </>
+        ) : isLibraryAdministrator(user) ? (
+        <>
+          <Stack.Screen name="LibraryAdminMain" component={LibraryAdminTabNavigator} />
+        </>
         ) :
         (<>
           <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="SAC" component={SACScreen} />
-          <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
-          <Stack.Screen name="Equipments" component={EquipmentScreen} />
+          <Stack.Screen name="SAC" component={SACAdminScreen} />
+          <Stack.Screen name="ClubRooms" component={SACAdminClubRoomScreen} />
+          <Stack.Screen name="Equipments" component={SACAdminEquipmentScreen} />
           <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
           <Stack.Screen name="Scan" component={Scanner} />  
-          <Stack.Screen name="Library" component={LibraryScreen} />
+          <Stack.Screen name="Library" component={LibraryAdminScreen} />
           <Stack.Screen name="LogBook" component={LogBook} />
         </>)  
       ) : (
