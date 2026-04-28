@@ -20,9 +20,6 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-.idea
-.idea/*
-
 # Metro
 .metro-health-check*
 
@@ -46,7 +43,3 @@ frontend/android/
 
 
 ISSUES.txt
-logs.txt
-
-frontend/google-services.json
-backend/logs/

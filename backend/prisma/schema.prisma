@@ -11,7 +11,6 @@ enum UserRole {
   warden
   security
   admin
-  SUPER_ADMIN
 }
 
 enum Gender {
@@ -24,7 +23,6 @@ enum Department {
   IT
   IT_BI
   Electronics
-  M_Tech
 }
 
 enum AcademicYear {
@@ -99,59 +97,6 @@ enum ScanType {
   manual
 }
 
-enum LocationType {
-  CAMPUS_BUILDING
-  HOSTEL
-  EXIT_GATE
-  FIXED_LOCATION
-  SECURITY_POINT
-  OTHER
-}
-
-enum NotificationType {
-  OUTPASS
-  SECURITY
-  LIBRARY
-  SAC
-  EMERGENCY
-  NEWS
-  SYSTEM
-}
-
-enum NotificationPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum PushTokenType {
-  FCM
-  APNS
-}
-
-enum PushPlatform {
-  android
-  ios
-}
-
-enum PushTokenStatus {
-  ACTIVE
-  INVALID
-  LOGGED_OUT
-  STALE
-}
-
-enum NotificationDeliveryStatus {
-  QUEUED
-  SENDING
-  RETRYING
-  DELIVERED
-  FAILED
-  INVALID_TOKEN
-  SKIPPED
-}
-
 model User {
   id               String    @id @db.VarChar(24)
   name             String
@@ -188,39 +133,10 @@ model User {
   sacRoomPresences       SacRoomPresence[]      @relation("SacRoomPresenceUser")
   sacEquipmentCheckouts  SacEquipmentCheckout[] @relation("SacEquipmentCheckoutUser")
   librarySeatSessions    LibrarySeatSession[]   @relation("LibrarySeatSessionUser")
-  sessions UserSession[]
-  qrGenerationHistory    QRGenerationHistory[]
-  qrDownloadHistory      QRDownloadHistory[]
-
-  notifications             Notification[]
-  pushTokens                PushToken[]
-  notificationPreference    NotificationPreference?
 
   @@index([role])
   @@index([hostel])
   @@map("users")
-}
-
-model UserSession {
-  id                String   @id @default(cuid())
-
-  userId            String   @map("user_id") @db.VarChar(24)
-
-  refreshTokenHash  String   @map("refresh_token_hash")
-
-  deviceName        String?  @map("device_name")
-  ipAddress         String?  @map("ip_address")
-
-  expiresAt         DateTime @map("expires_at")
-
-  createdAt         DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId])
-  @@index([expiresAt])
-
-  @@map("user_sessions")
 }
 
 model SacRoomSession {
@@ -439,60 +355,14 @@ model PasswordUpdateOtp {
 }
 
 model Location {
-  id                    String    @id @db.VarChar(24)
-  name                  String    @unique @db.VarChar(255)
-  type                  LocationType @default(OTHER)
-  code                  String    @unique @db.VarChar(100)
-  hash                  String    @unique @db.VarChar(256)
-  description           String?   @db.VarChar(500)
-  latitude              Decimal?  @db.Decimal(9, 6)
-  longitude             Decimal?  @db.Decimal(9, 6)
-  isActive              Boolean   @default(true) @map("is_active")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-  lastQrGeneratedAt     DateTime? @map("last_qr_generated_at")
-  qrGenerationCount     Int       @default(0) @map("qr_generation_count")
-  qrDownloadCount       Int       @default(0) @map("qr_download_count")
+  id          String   @id @db.VarChar(24)
+  name        String   @unique @db.VarChar(255)
+  code        String   @unique @db.VarChar(100)
+  hash        String   @unique @db.VarChar(256)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  qrGenerationHistory   QRGenerationHistory[]
-  qrDownloadHistory     QRDownloadHistory[]
-
-  @@index([type])
-  @@index([isActive])
-  @@index([createdAt(sort: Desc)])
   @@map("locations")
-}
-
-model QRGenerationHistory {
-  id            String   @id @db.VarChar(24)
-  locationId    String   @map("location_id") @db.VarChar(24)
-  generatedById String   @map("generated_by") @db.VarChar(24)
-  qrPayload     String   @map("qr_payload") @db.Text
-  qrFormat      String   @default("PNG") @db.VarChar(20) @map("qr_format")
-  generatedAt   DateTime @default(now()) @map("generated_at")
-
-  location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  generatedBy   User     @relation(fields: [generatedById], references: [id], onDelete: SetNull)
-
-  @@index([locationId, generatedAt(sort: Desc)])
-  @@index([generatedById])
-  @@map("qr_generation_history")
-}
-
-model QRDownloadHistory {
-  id              String   @id @db.VarChar(24)
-  locationId      String   @map("location_id") @db.VarChar(24)
-  downloadedById  String   @map("downloaded_by") @db.VarChar(24)
-  fileName        String   @map("file_name") @db.VarChar(500)
-  fileSize        Int?     @map("file_size")
-  downloadedAt    DateTime @default(now()) @map("downloaded_at")
-
-  location        Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  downloadedBy    User     @relation(fields: [downloadedById], references: [id], onDelete: SetNull)
-
-  @@index([locationId, downloadedAt(sort: Desc)])
-  @@index([downloadedById])
-  @@map("qr_download_history")
 }
 
 model Log {
@@ -519,111 +389,3 @@ model Log {
   @@map("logs")
 }
 
-model Notification {
-  id          String   @id @default(cuid())
-
-  userId      String   @map("user_id") @db.VarChar(24)
-
-  title       String
-  message     String
-
-  type        NotificationType
-  priority    NotificationPriority @default(NORMAL)
-
-  entityId    String?  @map("entity_id")
-  entityType  String?  @map("entity_type")
-  routeName   String?  @map("route_name")
-  routeParams Json?    @map("route_params")
-  badgeCount  Int?     @map("badge_count")
-
-  isRead      Boolean  @default(false)
-
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries NotificationDelivery[]
-
-  @@index([userId, isRead])
-  @@index([createdAt(sort: Desc)])
-
-  @@map("notifications")
-}
-
-model PushToken {
-  id          String   @id @default(cuid())
-
-  userId      String   @map("user_id") @db.VarChar(24)
-
-  token       String   @unique
-
-  tokenType   PushTokenType @map("token_type")
-  platform    PushPlatform
-
-  deviceId    String   @map("device_id") @db.VarChar(128)
-  deviceName  String?  @map("device_name")
-  appVersion  String?  @map("app_version") @db.VarChar(50)
-  buildNumber String?  @map("build_number") @db.VarChar(50)
-
-  isActive    Boolean  @default(true)
-  status      PushTokenStatus @default(ACTIVE)
-  invalidReason String? @map("invalid_reason")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  lastRegisteredAt DateTime @default(now()) @map("last_registered_at")
-  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
-  lastDeliveredAt DateTime? @map("last_delivered_at")
-  lastFailureAt DateTime? @map("last_failure_at")
-
-  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries NotificationDelivery[]
-
-  @@unique([deviceId])
-  @@index([userId, isActive, status])
-  @@index([lastSeenAt])
-
-  @@map("push_tokens")
-}
-
-model NotificationDelivery {
-  id                String                     @id @default(cuid())
-  notificationId    String                     @map("notification_id")
-  pushTokenId       String                     @map("push_token_id")
-  status            NotificationDeliveryStatus @default(QUEUED)
-  attemptCount      Int                        @default(0) @map("attempt_count")
-  providerMessageId String?                    @map("provider_message_id")
-  failureCode       String?                    @map("failure_code")
-  failureReason     String?                    @map("failure_reason")
-  providerResponse  Json?                      @map("provider_response")
-  nextRetryAt       DateTime?                  @map("next_retry_at")
-  sentAt            DateTime?                  @map("sent_at")
-  deliveredAt       DateTime?                  @map("delivered_at")
-  createdAt         DateTime                   @default(now()) @map("created_at")
-  updatedAt         DateTime                   @updatedAt @map("updated_at")
-
-  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  pushToken     PushToken    @relation(fields: [pushTokenId], references: [id], onDelete: Cascade)
-
-  @@index([notificationId, status])
-  @@index([pushTokenId, status])
-  @@index([createdAt(sort: Desc)])
-
-  @@map("notification_deliveries")
-}
-
-model NotificationPreference {
-  id                  String @id @default(cuid())
-
-  userId              String @unique @map("user_id") @db.VarChar(24)
-
-  pushEnabled         Boolean @default(true)
-
-  outpassEnabled      Boolean @default(true)
-  libraryEnabled      Boolean @default(true)
-  emergencyEnabled    Boolean @default(true)
-  newsEnabled         Boolean @default(true)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notification_preferences")
-}

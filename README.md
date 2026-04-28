@@ -108,26 +108,6 @@ For complete setup details, see [installation.md](installation.md). The short ve
 5. Start the backend with `npm run dev`.
 6. Start the frontend with `npm start`.
 
-## Development Quick Login And Dummy Data
-
-Set `ENVIRONEMENT=development` in `backend/.env` and restart Expo to enable a small `Dev Quick Login` button on the login screen. The button uses the currently selected role and signs in directly with seeded dummy accounts.
-
-Seed all dummy users plus realistic test scenario data with:
-
-```bash
-cd backend
-npm run seed:dev-dummy
-cd ..
-```
-
-Quick-login accounts (password: `123456`):
-
-- Student: `iit2023001@iiita.ac.in`
-- Warden: `warden.bh-1@iiita.ac.in`
-- Security: `guard100@iiita.ac.in`
-- SAC Admin: `sacAdmin@iiita.ac.in`
-- Library Admin: `libAdmin@iiita.ac.in`
-
 ## Documentation
 
 - Project setup and local run guide: [installation.md](installation.md)
