@@ -23,6 +23,7 @@ const {
   CAMPUS_TIMEZONE,
   getLibraryLimit,
   getLocalizedMinutes,
+  isLibOpenAt,
   isSacOpenAt,
 } = require("./campusActivityRules")
 const {
@@ -690,6 +691,10 @@ const createInternalMovement = async ({ context, contextMap, fromLocation, toLoc
   const enteringLibrary = toLocation === LIBRARY_LOCATION
   const leavingLibrary = fromLocation === LIBRARY_LOCATION
   const nextLibrarySeat = enteringLibrary ? pickAvailableLibrarySeatNumber(contextMap) : null
+
+  if (enteringLibrary && !isLibOpenAt(now)) {
+    return false
+  }
 
   if (enteringLibrary && !nextLibrarySeat) {
     return false
@@ -1728,6 +1733,10 @@ const simulateHostelToAcademic = async ({ contextMap, reservedIds, profile, now,
 }
 
 const simulateHostelToLibrary = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+  if (!isLibOpenAt(now)) {
+    return
+  }
+
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1843,11 +1852,15 @@ const simulateBuildingShifts = async ({ contextMap, reservedIds, profile, now, g
   for (const context of selected) {
     const fromLocation = context.state.location
     const sacIsOpen = isSacOpenAt(now)
+    const libIsOpen = isLibOpenAt(now)
     const academicTargets = sacIsOpen ? ACADEMIC_BUILDINGS : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC")
     const destinationOptions =
       fromLocation === LIBRARY_LOCATION
         ? academicTargets
-        : [LIBRARY_LOCATION, ...academicTargets.filter((location) => location !== fromLocation)]
+        : [
+            ...(libIsOpen ? [LIBRARY_LOCATION] : []),
+            ...academicTargets.filter((location) => location !== fromLocation),
+          ]
     const toLocation = pickRandomItem(destinationOptions)
 
     const moved = await createInternalMovement({

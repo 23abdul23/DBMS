@@ -56,6 +56,7 @@ const getTimeAgo = (date) => {
 export default function LibraryScreen({ navigation }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
   const [overview, setOverview] = useState(null)
+  const [libraryStatus, setLibraryStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -65,10 +66,20 @@ export default function LibraryScreen({ navigation }) {
         setLoading(true)
       }
 
-      const response = await libraryAPI.getOverview()
-      setOverview(response?.data?.overview || null)
-    } catch (error) {
-      console.log("Library overview error:", error?.response?.data || error)
+      const [overviewResult, statusResult] = await Promise.allSettled([libraryAPI.getOverview(), libraryAPI.getStatus()])
+
+      if (overviewResult.status === "fulfilled") {
+        setOverview(overviewResult.value?.data?.overview || null)
+      } else {
+        console.log("Library overview error:", overviewResult.reason?.response?.data || overviewResult.reason)
+      }
+
+      if (statusResult.status === "fulfilled") {
+        setLibraryStatus(statusResult.value?.data || null)
+      } else {
+        console.log("Library status error:", statusResult.reason?.response?.data || statusResult.reason)
+        setLibraryStatus(null)
+      }
     } finally {
       if (nextLoading) {
         setLoading(false)
@@ -94,6 +105,8 @@ export default function LibraryScreen({ navigation }) {
   const summary = overview?.summary || {}
   const activeSeat = overview?.myStatus?.activeSeat || null
   const activityFeed = overview?.activityFeed || []
+  const libraryClosesAt = libraryStatus?.closesAt || overview?.meta?.closesAt || "11:30 PM"
+  const isLibraryOpenNow = libraryStatus?.status ?? overview?.meta?.isOpenNow ?? false
   const occupiedPercent = useMemo(() => {
     const capacity = summary.capacity || LIBRARY_LIMIT
     if (!capacity) {
@@ -173,9 +186,6 @@ export default function LibraryScreen({ navigation }) {
             }}
           >
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live occupancy</Text>
-            {/* <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-              Student view keeps token counts and your own token visible, while the list of students inside stays hidden.
-            </Text> */}
 
             <View
               style={{
@@ -208,6 +218,26 @@ export default function LibraryScreen({ navigation }) {
                   }}
                 />
               </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 14,
+                borderRadius: 20,
+                padding: 14,
+                backgroundColor: colors.cardMuted,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
+                {isLibraryOpenNow
+                  ? `Library is open for new entry until ${libraryClosesAt}`
+                  : `Library is closed for new entry. Closing time remains ${libraryClosesAt}`}
+              </Text>
+              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
+                You can still see occupancy and your current token status here.
+              </Text>
             </View>
           </View>
         </View>

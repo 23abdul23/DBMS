@@ -310,6 +310,33 @@ const getOverview = async (viewer) => {
   }
 }
 
+router.get("/status", authenticate, async (req, res) => {
+  try {
+    if (!isSacOpenAt()) {
+      return res.status(403).json({
+        message: getSacClosedMessage(),
+        code: "SAC_CLOSED",
+        status: false,
+        closesAt: SAC_CLOSE_LABEL,
+      })
+    }
+
+    return res.status(200).json({
+      message: `SAC is open till ${SAC_CLOSE_LABEL}.`,
+      code: "SAC_OPEN",
+      status: true,
+      closesAt: SAC_CLOSE_LABEL,
+    })
+  } catch (error) {
+    console.error("SAC status error:", error)
+    return res.status(500).json({
+      message: "Server error fetching SAC status",
+      code: "SAC_STATUS_ERROR",
+      status: false,
+    })
+  }
+})
+
 router.get("/overview", authenticate, async (req, res) => {
   try {
     const overview = await getOverview(req.user)

@@ -83,6 +83,13 @@ export default function Scanner({ navigation, route }) {
       return
     }
 
+    const statusResponse = await libraryAPI.getStatus()
+    if (!statusResponse?.data?.status) {
+      showToast(statusResponse?.data?.message || "Library is closed for new entry right now.")
+      setScanned(false)
+      return
+    }
+
     if (overview?.summary?.isFull) {
       showToast("Library full.")
       setScanned(false)
@@ -118,6 +125,14 @@ export default function Scanner({ navigation, route }) {
 
       if (code === "LIBRARY_FULL") {
         showToast("Library full.")
+        await refreshLibraryOverview()
+        setShowLibraryPrompt(false)
+        setScanned(false)
+        return
+      }
+
+      if (code === "LIBRARY_CLOSED") {
+        showToast(error?.response?.data?.message || "Library is closed for new entry right now.")
         await refreshLibraryOverview()
         setShowLibraryPrompt(false)
         setScanned(false)
