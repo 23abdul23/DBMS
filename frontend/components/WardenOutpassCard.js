@@ -79,25 +79,6 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
             {prettify(outpass.status)}
           </Text>
         </View>
-        <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: `${monitoringColors[outpass.monitoringState] || COLORS.gray[500]}20`,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.badgeText,
-              {
-                color: monitoringColors[outpass.monitoringState] || COLORS.gray[500],
-              },
-            ]}
-          >
-            {prettify(outpass.monitoringState)}
-          </Text>
-        </View>
       </View>
 
       <Text style={[styles.metaText, { color: colors.text }]}>Reason: {outpass.reason}</Text>
@@ -119,10 +100,9 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
           Emergency Contact: {outpass.emergencyContact.name || "Contact"} ({outpass.emergencyContact.phone})
         </Text>
       ) : null}
-
       {outpass.latestMovement ? (
         <Text style={[styles.metaText, { color: colors.subText }]}>
-          Last Scan: {prettify(outpass.latestMovement.action)} at {formatDateTime(outpass.latestMovement.createdAt)}
+          Last Scan: {prettify(outpass.latestMovement.location)} at {formatDateTime(outpass.latestMovement.createdAt)}
         </Text>
       ) : null}
 

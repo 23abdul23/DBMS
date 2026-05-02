@@ -649,8 +649,15 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
       return left.student.name.localeCompare(right.student.name)
     })
 
+    // Counts for campus presence (inside/outside) should be computed
+    // separately from monitoring state to avoid key collisions when
+    // a monitoringState value matches a campusPresence value (e.g. 'inside').
     const counts = monitoring.reduce((accumulator, item) => {
       accumulator[item.campusPresence] = (accumulator[item.campusPresence] || 0) + 1
+      return accumulator
+    }, {})
+
+    const monitoringCounts = monitoring.reduce((accumulator, item) => {
       accumulator[item.monitoringState] = (accumulator[item.monitoringState] || 0) + 1
       return accumulator
     }, {})
@@ -659,6 +666,7 @@ router.get("/monitoring", [authenticate, authorize("warden")], async (req, res) 
       hostel,
       monitoring,
       counts,
+      monitoringCounts,
     })
   } catch (error) {
     console.error("Warden monitoring error:", error)

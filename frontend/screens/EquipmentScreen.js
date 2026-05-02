@@ -184,18 +184,8 @@ export default function EquipmentScreen({ navigation, route }) {
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Shared equipment, private identities</Text>
-                  <Text
-                    style={{
-                      color: colors.subText,
-                      fontFamily: FONTS.regular,
-                      fontSize: 13,
-                      marginTop: 4,
-                      lineHeight: 19,
-                    }}
-                  >
-                    Counts remain live, but the student view no longer reveals who currently holds each item.
-                  </Text>
+                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginTop: 15, marginLeft: 20 }}>Shared Equipment</Text>
+                  
                 </View>
               </View>
             </View>
@@ -211,7 +201,7 @@ export default function EquipmentScreen({ navigation, route }) {
             paddingTop: 18,
           }}
         >
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
             {[
               {
                 label: "In Use",
@@ -234,17 +224,18 @@ export default function EquipmentScreen({ navigation, route }) {
                 toneBg: colors.warningSoft,
                 toneFg: colors.warning,
               },
-            ].map((stat) => (
+            ].map((stat, index) => (
               <View
                 key={stat.label}
                 style={{
-                  width: statCardWidth,
+                  flex: 1,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
                   marginBottom: 12,
+                  marginRight: index < 2 ? 12 : 0,
                 }}
               >
                 <View
@@ -334,15 +325,12 @@ export default function EquipmentScreen({ navigation, route }) {
                     borderColor: colors.border,
                   }}
                 >
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13 }}>
-                    {userHasItem ? "This item is currently assigned to you." : "Holder identities are hidden in student view."}
-                  </Text>
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
                     {userHasItem
                       ? `Assigned since ${formatTime(
                           (overview?.myStatus?.activeEquipment || []).find((entry) => entry.name === item.name)?.checkedOutAt,
                         )}`
-                      : "Only scoped SAC observers can see who has taken each item."}
+                      : "No one has taken this Equipment."}
                   </Text>
                 </View>
 

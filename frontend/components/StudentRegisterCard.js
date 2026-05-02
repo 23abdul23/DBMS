@@ -12,7 +12,7 @@ export default function StudentRegisterCard({ formData, updateFormData, departme
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Email Address*"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.email}
           onChangeText={value => updateFormData('email', value)}
           keyboardType="email-address"
@@ -24,7 +24,7 @@ export default function StudentRegisterCard({ formData, updateFormData, departme
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Student ID*"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.studentId}
           onChangeText={value => updateFormData('studentId', value)}
           autoCapitalize="characters"
@@ -71,7 +71,7 @@ export default function StudentRegisterCard({ formData, updateFormData, departme
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Room Number"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.roomNumber}
           onChangeText={value => updateFormData('roomNumber', value)}
         />

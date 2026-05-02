@@ -236,17 +236,6 @@ export default function Scanner({ navigation, route }) {
           >
             Security Scan
           </Text>
-          <Text
-            style={{
-              color: colors.subText,
-              fontSize: 13,
-              fontFamily: FONTS.regular,
-              textAlign: "center",
-              marginTop: 2,
-            }}
-          >
-            QR and barcode verification with live movement status
-          </Text>
         </View>
         <TouchableOpacity
           onPress={toggleTheme}
@@ -296,9 +285,6 @@ export default function Scanner({ navigation, route }) {
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 16 }}>
               Align the code within the frame
             </Text>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 3 }}>
-              Entry, exit, and approved outpass usage will be identified automatically.
-            </Text>
           </View>
         </View>
       </View>
@@ -328,38 +314,7 @@ export default function Scanner({ navigation, route }) {
             }}
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           />
-          <View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              top: "18%",
-              left: "10%",
-              right: "10%",
-              bottom: "18%",
-              borderRadius: 28,
-              borderWidth: 2,
-              borderColor: "rgba(255,255,255,0.88)",
-              backgroundColor: "transparent",
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              bottom: 18,
-              left: 18,
-              right: 18,
-              borderRadius: 20,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              backgroundColor: colors.overlay,
-            }}
-          >
-            <Text style={{ color: colors.textInverse, fontFamily: FONTS.bold, fontSize: 14 }}>Live verification</Text>
-            <Text style={{ color: "rgba(248,251,255,0.78)", fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
-              Hold steady for a second while the app validates resident movement and outpass eligibility.
-            </Text>
-          </View>
+          
         </View>
       )}
 
