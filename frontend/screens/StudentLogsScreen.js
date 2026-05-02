@@ -1,10 +1,11 @@
 "use client"
 
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
+import LoadingSpinner from "../components/LoadingSpinner"
 import { studentAPI } from "../services/api"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 
@@ -167,7 +168,13 @@ export default function StudentLogsScreen() {
 
       {loading ? (
         <View style={localStyles.loader}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <LoadingSpinner
+            variant="panel"
+            label="Loading your movement logs"
+            sublabel="Pulling entry, exit, and outpass activity from Aegis."
+            statusText="Records are being synced and sorted for this timeline."
+            showThemeToggle={false}
+          />
         </View>
       ) : (
         <FlatList
@@ -182,7 +189,7 @@ export default function StudentLogsScreen() {
           ListFooterComponent={
             loadingMore ? (
                   <View style={localStyles.footerLoader}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <LoadingSpinner variant="inline" label="Loading more logs" />
                   </View>
                 ) : hasMore ? (
                   <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>

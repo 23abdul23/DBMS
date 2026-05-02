@@ -172,10 +172,10 @@ export default function LibraryScreen({ navigation }) {
               borderColor: colors.border,
             }}
           >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live occupancy, private identities</Text>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live occupancy</Text>
+            {/* <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
               Student view keeps token counts and your own token visible, while the list of students inside stays hidden.
-            </Text>
+            </Text> */}
 
             <View
               style={{
@@ -306,43 +306,15 @@ export default function LibraryScreen({ navigation }) {
               borderWidth: 1,
               borderColor: colors.border,
               padding: 18,
-              marginBottom: 16,
-            }}
-          >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Privacy-safe occupancy snapshot</Text>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 14 }}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Students inside</Text>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
-                  {summary.occupiedCount || 0}
-                </Text>
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Free tokens</Text>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
-                  {summary.availableCount ?? LIBRARY_LIMIT}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 12, lineHeight: 19 }}>
-              The student list is intentionally hidden here. Scoped library observers still get the detailed live roster.
-            </Text>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: colors.cardElevated,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: 18,
             }}
           >
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginBottom: 12 }}>
               Recent Token Activity
             </Text>
             {activityFeed.length ? (
-              activityFeed.map((activity, index) => (
+              activityFeed
+              .filter((activity) => activity.type !== "library_seat_released")
+              .map((activity, index) => (
                 <View
                   key={`${activity.id || activity.type}-${activity.timestamp}-${index}`}
                   style={{
@@ -378,7 +350,7 @@ export default function LibraryScreen({ navigation }) {
                     </Text>
                   </View>
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
-                    {formatTime(activity.timestamp)}
+                    From {getTimeAgo(activity.timestamp)}
                   </Text>
                 </View>
               ))

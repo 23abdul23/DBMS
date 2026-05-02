@@ -7,6 +7,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -14,16 +15,18 @@ import { useTheme } from "../context/ThemeContext"
 import { sacAPI } from "../services/api"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { FONTS } from "../utils/constants"
-
-const formatPercent = (value) => `${Math.max(0, Math.min(100, Math.round(value)))}%`
+import { CONTENT_MAX_WIDTH, getTwoColumnCardWidth } from "../utils/responsiveLayout"
 
 export default function SACScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
+  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   const entrySource = route?.params?.entrySource || "manual"
+  const actionCardWidth = getTwoColumnCardWidth(width)
+  const isCompact = width < 520
 
   const loadOverview = async (nextLoading = false) => {
     try {
@@ -60,12 +63,13 @@ export default function SACScreen({ navigation, route }) {
   const myStatus = overview?.myStatus || {}
   const rooms = overview?.rooms || []
   const equipment = overview?.equipment || []
+
   const roomOccupancy = useMemo(() => {
     if (!rooms.length) {
       return 0
     }
 
-    return (rooms.filter((room) => room.isOpen).length / rooms.length) * 100
+    return rooms.filter((room) => room.isOpen).length
   }, [rooms])
 
   const equipmentActivity = useMemo(() => {
@@ -73,7 +77,7 @@ export default function SACScreen({ navigation, route }) {
       return 0
     }
 
-    return (equipment.filter((item) => item.activeCount > 0).length / equipment.length) * 100
+    return equipment.filter((item) => item.activeCount > 0).length
   }, [equipment])
 
   if (loading) {
@@ -99,103 +103,109 @@ export default function SACScreen({ navigation, route }) {
             borderBottomColor: colors.border,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>SAC</Text>
-
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              marginTop: 18,
-              borderRadius: 28,
-              padding: 20,
-              backgroundColor: colors.cardElevated,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
+          <View style={{ width: "100%", alignSelf: "center", maxWidth: CONTENT_MAX_WIDTH }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 18,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <Ionicons
-                  name={entrySource === "qr" ? "qr-code-outline" : "color-wand-outline"}
-                  size={28}
-                  color={entrySource === "qr" ? colors.success : colors.warning}
-                />
-              </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>
-                  Shared spaces, privacy-safe view
-                </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-                  Student view shows live counts and your own activity, while individual identities stay hidden.
-                </Text>
-              </View>
+                <Ionicons name="arrow-back" size={22} color={colors.text} />
+              </TouchableOpacity>
+
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>SAC</Text>
+
+              <TouchableOpacity
+                onPress={toggleTheme}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+              </TouchableOpacity>
             </View>
 
             <View
               style={{
                 marginTop: 18,
-                borderRadius: 20,
-                padding: 14,
-                backgroundColor: colors.cardMuted,
+                borderRadius: 28,
+                padding: 20,
+                backgroundColor: colors.cardElevated,
                 borderWidth: 1,
                 borderColor: colors.border,
               }}
             >
-              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
-                {overview?.meta?.isOpenNow
-                  ? `SAC is open now until ${overview?.meta?.closesAt || "10:30 PM"}`
-                  : `SAC is closed right now. Closing time remains ${overview?.meta?.closesAt || "10:30 PM"}`}
-              </Text>
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
-                Open the room and equipment sections to manage only your own participation.
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
+                  }}
+                >
+                  <Ionicons
+                    name={entrySource === "qr" ? "qr-code-outline" : "color-wand-outline"}
+                    size={28}
+                    color={entrySource === "qr" ? colors.success : colors.warning}
+                  />
+                </View>
+
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20, marginTop: 15 , marginLeft : 30}}>Shared Spaces</Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  marginTop: 18,
+                  borderRadius: 20,
+                  padding: 14,
+                  backgroundColor: colors.cardMuted,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
+                  {overview?.meta?.isOpenNow
+                    ? `SAC is open now until ${overview?.meta?.closesAt || "10:30 PM"}`
+                    : `SAC is closed right now. Closing time remains ${overview?.meta?.closesAt || "10:30 PM"}`}
+                </Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
+                  Open the club room and equipment sections to manage only your own participation.
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            width: "100%",
+            alignSelf: "center",
+            maxWidth: CONTENT_MAX_WIDTH,
+            paddingHorizontal: 18,
+            paddingTop: 18,
+          }}
+        >
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
             {[
               {
                 label: "Open Rooms",
@@ -218,16 +228,18 @@ export default function SACScreen({ navigation, route }) {
                 toneBg: colors.primarySoft,
                 toneFg: colors.primary,
               },
-            ].map((stat) => (
+            ].map((stat, index) => (
               <View
                 key={stat.label}
                 style={{
-                  width: "31%",
+                  flex: 1,
+                  marginRight: index < 2 ? 8 : 0,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
+                  marginBottom: 12,
                 }}
               >
                 <View
@@ -262,7 +274,12 @@ export default function SACScreen({ navigation, route }) {
             }}
           >
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Your SAC status</Text>
-            <View style={{ flexDirection: "row", marginTop: 14 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                marginTop: 14,
+              }}
+            >
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>Rooms joined</Text>
                 <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 28, marginTop: 6 }}>
@@ -276,21 +293,19 @@ export default function SACScreen({ navigation, route }) {
                 </Text>
               </View>
             </View>
-            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 10, lineHeight: 19 }}>
-              You can still join a room, leave a room, take equipment, and return only your own items from the next screens.
-            </Text>
           </View>
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
             <TouchableOpacity
               onPress={() => navigation.navigate("ClubRooms", { entrySource, location: route?.params?.location || "SAC" })}
               style={{
-                width: "48.5%",
+                width: actionCardWidth,
                 backgroundColor: colors.cardElevated,
                 borderRadius: 28,
                 borderWidth: 1,
                 borderColor: colors.border,
                 padding: 18,
+                marginBottom: 12,
               }}
             >
               <View
@@ -307,22 +322,23 @@ export default function SACScreen({ navigation, route }) {
               </View>
               <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginTop: 16 }}>Club Rooms</Text>
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-                Open rooms, see only room counts, and manage your own membership.
+                Open rooms, see live occupancy counts, and manage your own room membership.
               </Text>
               <Text style={{ color: colors.warning, fontFamily: FONTS.bold, fontSize: 13, marginTop: 16 }}>
-                {formatPercent(roomOccupancy)} rooms active
+                {roomOccupancy} rooms active
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => navigation.navigate("Equipments", { entrySource, location: route?.params?.location || "SAC" })}
               style={{
-                width: "48.5%",
+                width: actionCardWidth,
                 backgroundColor: colors.cardElevated,
                 borderRadius: 28,
                 borderWidth: 1,
                 borderColor: colors.border,
                 padding: 18,
+                marginBottom: 12,
               }}
             >
               <View
@@ -339,38 +355,12 @@ export default function SACScreen({ navigation, route }) {
               </View>
               <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginTop: 16 }}>Equipments</Text>
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-                Check live checkout counts without exposing who is using each item.
+                Check live checkout counts and update only the equipment currently assigned to you.
               </Text>
               <Text style={{ color: colors.primary, fontFamily: FONTS.bold, fontSize: 13, marginTop: 16 }}>
-                {formatPercent(equipmentActivity)} types active
+                {equipmentActivity} types active
               </Text>
             </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: colors.cardElevated,
-              borderRadius: 28,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: 20,
-            }}
-          >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>What you can see here</Text>
-            <View style={{ marginTop: 14 }}>
-              {[
-                "Live room and equipment counts",
-                "Your joined rooms and active equipment",
-                "Anonymous shared-space activity without names",
-              ].map((item) => (
-                <View key={item} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginLeft: 10 }}>
-                    {item}
-                  </Text>
-                </View>
-              ))}
-            </View>
           </View>
         </View>
       </ScrollView>

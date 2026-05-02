@@ -7,6 +7,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -16,6 +17,7 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import { sacAPI } from "../services/api"
 import { SAC_EQUIPMENT } from "../constants/sacCatalog"
 import { FONTS } from "../utils/constants"
+import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth } from "../utils/responsiveLayout"
 
 const formatTime = (value) => {
   if (!value) {
@@ -31,12 +33,15 @@ const formatTime = (value) => {
 export default function EquipmentScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
   const { user } = useAuth()
+  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [submittingKey, setSubmittingKey] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
+  const statCardWidth = getThreeColumnCardWidth(width)
+
   const myEquipmentSet = useMemo(
     () => new Set((overview?.myStatus?.activeEquipment || []).map((item) => item.name)),
     [overview?.myStatus?.activeEquipment],
@@ -114,81 +119,99 @@ export default function EquipmentScreen({ navigation, route }) {
             borderBottomColor: colors.border,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Equipments</Text>
-
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              marginTop: 18,
-              borderRadius: 28,
-              padding: 20,
-              backgroundColor: colors.cardElevated,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
+          <View style={{ width: "100%", alignSelf: "center", maxWidth: CONTENT_MAX_WIDTH }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
                 style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 18,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: entrySource === "qr" ? colors.successSoft : colors.primarySoft,
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <Ionicons
-                  name={entrySource === "qr" ? "qr-code-outline" : "football-outline"}
-                  size={26}
-                  color={entrySource === "qr" ? colors.success : colors.primary}
-                />
-              </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Shared equipment, private identities</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                  Counts remain live, but the student view no longer reveals who currently holds each item.
-                </Text>
+                <Ionicons name="arrow-back" size={22} color={colors.text} />
+              </TouchableOpacity>
+
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Equipments</Text>
+
+              <TouchableOpacity
+                onPress={toggleTheme}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                marginTop: 18,
+                borderRadius: 28,
+                padding: 20,
+                backgroundColor: colors.cardElevated,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <View
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.primarySoft,
+                  }}
+                >
+                  <Ionicons
+                    name={entrySource === "qr" ? "qr-code-outline" : "football-outline"}
+                    size={26}
+                    color={entrySource === "qr" ? colors.success : colors.primary}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Shared equipment, private identities</Text>
+                  <Text
+                    style={{
+                      color: colors.subText,
+                      fontFamily: FONTS.regular,
+                      fontSize: 13,
+                      marginTop: 4,
+                      lineHeight: 19,
+                    }}
+                  >
+                    Counts remain live, but the student view no longer reveals who currently holds each item.
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
+        <View
+          style={{
+            width: "100%",
+            alignSelf: "center",
+            maxWidth: CONTENT_MAX_WIDTH,
+            paddingHorizontal: 18,
+            paddingTop: 18,
+          }}
+        >
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
             {[
               {
                 label: "In Use",
@@ -215,12 +238,13 @@ export default function EquipmentScreen({ navigation, route }) {
               <View
                 key={stat.label}
                 style={{
-                  width: "31%",
+                  width: statCardWidth,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
+                  marginBottom: 12,
                 }}
               >
                 <View
@@ -412,7 +436,7 @@ export default function EquipmentScreen({ navigation, route }) {
                       {activity.subtitle}
                     </Text>
                   </View>
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginLeft: 12 }}>
                     {formatTime(activity.timestamp)}
                   </Text>
                 </View>

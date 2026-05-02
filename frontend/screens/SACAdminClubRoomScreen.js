@@ -8,6 +8,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -17,6 +18,7 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import { sacAPI } from "../services/api"
 import { SAC_CLUB_ROOMS } from "../constants/sacCatalog"
 import { FONTS } from "../utils/constants"
+import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth } from "../utils/responsiveLayout"
 
 const formatTime = (value) => {
   if (!value) {
@@ -41,9 +43,10 @@ const getRoomActivityMeta = (activityType) => {
   return { icon: "people-outline", colorKey: "accent", bgKey: "accentSoft" }
 }
 
-export default function ClubRoomScreen({ navigation, route }) {
+export default function SACAdminClubRoomScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
   const { user } = useAuth()
+  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -51,6 +54,8 @@ export default function ClubRoomScreen({ navigation, route }) {
 
   const entrySource = route?.params?.entrySource || "manual"
   const isStudent = user?.role === "student"
+  const statCardWidth = getThreeColumnCardWidth(width)
+  const isCompact = width < 520
 
   const roomStateMap = useMemo(
     () => new Map((overview?.rooms || []).map((room) => [room.name, room])),
@@ -129,81 +134,91 @@ export default function ClubRoomScreen({ navigation, route }) {
             borderBottomColor: colors.border,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Club Rooms</Text>
-
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              marginTop: 18,
-              borderRadius: 28,
-              padding: 20,
-              backgroundColor: colors.cardElevated,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
+          <View style={{ width: "100%", alignSelf: "center", maxWidth: CONTENT_MAX_WIDTH }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
                 style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 18,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <Ionicons
-                  name={entrySource === "qr" ? "qr-code-outline" : "key-outline"}
-                  size={26}
-                  color={entrySource === "qr" ? colors.success : colors.warning}
-                />
-              </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Club room activity</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
-                  Open a room, join an active room, and see who is currently inside each club room.
-                </Text>
+                <Ionicons name="arrow-back" size={22} color={colors.text} />
+              </TouchableOpacity>
+
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Club Rooms</Text>
+
+              <TouchableOpacity
+                onPress={toggleTheme}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                marginTop: 18,
+                borderRadius: 28,
+                padding: 20,
+                backgroundColor: colors.cardElevated,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
+                  }}
+                >
+                  <Ionicons
+                    name={entrySource === "qr" ? "qr-code-outline" : "key-outline"}
+                    size={26}
+                    color={entrySource === "qr" ? colors.success : colors.warning}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Guard room activity view</Text>
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+                    Open a room, join an active room, and see who is currently inside each club room.
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
+        <View
+          style={{
+            width: "100%",
+            alignSelf: "center",
+            maxWidth: CONTENT_MAX_WIDTH,
+            paddingHorizontal: 18,
+            paddingTop: 18,
+          }}
+        >
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
             {[
               {
                 label: "Open Rooms",
@@ -230,12 +245,13 @@ export default function ClubRoomScreen({ navigation, route }) {
               <View
                 key={stat.label}
                 style={{
-                  width: "31%",
+                  width: statCardWidth,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
+                  marginBottom: 12,
                 }}
               >
                 <View
@@ -284,8 +300,21 @@ export default function ClubRoomScreen({ navigation, route }) {
                     borderBottomColor: colors.border,
                   }}
                 >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <View style={{ flexDirection: "row", flex: 1, paddingRight: 10 }}>
+                  <View
+                    style={{
+                      flexDirection: isCompact ? "column" : "row",
+                      justifyContent: "space-between",
+                      alignItems: isCompact ? "stretch" : "flex-start",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flex: 1,
+                        paddingRight: isCompact ? 0 : 10,
+                        marginBottom: isCompact ? 12 : 0,
+                      }}
+                    >
                       <View
                         style={{
                           width: 68,
@@ -317,8 +346,10 @@ export default function ClubRoomScreen({ navigation, route }) {
                         </Text>
                       </View>
                     </View>
+
                     <View
                       style={{
+                        alignSelf: isCompact ? "flex-start" : "auto",
                         borderRadius: 999,
                         paddingHorizontal: 12,
                         paddingVertical: 6,
@@ -365,7 +396,8 @@ export default function ClubRoomScreen({ navigation, route }) {
                               borderRadius: 999,
                               paddingHorizontal: 12,
                               paddingVertical: 8,
-                              backgroundColor: occupant.user?.id === roomState.openedBy?.id ? colors.warningSoft : colors.cardMuted,
+                              backgroundColor:
+                                occupant.user?.id === roomState.openedBy?.id ? colors.warningSoft : colors.cardMuted,
                               borderWidth: 1,
                               borderColor: colors.border,
                             }}
@@ -475,7 +507,7 @@ export default function ClubRoomScreen({ navigation, route }) {
                         {activity.subtitle}
                       </Text>
                     </View>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
+                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginLeft: 12 }}>
                       {formatTime(activity.timestamp)}
                     </Text>
                   </View>
