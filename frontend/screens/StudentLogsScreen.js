@@ -159,9 +159,9 @@ export default function StudentLogsScreen() {
     <View style={[localStyles.container, { backgroundColor: colors.background }]}>
       <View style={[localStyles.header, { backgroundColor: colors.header, borderBottomColor: colors.border || COLORS.gray[200] }]}>
         <Text style={[localStyles.headerTitle, { color: colors.heading }]}>My Logs</Text>
-        <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
+        {/* <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
           Personal entry, exit, and outpass activity
-        </Text>
+        </Text> */}
         <Text style={[localStyles.headerSummary, { color: colors.subText }]}>{summaryText}</Text>
         {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
       </View>

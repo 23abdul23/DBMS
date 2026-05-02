@@ -71,7 +71,6 @@ export default function GuardDashboardScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false)
   const [savingQr, setSavingQr] = useState(false)
 
-  const actionCardWidth = getTwoColumnCardWidth(width)
   const infoCardWidth = getTwoColumnCardWidth(width)
   const isCompact = width < 520
   const qrSize = width < 420 ? 180 : 210
@@ -114,7 +113,6 @@ export default function GuardDashboardScreen({ navigation }) {
     {
       key: "logs",
       title: "Logs",
-      subtitle: "Review entry, exit, SAC, and library activity.",
       icon: "document-text-outline",
       toneBg: colors.primarySoft,
       toneFg: colors.primary,
@@ -123,7 +121,6 @@ export default function GuardDashboardScreen({ navigation }) {
     {
       key: "profile",
       title: "Profile",
-      subtitle: "Check your guard details and account metadata.",
       icon: "person-circle-outline",
       toneBg: colors.accentSoft,
       toneFg: colors.accent,
@@ -309,21 +306,19 @@ export default function GuardDashboardScreen({ navigation }) {
             paddingTop: 18,
           }}
         >
-          <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 21, marginBottom: 12 }}>
-            Quick Actions
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 8 }}>
-            {quickActions.map((action) => (
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 8 }}>
+            {quickActions.map((action, index) => (
               <TouchableOpacity
                 key={action.key}
                 onPress={action.onPress}
                 activeOpacity={0.85}
                 style={{
-                  width: actionCardWidth,
+                  flex: 1,
+                  marginRight: index === 0 ? 10 : 0,
+                  marginLeft: index === 1 ? 10 : 0,
                   borderRadius: 28,
                   paddingHorizontal: 18,
                   paddingTop: 18,
-                  paddingBottom: 20,
                   borderWidth: 1,
                   borderColor: colors.border,
                   backgroundColor: colors.cardElevated,
@@ -381,7 +376,7 @@ export default function GuardDashboardScreen({ navigation }) {
             >
               <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>QR For Location</Text>
               <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-                Gates need outpass checks after 6:00 PM. Buildings and hostels are internal campus locations.
+                Gates need outpass checks after 6:00 PM.
               </Text>
 
               <View
@@ -403,66 +398,53 @@ export default function GuardDashboardScreen({ navigation }) {
 
               <View
                 style={{
-                  marginTop: 16,
-                  borderRadius: 18,
-                  padding: 14,
-                  backgroundColor: colors.cardMuted,
+                  width: infoCardWidth,
+                  borderRadius: 28,
+                  padding: 20,
+                  marginTop:20,
                   borderWidth: 1,
                   borderColor: colors.border,
+                  backgroundColor: colors.cardElevated,
+                  marginBottom: 16,
+                  alignItems: "center",
                 }}
               >
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13 }}>Current QR payload</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 6, lineHeight: 18 }}>
-                  Guard ID: {user?.guardId || "-"}{"\n"}Location: {loc || "-"}
-                </Text>
-              </View>
-            </View>
-
-            <View
-              style={{
-                width: infoCardWidth,
-                borderRadius: 28,
-                padding: 20,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.cardElevated,
-                marginBottom: 16,
-                alignItems: "center",
-              }}
-            >
-              <View
-                ref={qrCardRef}
-                collapsable={false}
-                style={[localStyles.qrCard, { backgroundColor: COLORS.white, width: "100%" }]}
-              >
-                <Text style={localStyles.qrCardTitle}>Guard QR</Text>
-                <Text style={localStyles.qrMeta}>Location: {loc || "-"}</Text>
-                <Text style={localStyles.qrMeta}>Date: {generatedDateLabel}</Text>
-                <Text style={localStyles.qrMeta}>Guard: {user?.name || "Guard"}</Text>
-                <View style={localStyles.qrCanvas}>
-                  <QRCode value={qrPayload} size={qrSize} color={COLORS.gray[800]} backgroundColor={COLORS.white} />
+                <View
+                  ref={qrCardRef}
+                  collapsable={false}
+                  style={[localStyles.qrCard, { backgroundColor: COLORS.white, width: "100%" }]}
+                >
+                  <Text style={localStyles.qrCardTitle}>Guard QR</Text>
+                  <Text style={localStyles.qrMeta}>Location: {loc || "-"}</Text>
+                  <Text style={localStyles.qrMeta}>Date: {generatedDateLabel}</Text>
+                  <Text style={localStyles.qrMeta}>Guard: {user?.name || "Guard"}</Text>
+                  <View style={localStyles.qrCanvas}>
+                    <QRCode value={qrPayload} size={qrSize} color={COLORS.gray[800]} backgroundColor={COLORS.white} />
+                  </View>
+                  <Text style={localStyles.qrNote}>Scan this QR at entry or exit checkpoints.</Text>
                 </View>
-                <Text style={localStyles.qrNote}>Scan this QR at entry or exit checkpoints.</Text>
-              </View>
 
-              <TouchableOpacity
-                style={[
-                  localStyles.downloadButton,
-                  {
-                    backgroundColor: colors.primary,
-                    width: "100%",
-                    opacity: savingQr ? 0.7 : 1,
-                  },
-                ]}
-                onPress={handleDownloadQr}
-                disabled={savingQr}
-              >
-                <Ionicons name="download-outline" size={18} color={colors.buttonTextOnPrimary} />
-                <Text style={[localStyles.downloadButtonText, { color: colors.buttonTextOnPrimary }]}>
-                  {savingQr ? "Saving..." : "Download QR"}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    localStyles.downloadButton,
+                    {
+                      backgroundColor: colors.primary,
+                      width: "100%",
+                      opacity: savingQr ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handleDownloadQr}
+                  disabled={savingQr}
+                >
+                  <Ionicons name="download-outline" size={18} color={colors.buttonTextOnPrimary} />
+                  <Text style={[localStyles.downloadButtonText, { color: colors.buttonTextOnPrimary }]}>
+                    {savingQr ? "Saving..." : "Download QR"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
+              
           </View>
         </View>
       </ScrollView>

@@ -99,9 +99,6 @@ export default function WardenMonitoringScreen() {
         <View style={styles.headerTopRow}>
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Student Monitoring</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
-              Privacy-safe inside and outside campus presence for your hostel.
-            </Text>
           </View>
           <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
             <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />

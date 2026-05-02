@@ -131,7 +131,7 @@ export default function LoginScreen({ navigation }) {
               <TextInput
                 style={[styles.input, { color: colors.inputText }]}
                 placeholder="Email Address"
-                placeholderTextColor={colors.placeholder}
+                placeholderTextColor={colors.inputText}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"

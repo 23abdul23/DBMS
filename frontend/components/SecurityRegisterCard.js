@@ -20,7 +20,7 @@ export default function SecurityRegisterCard({ formData, updateFormData, colors 
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Email Address *"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.email}
           onChangeText={value => updateFormData('email', value)}
           keyboardType="email-address"
@@ -32,7 +32,7 @@ export default function SecurityRegisterCard({ formData, updateFormData, colors 
         <TextInput
           style={[styles.input, { color: colors.inputText }]}
           placeholder="Guard ID*"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={colors.inputText}
           value={formData.guardId}
           onChangeText={value => updateFormData('guardId', value)}
           autoCapitalize="characters"
