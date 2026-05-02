@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useMemo, useState } from "react"
 import {
   Alert,
   RefreshControl,
@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native"
+import { useFocusEffect } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { sacAPI } from "../services/api"
@@ -23,40 +24,86 @@ export default function SACScreen({ navigation, route }) {
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [sacStatus, setSacStatus] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
   const actionCardWidth = getTwoColumnCardWidth(width)
   const isCompact = width < 520
 
-  const loadOverview = async (nextLoading = false) => {
+  const loadSacData = useCallback(async (nextLoading = false) => {
     try {
       if (nextLoading) {
         setLoading(true)
       }
 
-      const response = await sacAPI.getOverview()
-      setOverview(response?.data?.overview || null)
+      const [overviewResult, statusResult] = await Promise.allSettled([sacAPI.getOverview(), sacAPI.getSacStatus()])
+
+      if (overviewResult.status === "fulfilled") {
+        setOverview(overviewResult.value?.data?.overview || null)
+      } else {
+        console.log("SAC overview error:", overviewResult.reason?.response?.data || overviewResult.reason)
+        Alert.alert(
+          "SAC Error",
+          overviewResult.reason?.response?.data?.message || "Unable to load SAC activity right now.",
+        )
+      }
+
+      if (statusResult.status === "fulfilled") {
+        setSacStatus(statusResult.value?.data || null)
+      } else {
+        console.log("SAC status error:", statusResult.reason?.response?.data || statusResult.reason)
+        setSacStatus(null)
+      }
     } catch (error) {
-      console.log("SAC overview error:", error?.response?.data || error)
+      console.log("SAC screen error:", error?.response?.data || error)
       Alert.alert("SAC Error", error?.response?.data?.message || "Unable to load SAC activity right now.")
     } finally {
       if (nextLoading) {
         setLoading(false)
       }
     }
-  }
-
-  useEffect(() => {
-    loadOverview(true)
   }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSacData(true)
+    }, [loadSacData]),
+  )
 
   const onRefresh = async () => {
     try {
       setRefreshing(true)
-      await loadOverview(false)
+      await loadSacData(false)
     } finally {
       setRefreshing(false)
     }
+  }
+
+  const sacClosesAt = sacStatus?.closesAt || overview?.meta?.closesAt || "10:30 PM"
+  const isSacOpenNow = sacStatus?.status ?? overview?.meta?.isOpenNow ?? false
+
+  const handleNavigateToRooms = () => {
+    if (!isSacOpenNow) {
+      Alert.alert(
+        "SAC Closed",
+        sacStatus?.message || `SAC is closed right now. It remains open till ${sacClosesAt}.`,
+        [{ text: "OK" }],
+      )
+      return
+    }
+    navigation.navigate("ClubRooms", { entrySource, location: route?.params?.location || "SAC" })
+  }
+
+  const handleNavigateToEquipments = () => {
+    if (!isSacOpenNow) {
+      Alert.alert(
+        "SAC Closed",
+        sacStatus?.message || `SAC is closed right now. It remains open till ${sacClosesAt}.`,
+        [{ text: "OK" }],
+      )
+      return
+    }
+    navigation.navigate("Equipments", { entrySource, location: route?.params?.location || "SAC" })
   }
 
   const summary = overview?.summary || {}
@@ -184,9 +231,9 @@ export default function SACScreen({ navigation, route }) {
                 }}
               >
                 <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
-                  {overview?.meta?.isOpenNow
-                    ? `SAC is open now until ${overview?.meta?.closesAt || "10:30 PM"}`
-                    : `SAC is closed right now. Closing time remains ${overview?.meta?.closesAt || "10:30 PM"}`}
+                  {isSacOpenNow
+                    ? `SAC is open now until ${sacClosesAt}`
+                    : `SAC is closed right now. Closing time remains ${sacClosesAt}`}
                 </Text>
                 <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
                   Open the club room and equipment sections to manage only your own participation.
@@ -297,7 +344,7 @@ export default function SACScreen({ navigation, route }) {
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
             <TouchableOpacity
-              onPress={() => navigation.navigate("ClubRooms", { entrySource, location: route?.params?.location || "SAC" })}
+              onPress={handleNavigateToRooms}
               style={{
                 width: actionCardWidth,
                 backgroundColor: colors.cardElevated,
@@ -330,7 +377,7 @@ export default function SACScreen({ navigation, route }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => navigation.navigate("Equipments", { entrySource, location: route?.params?.location || "SAC" })}
+              onPress={handleNavigateToEquipments}
               style={{
                 width: actionCardWidth,
                 backgroundColor: colors.cardElevated,

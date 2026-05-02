@@ -111,6 +111,8 @@ const requestWithFallback = async (requests) => {
   throw lastError
 }
 
+const allowOpenClosedStatus = (status) => status === 200 || status === 403
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
@@ -223,6 +225,7 @@ export const securityAPI = {
 
 export const sacAPI = {
   getOverview: () => api.get("/sac/overview"),
+  getSacStatus: () => api.get("/sac/status", { validateStatus: allowOpenClosedStatus }),
   selectRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
   leaveRoom: (roomName) => api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
   selectEquipment: (equipmentName) => api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
@@ -231,6 +234,7 @@ export const sacAPI = {
 
 export const libraryAPI = {
   getOverview: () => api.get("/library/overview"),
+  getStatus: () => api.get("/library/status", { validateStatus: allowOpenClosedStatus }),
   claimSeat: (seatNumber) => api.post("/library/claim-seat", { seatNumber }),
   releaseSeat: () => api.post("/library/release-seat"),
 }

@@ -1,7 +1,7 @@
 const express = require("express")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate, authorize } = require("../middleware/auth")
-const { getLibraryLimit } = require("../utils/campusActivityRules")
+const { getLibraryLimit, isLibOpenAt, LIB_CLOSE_LABEL } = require("../utils/campusActivityRules")
 const {
   getActiveSeatSession,
   getSeatSessionByNumber,
@@ -12,6 +12,8 @@ const {
 
 const prisma = getPrismaClient()
 const router = express.Router()
+
+const getLibraryClosedMessage = () => `Library is closed for new entry. It remains open till ${LIB_CLOSE_LABEL}.`
 
 const createHttpError = (statusCode, message, code) => {
   const error = new Error(message)
@@ -24,6 +26,33 @@ const parseSeatNumber = (value) => {
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : NaN
 }
+
+router.get("/status", authenticate, async (req, res) => {
+  try {
+    if (!isLibOpenAt()) {
+      return res.status(403).json({
+        message: getLibraryClosedMessage(),
+        code: "LIBRARY_CLOSED",
+        status: false,
+        closesAt: LIB_CLOSE_LABEL,
+      })
+    }
+
+    return res.status(200).json({
+      message: `Library is open till ${LIB_CLOSE_LABEL}.`,
+      code: "LIBRARY_OPEN",
+      status: true,
+      closesAt: LIB_CLOSE_LABEL,
+    })
+  } catch (error) {
+    console.error("Library status error:", error)
+    return res.status(500).json({
+      code: "LIBRARY_STATUS_ERROR",
+      message: "Server error fetching library status",
+      status: false,
+    })
+  }
+})
 
 router.get("/overview", authenticate, async (req, res) => {
   try {
@@ -61,6 +90,14 @@ router.post("/claim-seat", [authenticate, authorize("student")], async (req, res
       return res.status(409).json({
         code: "ALREADY_SEATED",
         message: `You already have Token Number ${activeSeat.seatNumber}. Release it before choosing another seat.`,
+      })
+    }
+
+    if (!isLibOpenAt()) {
+      return res.status(403).json({
+        code: "LIBRARY_CLOSED",
+        message: getLibraryClosedMessage(),
+        closesAt: LIB_CLOSE_LABEL,
       })
     }
 

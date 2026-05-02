@@ -1,5 +1,5 @@
 const { generateId } = require("./hashGenerator")
-const { getLibraryLimit } = require("./campusActivityRules")
+const { getLibraryLimit, isLibOpenAt, LIB_CLOSE_LABEL } = require("./campusActivityRules")
 const { canViewFullLibraryActivity } = require("./adminScopes")
 
 const LIBRARY_LOCATION = "Library"
@@ -128,6 +128,8 @@ const getLibraryOverview = async (client, viewer) => {
       .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails)),
     meta: {
       limit,
+      isOpenNow: isLibOpenAt(),
+      closesAt: LIB_CLOSE_LABEL,
       viewerCanSeeDetails: includeUserDetails,
     },
   }
