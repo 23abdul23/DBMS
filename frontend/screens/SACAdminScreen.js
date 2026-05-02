@@ -7,6 +7,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -14,14 +15,18 @@ import { useTheme } from "../context/ThemeContext"
 import { sacAPI } from "../services/api"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { FONTS } from "../utils/constants"
+import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth, getTwoColumnCardWidth } from "../utils/responsiveLayout"
 
 export default function SACAdminScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
+  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   const entrySource = route?.params?.entrySource || "manual"
+  const statCardWidth = getThreeColumnCardWidth(width)
+  const actionCardWidth = getTwoColumnCardWidth(width)
 
   const loadOverview = async (nextLoading = false) => {
     try {
@@ -115,88 +120,98 @@ export default function SACAdminScreen({ navigation, route }) {
             borderBottomColor: colors.border,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.text} />
-            </TouchableOpacity>
-
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>SAC</Text>
-
-            <TouchableOpacity
-              onPress={toggleTheme}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              marginTop: 18,
-              borderRadius: 28,
-              padding: 20,
-              backgroundColor: colors.cardElevated,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
+          <View style={{ width: "100%", alignSelf: "center", maxWidth: CONTENT_MAX_WIDTH }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
                 style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 18,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: entrySource === "qr" ? colors.successSoft : colors.accentSoft,
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <Ionicons
-                  name={entrySource === "qr" ? "qr-code-outline" : "grid-outline"}
-                  size={26}
-                  color={entrySource === "qr" ? colors.success : colors.accent}
-                />
-              </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>
-                  {entrySource === "qr" ? "SAC QR scanned" : "Choose a SAC section"}
-                </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4 }}>
-                  Start with club rooms or equipments. Each section opens its own screen with the full SAC features.
-                </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 6 }}>
-                  {overview?.meta?.isOpenNow
-                    ? `Open now. Closes at ${overview?.meta?.closesAt || "10:30 PM"}.`
-                    : `Closed now. Opens again tomorrow. Closing time is ${overview?.meta?.closesAt || "10:30 PM"}.`}
-                </Text>
+                <Ionicons name="arrow-back" size={22} color={colors.text} />
+              </TouchableOpacity>
+
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>SAC</Text>
+
+              <TouchableOpacity
+                onPress={toggleTheme}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.cardElevated,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                marginTop: 18,
+                borderRadius: 28,
+                padding: 20,
+                backgroundColor: colors.cardElevated,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.accentSoft,
+                  }}
+                >
+                  <Ionicons
+                    name={entrySource === "qr" ? "qr-code-outline" : "grid-outline"}
+                    size={26}
+                    color={entrySource === "qr" ? colors.success : colors.accent}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>
+                    {entrySource === "qr" ? "SAC QR scanned" : "Choose a SAC section"}
+                  </Text>
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+                    Start with club rooms or equipments. Each section opens its own screen with the full SAC guard view.
+                  </Text>
+                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 6 }}>
+                    {overview?.meta?.isOpenNow
+                      ? `Open now. Closes at ${overview?.meta?.closesAt || "10:30 PM"}.`
+                      : `Closed now. Opens again tomorrow. Closing time is ${overview?.meta?.closesAt || "10:30 PM"}.`}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 18, paddingTop: 20 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
+        <View
+          style={{
+            width: "100%",
+            alignSelf: "center",
+            maxWidth: CONTENT_MAX_WIDTH,
+            paddingHorizontal: 18,
+            paddingTop: 20,
+          }}
+        >
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
             {[
               {
                 label: "Open Rooms",
@@ -223,12 +238,13 @@ export default function SACAdminScreen({ navigation, route }) {
               <View
                 key={stat.label}
                 style={{
-                  width: "31%",
+                  width: statCardWidth,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
+                  marginBottom: 12,
                 }}
               >
                 <View
@@ -252,62 +268,65 @@ export default function SACAdminScreen({ navigation, route }) {
             ))}
           </View>
 
-          {tiles.map((tile) => (
-            <TouchableOpacity
-              key={tile.key}
-              onPress={() => navigation.navigate(tile.routeName, { entrySource, location: route?.params?.location || "SAC" })}
-              style={{
-                marginBottom: 16,
-                backgroundColor: colors.cardElevated,
-                borderRadius: 28,
-                borderWidth: 1,
-                borderColor: colors.border,
-                padding: 20,
-              }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <View
-                  style={{
-                    width: 58,
-                    height: 58,
-                    borderRadius: 18,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: tile.accentBg,
-                  }}
-                >
-                  <Ionicons name={tile.icon} size={28} color={tile.accentFg} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
+            {tiles.map((tile) => (
+              <TouchableOpacity
+                key={tile.key}
+                onPress={() => navigation.navigate(tile.routeName, { entrySource, location: route?.params?.location || "SAC" })}
+                style={{
+                  width: actionCardWidth,
+                  marginBottom: 16,
+                  backgroundColor: colors.cardElevated,
+                  borderRadius: 28,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  padding: 20,
+                }}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <View
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: tile.accentBg,
+                    }}
+                  >
+                    <Ionicons name={tile.icon} size={28} color={tile.accentFg} />
+                  </View>
+
+                  <View
+                    style={{
+                      borderRadius: 999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      backgroundColor: colors.cardMuted,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>
+                      {tile.value} {tile.valueLabel}
+                    </Text>
+                  </View>
                 </View>
 
-                <View
-                  style={{
-                    borderRadius: 999,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    backgroundColor: colors.cardMuted,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>
-                    {tile.value} {tile.valueLabel}
-                  </Text>
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22, marginTop: 18 }}>
+                  {tile.title}
+                </Text>
+                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 14, marginTop: 6, lineHeight: 20 }}>
+                  {tile.subtitle}
+                </Text>
+
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 18 }}>
+                  <Text style={{ color: colors.primary, fontFamily: FONTS.bold, fontSize: 14 }}>Open section</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.primary} style={{ marginLeft: 6 }} />
                 </View>
-              </View>
-
-              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22, marginTop: 18 }}>
-                {tile.title}
-              </Text>
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 14, marginTop: 6, lineHeight: 20 }}>
-                {tile.subtitle}
-              </Text>
-
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 18 }}>
-                <Text style={{ color: colors.primary, fontFamily: FONTS.bold, fontSize: 14 }}>Open section</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.primary} style={{ marginLeft: 6 }} />
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

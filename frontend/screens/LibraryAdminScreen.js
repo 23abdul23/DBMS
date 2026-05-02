@@ -227,32 +227,7 @@ export default function LibraryScreen({ navigation }) {
             ))}
           </View>
 
-          <View
-            style={{
-              backgroundColor: colors.cardElevated,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: colors.border,
-              padding: 18,
-              marginBottom: 16,
-            }}
-          >
-            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Your Token</Text>
-            {activeSeat ? (
-              <>
-                <Text style={{ color: colors.primary, fontFamily: FONTS.bold, fontSize: 34, marginTop: 10 }}>
-                  #{activeSeat.seatNumber}
-                </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
-                  Seated from {formatTime(activeSeat.enteredAt)}
-                </Text>
-              </>
-            ) : (
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 10 }}>
-                No active library token. Scan the Library QR to take one.
-              </Text>
-            )}
-          </View>
+          
 
           <View
             style={{

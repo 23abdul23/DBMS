@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   TextInput,
   ScrollView,
@@ -15,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Picker } from "@react-native-picker/picker"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
+import LoadingSpinner from "../components/LoadingSpinner"
 import { securityAPI } from "../services/api"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
 
@@ -335,7 +335,13 @@ export default function LogBook({ navigation, route }) {
 
       {loading ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <LoadingSpinner
+            variant="panel"
+            label="Loading entry and exit logs"
+            sublabel="Fetching the latest campus movement records for this view."
+            statusText="Aegis is assembling the filtered logbook feed."
+            showThemeToggle={false}
+          />
         </View>
       ) : (
         <FlatList
@@ -351,7 +357,7 @@ export default function LogBook({ navigation, route }) {
           ListFooterComponent={
             loadingMore ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <LoadingSpinner variant="inline" label="Loading more logs" />
               </View>
             ) : hasMore ? (
               <TouchableOpacity onPress={onLoadMore} style={styles.loadMoreButton}>
