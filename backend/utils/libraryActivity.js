@@ -125,7 +125,7 @@ const getLibraryOverview = async (client, viewer) => {
         seatNumber: log.details?.seatNumber || null,
         user: log.user ? buildLibraryStudentSummary(log.user) : null,
       }))
-      .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails)),
+      .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails)).slice(0,15),
     meta: {
       limit,
       isOpenNow: isLibOpenAt(),

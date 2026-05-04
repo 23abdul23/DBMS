@@ -2,7 +2,7 @@ Write-Host "========================================="
 Write-Host "Starting Android APK Build..."
 Write-Host "========================================="
 
-Set-Location "C:\Users\Azeem\Desktop\Aegis - Eval\frontend"
+Set-Location "C:\Users\Azeem\Desktop\Aegis\frontend"
 
 Write-Host ""
 Write-Host "Step 1: Installing dependencies..."

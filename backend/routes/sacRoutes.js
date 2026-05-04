@@ -304,7 +304,7 @@ const getOverview = async (viewer) => {
       activeEquipmentTypes: equipment.filter((item) => item.activeCount > 0).length,
     },
     rooms: rooms.map((room) => sanitizeRoomState(room, includeUserDetails)),
-    equipment: equipment.map((item) => sanitizeEquipmentState(item, includeUserDetails)),
+    equipment: equipment.map((item) => sanitizeEquipmentState(item, includeUserDetails)).slice(0,15),
     myStatus: {
       activeRooms: myActivePresences
         .map((presence) => buildRoomState(presence.session.roomName, presence.session, viewerUserId))

@@ -1,6 +1,6 @@
 "use client"
 
-import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View, ImageBackground } from "react-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect } from "@react-navigation/native"
@@ -155,9 +155,27 @@ export default function StudentLogsScreen() {
     </View>
   ) : null
 
+  if (loading) {
+    return (
+      <LoadingSpinner
+        variant="screen"
+        label="Loading your movement logs"
+        sublabel="Pulling entry, exit, and outpass activity from Aegis."
+        statusText="Records are being synced and sorted for this timeline."
+        showThemeToggle={false}
+      />
+    )
+  }
+
   return (
-    <View style={[localStyles.container, { backgroundColor: colors.background }]}>
-      <View style={[localStyles.header, { backgroundColor: colors.header, borderBottomColor: colors.border || COLORS.gray[200] }]}>
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
+    >
+      <View style={[localStyles.container, { backgroundColor: "transparent" }]}>
+        <View style={[localStyles.header, { backgroundColor: colors.header + "F0", borderBottomColor: colors.border || COLORS.gray[200] }]}>
         <Text style={[localStyles.headerTitle, { color: colors.heading }]}>My Logs</Text>
         {/* <Text style={[localStyles.headerSubtitle, { color: colors.subText }]}>
           Personal entry, exit, and outpass activity
@@ -166,40 +184,29 @@ export default function StudentLogsScreen() {
         {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
       </View>
 
-      {loading ? (
-        <View style={localStyles.loader}>
-          <LoadingSpinner
-            variant="panel"
-            label="Loading your movement logs"
-            sublabel="Pulling entry, exit, and outpass activity from Aegis."
-            statusText="Records are being synced and sorted for this timeline."
-            showThemeToggle={false}
+      <FlatList
+        data={logs}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={localStyles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={emptyState}
+        onEndReachedThreshold={0.4}
+        onEndReached={onLoadMore}
+        ListFooterComponent={
+          loadingMore ? (
+                <View style={localStyles.footerLoader}>
+                  <LoadingSpinner variant="inline" label="Loading more logs" />
+                </View>
+              ) : hasMore ? (
+                <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>
+                  <Text style={[localStyles.loadMoreText, { color: colors.onPrimary }]}>Load More</Text>
+                </TouchableOpacity>
+              ) : null
+            }
           />
-        </View>
-      ) : (
-        <FlatList
-          data={logs}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={localStyles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={emptyState}
-          onEndReachedThreshold={0.4}
-          onEndReached={onLoadMore}
-          ListFooterComponent={
-            loadingMore ? (
-                  <View style={localStyles.footerLoader}>
-                    <LoadingSpinner variant="inline" label="Loading more logs" />
-                  </View>
-                ) : hasMore ? (
-                  <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>
-                    <Text style={[localStyles.loadMoreText, { color: colors.onPrimary }]}>Load More</Text>
-                  </TouchableOpacity>
-                ) : null
-              }
-            />
-      )}
-    </View>
+      </View>
+    </ImageBackground>
   )
 }
 
@@ -233,11 +240,6 @@ const localStyles = StyleSheet.create({
     fontSize: SIZES.sm,
     fontFamily: FONTS.regular,
   },
-  loader: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   listContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xl,
@@ -247,7 +249,7 @@ const localStyles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderLeftWidth: 4,
+    borderLeftWidth: 8,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 10,

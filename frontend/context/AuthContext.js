@@ -3,7 +3,7 @@
 import React from 'react';
 import { createContext, useContext, useState, useEffect } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { authAPI } from "../services/api"
+import { authAPI, commonAPI } from "../services/api"
 
 const normalizeLoginRole = (role) => {
   if (role === "sac_admin" || role === "library_admin") {
@@ -70,6 +70,22 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const setAuthenticatedUser = async (userData) => {
+    await AsyncStorage.setItem("userData", JSON.stringify(userData))
+    setUser(userData)
+  }
+
+  const refreshUser = async () => {
+    const response = await commonAPI.getProfile()
+    const latestUser = response.data?.user || response.data?.userData || null
+
+    if (latestUser) {
+      await setAuthenticatedUser(latestUser)
+    }
+
+    return latestUser
+  }
+
   const register = async (userData) => {
     try {
       
@@ -105,6 +121,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    refreshUser,
+    setAuthenticatedUser,
     logout,
   }
 
