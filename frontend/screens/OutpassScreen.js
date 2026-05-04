@@ -1,6 +1,6 @@
 "use client"
 
-import { View, Text, TouchableOpacity, RefreshControl, Alert, FlatList } from "react-native"
+import { View, Text, TouchableOpacity, RefreshControl, Alert, FlatList, ImageBackground } from "react-native"
 import { useCallback, useState, useEffect, useMemo } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
@@ -143,13 +143,19 @@ export default function OutpassScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.header, flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomColor: colors.border },
-        ]}
-      >
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
+    >
+      <View style={[styles.container, { backgroundColor: "transparent" }]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.header + "F0", flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomColor: colors.border },
+          ]}
+        >
         <View style={{ flex: 1 }} />
         <Text style={[styles.headerTitle, { color: colors.heading, textAlign: "center", flex: 2 }]}>
           Outpass Management
@@ -184,6 +190,7 @@ export default function OutpassScreen() {
         <Ionicons name="add" size={28} color={colors.onPrimary} />
         <Text style={[styles.floatingCreateLabel, { color: colors.onPrimary }]}>Create Outpass</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </ImageBackground>
   )
 }
