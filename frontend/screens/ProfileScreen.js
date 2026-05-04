@@ -47,6 +47,126 @@ const getBannerBackground = (type) => {
   return "#b91c1c"
 }
 
+const formatDate = (value) => {
+  if (!value) {
+    return "Not available"
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "Not available"
+  }
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+const getInitials = (name = "") => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) {
+    return "U"
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("")
+}
+
+const displayValue = (value, fallback = "Not specified") => {
+  if (value === null || value === undefined || value === "") {
+    return fallback
+  }
+
+  return value
+}
+
+const getRoleAccent = (role, profile, colors) => {
+  if (isSacAdministrator(profile)) {
+    return { icon: "color-wand-outline", bg: colors.warningSoft, fg: colors.warning }
+  }
+
+  if (isLibraryAdministrator(profile)) {
+    return { icon: "library-outline", bg: colors.successSoft, fg: colors.success }
+  }
+
+  if (role === "security") {
+    return { icon: "shield-checkmark-outline", bg: colors.dangerSoft, fg: colors.danger }
+  }
+
+  if (role === "warden") {
+    return { icon: "business-outline", bg: colors.accentSoft, fg: colors.accent }
+  }
+
+  return { icon: "school-outline", bg: colors.primarySoft, fg: colors.primary }
+}
+
+const InfoRow = ({ icon, label, value, colors }) => (
+  <View style={styles.infoRow}>
+    <View style={[styles.infoIcon, { backgroundColor: colors.primarySoft }]}>
+      <Ionicons name={icon} size={18} color={colors.primary} />
+    </View>
+    <View style={styles.infoCopy}>
+      <Text style={[styles.fieldLabel, { color: colors.subText }]}>{label}</Text>
+      <Text style={[styles.fieldValue, { color: colors.text }]} numberOfLines={2}>
+        {displayValue(value)}
+      </Text>
+    </View>
+  </View>
+)
+
+const EditableTextField = ({
+  label,
+  value,
+  onChangeText,
+  colors,
+  keyboardType = "default",
+  autoCapitalize = "sentences",
+}) => (
+  <View style={styles.fieldContainer}>
+    <Text style={[styles.fieldLabel, { color: colors.subText }]}>{label}</Text>
+    <TextInput
+      style={[
+        styles.fieldInput,
+        {
+          color: colors.inputText,
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.inputBorder,
+        },
+      ]}
+      value={value || ""}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType}
+      autoCapitalize={autoCapitalize}
+      placeholder={label}
+      placeholderTextColor={colors.subText}
+    />
+  </View>
+)
+
+const PasswordField = ({ label, value, onChangeText, visible, onToggle, colors, placeholder }) => (
+  <View style={styles.fieldContainer}>
+    <Text style={[styles.fieldLabel, { color: colors.subText }]}>{label}</Text>
+    <View style={[styles.passwordInputShell, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+      <TextInput
+        style={[styles.passwordInput, { color: colors.inputText }]}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!visible}
+        placeholder={placeholder}
+        placeholderTextColor={colors.subText}
+        autoCapitalize="none"
+      />
+      <TouchableOpacity onPress={onToggle} style={styles.passwordEyeButton}>
+        <Ionicons name={visible ? "eye-outline" : "eye-off-outline"} size={18} color={colors.subText} />
+      </TouchableOpacity>
+    </View>
+  </View>
+)
+
 export default function ProfileScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme()
   const { logout } = useAuth()
@@ -278,6 +398,30 @@ export default function ProfileScreen() {
   const idLabel = isSecurity ? "Guard ID" : "Student ID"
   const resendDisabled = otpCountdown > 0 || pwdSaving
   const roleLabel = getScopedAdminLabel(profile) || profile?.role?.toUpperCase()
+  const roleAccent = getRoleAccent(profile?.role, profile, colors)
+  const primaryId = isSecurity ? profile?.guardId : profile?.studentId
+  const locationValue = isSacAdministrator(profile)
+    ? "SAC activity observer"
+    : isLibraryAdministrator(profile)
+      ? "Library activity observer"
+      : profile?.hostel || "Not assigned"
+  const academicLabel = isStudent
+    ? `${DepartmentMap[profile?.department] || displayValue(profile?.department)} | ${
+        AcademicYearMap[profile?.year] || displayValue(profile?.year)
+      }`
+    : locationValue
+  const profileFields = [
+    profile?.name,
+    profile?.email,
+    profile?.phoneNumber,
+    isStudent || isSecurity ? primaryId : roleLabel,
+    isStudent ? profile?.department : locationValue,
+    isStudent ? profile?.year : profile?.role,
+    profile?.hostel,
+    profile?.roomNumber,
+  ]
+  const completedFields = profileFields.filter((field) => field !== null && field !== undefined && field !== "").length
+  const profileCompletion = Math.round((completedFields / profileFields.length) * 100)
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -293,282 +437,318 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: colors.background + "20" }]}>
-              <Text style={[styles.avatarText, { color: colors.text }]}>{profile?.name?.charAt(0)?.toUpperCase() || "U"}</Text>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroShell}>
+          <View
+            style={[
+              styles.heroCard,
+              {
+                backgroundColor: colors.cardElevated,
+                borderColor: colors.border,
+                shadowColor: colors.shadowStrong,
+              },
+            ]}
+          >
+            <View style={styles.heroTopRow}>
+              <View style={[styles.avatar, { backgroundColor: roleAccent.bg }]}>
+                <Text style={[styles.avatarText, { color: roleAccent.fg }]}>{getInitials(profile?.name)}</Text>
+              </View>
+
+              <View style={styles.heroActions}>
+                <TouchableOpacity
+                  onPress={toggleTheme}
+                  style={[
+                    styles.iconButton,
+                    {
+                      backgroundColor: colors.cardMuted,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons name={isDarkMode ? "sunny" : "moon"} size={20} color={colors.text} />
+                </TouchableOpacity>
+                <View
+                  style={[
+                    styles.iconButton,
+                    {
+                      backgroundColor: profile?.isActive ? colors.successSoft : colors.dangerSoft,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={profile?.isActive ? "checkmark-circle-outline" : "alert-circle-outline"}
+                    size={20}
+                    color={profile?.isActive ? colors.success : colors.danger}
+                  />
+                </View>
+              </View>
             </View>
-            <Text style={[styles.userName, { color: colors.text }]}>{profile?.name}</Text>
-            <Text style={[styles.userRole, { color: colors.text, opacity: 0.8 }]}>{roleLabel}</Text>
+
+            <Text style={[styles.userName, { color: colors.heading }]} numberOfLines={2}>
+              {displayValue(profile?.name, "Unnamed User")}
+            </Text>
+            <Text style={[styles.userEmail, { color: colors.subText }]} numberOfLines={1}>
+              {displayValue(profile?.email, "No email on file")}
+            </Text>
+
+            <View style={styles.chipRow}>
+              <View style={[styles.roleChip, { backgroundColor: roleAccent.bg }]}>
+                <Ionicons name={roleAccent.icon} size={15} color={roleAccent.fg} />
+                <Text style={[styles.roleChipText, { color: roleAccent.fg }]} numberOfLines={1}>
+                  {roleLabel}
+                </Text>
+              </View>
+              <View style={[styles.statusChip, { backgroundColor: profile?.isActive ? colors.successSoft : colors.dangerSoft }]}>
+                <View style={[styles.statusDot, { backgroundColor: profile?.isActive ? colors.success : colors.danger }]} />
+                <Text style={[styles.statusChipText, { color: profile?.isActive ? colors.success : colors.danger }]}>
+                  {profile?.isActive ? "Active" : "Inactive"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.summaryGrid}>
+              <View style={[styles.summaryTile, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+                <Text style={[styles.summaryLabel, { color: colors.subText }]}>{isStudent || isSecurity ? idLabel : "Account"}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]} numberOfLines={1}>
+                  {isStudent || isSecurity ? displayValue(primaryId) : displayValue(profile?.role)}
+                </Text>
+              </View>
+              <View style={[styles.summaryTile, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+                <Text style={[styles.summaryLabel, { color: colors.subText }]}>{isStudent ? "Academic" : locationLabel}</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]} numberOfLines={1}>
+                  {academicLabel}
+                </Text>
+              </View>
+              <View style={[styles.summaryTile, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+                <Text style={[styles.summaryLabel, { color: colors.subText }]}>Profile</Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>{profileCompletion}% complete</Text>
+              </View>
+            </View>
           </View>
         </View>
 
         <View style={styles.content}>
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile Details</Text>
+                <Text style={[styles.sectionCaption, { color: colors.subText }]}>
+                  {editing ? "Update visible account information." : "Core identity and contact records."}
+                </Text>
+              </View>
               <TouchableOpacity
-                style={styles.editButton}
+                style={[
+                  styles.primaryAction,
+                  {
+                    backgroundColor: editing ? colors.successSoft : colors.primarySoft,
+                    borderColor: editing ? colors.success : colors.primary,
+                  },
+                ]}
                 onPress={() => (editing ? handleSave() : setEditing(true))}
                 disabled={saving}
               >
-                <Ionicons name={editing ? "checkmark" : "pencil"} size={20} color={colors.text} />
-                <Text style={[styles.editButtonText, { color: colors.text }]}>{editing ? (saving ? "Saving..." : "Save") : "Edit"}</Text>
+                <Ionicons name={editing ? "checkmark" : "pencil"} size={18} color={editing ? colors.success : colors.primary} />
+                <Text style={[styles.primaryActionText, { color: editing ? colors.success : colors.primary }]}>
+                  {editing ? (saving ? "Saving" : "Save") : "Edit"}
+                </Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Full Name</Text>
-              {editing ? (
-                <TextInput
-                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                  value={profile?.name || ""}
+            {editing ? (
+              <>
+                <EditableTextField
+                  label="Full Name"
+                  value={profile?.name}
                   onChangeText={(value) => updateProfile("name", value)}
-                  placeholderTextColor={colors.subText}
+                  colors={colors}
                 />
-              ) : (
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.name}</Text>
-              )}
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Email</Text>
-              {editing ? (
-                <TextInput
-                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                  value={profile?.email || ""}
+                <EditableTextField
+                  label="Email"
+                  value={profile?.email}
                   onChangeText={(value) => updateProfile("email", value)}
-                  placeholderTextColor={colors.subText}
+                  colors={colors}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
-              ) : (
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.email}</Text>
-              )}
-            </View>
-
-            {isStudent || isSecurity ? (
-              <View style={styles.fieldContainer}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>{idLabel}</Text>
-                {editing ? (
-                  <TextInput
-                    style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                    value={isSecurity ? profile?.guardId || "" : profile?.studentId || ""}
+                {isStudent || isSecurity ? (
+                  <EditableTextField
+                    label={idLabel}
+                    value={primaryId}
                     onChangeText={(value) => updateProfile(isSecurity ? "guardId" : "studentId", value)}
-                    placeholderTextColor={colors.subText}
+                    colors={colors}
+                    autoCapitalize="characters"
                   />
-                ) : (
-                  <Text style={[styles.fieldValue, { color: colors.text }]}>
-                    {isSecurity ? profile?.guardId : profile?.studentId}
-                  </Text>
-                )}
-              </View>
-            ) : null}
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number</Text>
-              {editing ? (
-                <TextInput
-                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                  value={profile?.phoneNumber || ""}
+                ) : null}
+                <EditableTextField
+                  label="Phone Number"
+                  value={profile?.phoneNumber}
                   onChangeText={(value) => updateProfile("phoneNumber", value)}
+                  colors={colors}
                   keyboardType="phone-pad"
-                  placeholderTextColor={colors.subText}
                 />
-              ) : (
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.phoneNumber}</Text>
-              )}
-            </View>
-          </View>
 
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {isStudent ? "Academic Information" : isSecurity ? "Station Information" : "Hostel Information"}
-              </Text>
-            </View>
+                {isStudent ? (
+                  <>
+                    <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                      <Ionicons name="library-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                      <Picker selectedValue={profile.department || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("department", value)}>
+                        <Picker.Item label="Select Department *" value="" />
+                        {departments.map((dept) => (
+                          <Picker.Item key={dept} label={DepartmentMap[dept] || dept} value={dept} />
+                        ))}
+                      </Picker>
+                    </View>
+                    <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                      <Ionicons name="calendar-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                      <Picker selectedValue={profile.year || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("year", value)}>
+                        <Picker.Item label="Select Year *" value="" />
+                        {years.map((year) => (
+                          <Picker.Item key={year} label={AcademicYearMap[year] || year} value={year} />
+                        ))}
+                      </Picker>
+                    </View>
+                    <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                      <Ionicons name="home-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                      <Picker selectedValue={profile.hostel || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("hostel", value)}>
+                        <Picker.Item label="Select Hostel *" value="" />
+                        {hostels.map((hostel) => (
+                          <Picker.Item key={hostel} label={hostel} value={hostel} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </>
+                ) : null}
 
-            {isStudent && !editing ? (
-              <>
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Department</Text>
-                  <Text style={[styles.fieldValue, { color: colors.text }]}>{DepartmentMap[profile?.department] || profile?.department}</Text>
-                </View>
-
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Year</Text>
-                  <Text style={[styles.fieldValue, { color: colors.text }]}>{AcademicYearMap[profile?.year] || profile?.year}</Text>
-                </View>
-
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Hostel</Text>
-                  <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.hostel}</Text>
-                </View>
-              </>
-            ) : isStudent && editing ? (
-              <>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                  <Ionicons name="library-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.department || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("department", value)}>
-                    <Picker.Item label="Select Department *" value="" />
-                    {departments.map((dept) => (
-                      <Picker.Item key={dept} label={DepartmentMap[dept] || dept} value={dept} />
-                    ))}
-                  </Picker>
-                </View>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.year || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("year", value)}>
-                    <Picker.Item label="Select Year *" value="" />
-                    {years.map((year) => (
-                      <Picker.Item key={year} label={AcademicYearMap[year] || year} value={year} />
-                    ))}
-                  </Picker>
-                </View>
-                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                  <Ionicons name="home-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-                  <Picker selectedValue={profile.hostel || ""} style={[styles.picker, { color: colors.inputText }]} onValueChange={(value) => updateProfile("hostel", value)}>
-                    <Picker.Item label="Select Hostel *" value="" />
-                    {hostels.map((hostel) => (
-                      <Picker.Item key={hostel} label={hostel} value={hostel} />
-                    ))}
-                  </Picker>
-                </View>
+                {!isScopedAdmin && !isSecurity ? (
+                  <EditableTextField
+                    label="Room Number"
+                    value={profile?.roomNumber}
+                    onChangeText={(value) => updateProfile("roomNumber", value)}
+                    colors={colors}
+                  />
+                ) : null}
               </>
             ) : (
-              <View style={styles.fieldContainer}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>{locationLabel}</Text>
-                <Text style={[styles.fieldValue, { color: colors.text }]}>
-                  {isSacAdministrator(profile)
-                    ? "SAC activity observer"
-                    : isLibraryAdministrator(profile)
-                      ? "Library activity observer"
-                      : profile?.hostel || "Not assigned"}
-                </Text>
-              </View>
+              <>
+                <InfoRow icon="person-outline" label="Full Name" value={profile?.name} colors={colors} />
+                <InfoRow icon="mail-outline" label="Email" value={profile?.email} colors={colors} />
+                {(isStudent || isSecurity) ? <InfoRow icon="card-outline" label={idLabel} value={primaryId} colors={colors} /> : null}
+                <InfoRow icon="call-outline" label="Phone Number" value={profile?.phoneNumber} colors={colors} />
+                {isStudent ? (
+                  <>
+                    <InfoRow icon="library-outline" label="Department" value={DepartmentMap[profile?.department] || profile?.department} colors={colors} />
+                    <InfoRow icon="calendar-outline" label="Year" value={AcademicYearMap[profile?.year] || profile?.year} colors={colors} />
+                    <InfoRow icon="home-outline" label="Hostel" value={profile?.hostel} colors={colors} />
+                    <InfoRow icon="bed-outline" label="Room Number" value={profile?.roomNumber} colors={colors} />
+                  </>
+                ) : (
+                  <InfoRow icon={isSecurity ? "shield-outline" : "business-outline"} label={locationLabel} value={locationValue} colors={colors} />
+                )}
+              </>
             )}
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Room Number</Text>
-              {editing ? (
-                <TextInput
-                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                  value={profile?.roomNumber || ""}
-                  onChangeText={(value) => updateProfile("roomNumber", value)}
-                  placeholderTextColor={colors.subText}
-                />
-              ) : (
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{profile?.roomNumber || "Not specified"}</Text>
-              )}
-            </View>
           </View>
 
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Change Password</Text>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Password</Text>
+                <Text style={[styles.sectionCaption, { color: colors.subText }]}>
+                  {isStudent ? "Students verify password updates with email OTP." : "Update credentials with your current password."}
+                </Text>
+              </View>
+              <View style={[styles.lockBadge, { backgroundColor: colors.warningSoft }]}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
+              </View>
             </View>
 
             {!isStudent ? (
-              <View style={styles.fieldContainer}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Current Password</Text>
-                <TextInput
-                  style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry={!showCurrent}
-                  placeholder="Enter current password"
-                  placeholderTextColor={colors.subText}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowCurrent((value) => !value)} style={styles.eyeButton}>
-                  <Ionicons name={showCurrent ? "eye-outline" : "eye-off-outline"} size={18} color={colors.subText} />
-                </TouchableOpacity>
-              </View>
+              <PasswordField
+                label="Current Password"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                visible={showCurrent}
+                onToggle={() => setShowCurrent((value) => !value)}
+                colors={colors}
+                placeholder="Enter current password"
+              />
             ) : null}
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>New Password</Text>
-              <TextInput
-                style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry={!showNew}
-                placeholder="Enter new password"
-                placeholderTextColor={colors.subText}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity onPress={() => setShowNew((value) => !value)} style={styles.eyeButton}>
-                <Ionicons name={showNew ? "eye-outline" : "eye-off-outline"} size={18} color={colors.subText} />
-              </TouchableOpacity>
-            </View>
+            <PasswordField
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              visible={showNew}
+              onToggle={() => setShowNew((value) => !value)}
+              colors={colors}
+              placeholder="Enter new password"
+            />
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Confirm New Password</Text>
-              <TextInput
-                style={[styles.fieldInput, { color: colors.inputText, borderBottomColor: colors.inputBorderFocus }]}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirm}
-                placeholder="Confirm new password"
-                placeholderTextColor={colors.subText}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity onPress={() => setShowConfirm((value) => !value)} style={styles.eyeButton}>
-                <Ionicons name={showConfirm ? "eye-outline" : "eye-off-outline"} size={18} color={colors.subText} />
-              </TouchableOpacity>
-            </View>
+            <PasswordField
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              visible={showConfirm}
+              onToggle={() => setShowConfirm((value) => !value)}
+              colors={colors}
+              placeholder="Confirm new password"
+            />
 
-            {isStudent ? (
-              <Text style={[styles.passwordHint, { color: colors.subText }]}>An OTP will be sent to your email after you submit the new password.</Text>
-            ) : null}
+            <View style={[styles.passwordHintBox, { backgroundColor: colors.infoSoft }]}>
+              <Ionicons name={isStudent ? "mail-outline" : "information-circle-outline"} size={18} color={colors.info} />
+              <Text style={[styles.passwordHint, { color: colors.text }]}>
+                {isStudent
+                  ? "An OTP will be sent to your registered email before the password changes."
+                  : "Use 8-64 characters with uppercase, lowercase, number, and special character."}
+              </Text>
+            </View>
 
             <View style={styles.passwordActions}>
-              <TouchableOpacity onPress={resetPasswordFields} style={styles.cancelButton}>
-                <Text style={{ color: colors.text }}>Cancel</Text>
+              <TouchableOpacity onPress={resetPasswordFields} style={[styles.secondaryButton, { borderColor: colors.border }]}>
+                <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={isStudent ? handleStudentPasswordSubmit : handleLegacyPasswordUpdate}
-                style={[styles.editButton, styles.passwordSubmit]}
+                style={[styles.solidButton, { backgroundColor: colors.primary }]}
                 disabled={pwdSaving}
               >
-                <Ionicons name="key-outline" size={18} color={colors.text} />
-                <Text style={[styles.editButtonText, { color: colors.text, marginLeft: SPACING.xs }]}>
-                  {pwdSaving ? (isStudent ? "Sending OTP..." : "Updating...") : isStudent ? "Send OTP" : "Update Password"}
+                <Ionicons name="key-outline" size={18} color={colors.buttonTextOnPrimary || COLORS.white} />
+                <Text style={[styles.solidButtonText, { color: colors.buttonTextOnPrimary || COLORS.white }]}>
+                  {pwdSaving ? (isStudent ? "Sending OTP" : "Updating") : isStudent ? "Send OTP" : "Update"}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={[styles.section, { backgroundColor: colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Status</Text>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Status</Text>
+            </View>
 
-            <View style={styles.statusContainer}>
-              <View style={styles.statusItem}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor: profile?.isActive ? "#4caf50" : "#f44336",
-                    },
-                  ]}
-                />
-                <Text style={[styles.statusText, { color: colors.text }]}>{profile?.isActive ? "Active" : "Inactive"}</Text>
+            <View style={styles.accountGrid}>
+              <View style={[styles.accountTile, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+                <Ionicons name="pulse-outline" size={20} color={profile?.isActive ? colors.success : colors.danger} />
+                <Text style={[styles.accountTileLabel, { color: colors.subText }]}>State</Text>
+                <Text style={[styles.accountTileValue, { color: colors.text }]}>{profile?.isActive ? "Active" : "Inactive"}</Text>
               </View>
-
-              <View style={styles.statusItem}>
-                <Text style={[styles.statusLabel, { color: colors.text }]}>Member since</Text>
-                <Text style={[styles.statusValue, { color: colors.text }]}>{new Date(profile?.createdAt).toLocaleDateString()}</Text>
+              <View style={[styles.accountTile, { backgroundColor: colors.cardMuted, borderColor: colors.border }]}>
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
+                <Text style={[styles.accountTileLabel, { color: colors.subText }]}>Member Since</Text>
+                <Text style={[styles.accountTileValue, { color: colors.text }]}>{formatDate(profile?.createdAt)}</Text>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity style={[styles.logoutButton, { backgroundColor: isDarkMode ? "#f4433620" : COLORS.error + "10" }]} onPress={logout}>
-            <Ionicons name="log-out-outline" size={20} color={isDarkMode ? "#f44336" : COLORS.error} />
-            <Text style={[styles.logoutButtonText, { color: isDarkMode ? "#f44336" : COLORS.error }]}>Logout</Text>
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}
+            onPress={logout}
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+            <Text style={[styles.logoutButtonText, { color: colors.danger }]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -664,173 +844,321 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 50,
-    paddingBottom: SPACING.xl,
-    alignItems: "center",
+  contentContainer: {
+    paddingBottom: 34,
   },
-  headerActions: {
+  heroShell: {
+    paddingHorizontal: 18,
+    paddingTop: 52,
+  },
+  heroCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 18,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  heroTopRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    width: "100%",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  themeToggle: {
-    padding: 8,
-    alignSelf: "flex-end",
+  heroActions: {
+    flexDirection: "row",
   },
-  avatarContainer: {
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 78,
+    height: 78,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.md,
   },
   avatarText: {
-    fontSize: SIZES.xxxl,
+    fontSize: 28,
     fontFamily: FONTS.bold,
   },
   userName: {
-    fontSize: SIZES.xl,
+    fontSize: 28,
     fontFamily: FONTS.bold,
-    marginBottom: SPACING.xs,
+    lineHeight: 34,
+    marginTop: 18,
   },
-  userRole: {
+  userEmail: {
     fontSize: SIZES.sm,
     fontFamily: FONTS.regular,
-    opacity: 0.8,
+    marginTop: 6,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 16,
+  },
+  roleChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+    marginBottom: 8,
+    maxWidth: "68%",
+  },
+  roleChipText: {
+    fontSize: SIZES.xs,
+    fontFamily: FONTS.bold,
+    marginLeft: 6,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 7,
+  },
+  statusChipText: {
+    fontSize: SIZES.xs,
+    fontFamily: FONTS.bold,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  summaryTile: {
+    width: "32%",
+    minHeight: 82,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 11,
+    justifyContent: "space-between",
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+  },
+  summaryValue: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+    lineHeight: 18,
   },
   content: {
-    padding: SPACING.lg,
+    paddingHorizontal: 18,
+    paddingTop: 18,
   },
   section: {
-    borderRadius: 12,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.lg,
+    alignItems: "flex-start",
+    marginBottom: 14,
+    gap: 12,
   },
   sectionTitle: {
     fontSize: SIZES.lg,
     fontFamily: FONTS.bold,
   },
-  editButton: {
+  sectionCaption: {
+    fontSize: SIZES.xs,
+    fontFamily: FONTS.regular,
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  primaryAction: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  editButtonText: {
+  primaryActionText: {
     fontSize: SIZES.sm,
-    fontFamily: FONTS.regular,
-    marginLeft: SPACING.xs,
+    fontFamily: FONTS.bold,
+    marginLeft: 6,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 12,
+  },
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  infoCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   fieldContainer: {
-    marginBottom: SPACING.md,
-    position: "relative",
+    marginBottom: 14,
   },
   fieldLabel: {
-    fontSize: SIZES.sm,
+    fontSize: SIZES.xs,
     fontFamily: FONTS.regular,
-    marginBottom: SPACING.xs,
+    marginBottom: 5,
   },
   fieldValue: {
     fontSize: SIZES.md,
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.bold,
+    lineHeight: 22,
   },
   fieldInput: {
     fontSize: SIZES.md,
     fontFamily: FONTS.regular,
-    borderBottomWidth: 1,
-    paddingVertical: SPACING.xs,
-    paddingRight: 36,
-  },
-  eyeButton: {
-    position: "absolute",
-    right: 12,
-    top: 34,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    borderRadius: 14,
+    marginBottom: 14,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    height: 50,
+    minHeight: 52,
   },
   inputIcon: {
     marginRight: SPACING.sm,
   },
   picker: {
     flex: 1,
-    height: 50,
+    minHeight: 52,
+  },
+  lockBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  passwordInputShell: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingLeft: 14,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: SIZES.md,
+    fontFamily: FONTS.regular,
+    paddingVertical: 12,
+  },
+  passwordEyeButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  passwordHintBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 2,
   },
   passwordHint: {
     fontSize: SIZES.sm,
     fontFamily: FONTS.regular,
     lineHeight: 20,
+    flex: 1,
+    marginLeft: 8,
   },
   passwordActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 12,
+    marginTop: 16,
   },
-  cancelButton: {
-    padding: 10,
-    marginRight: 8,
-  },
-  passwordSubmit: {
+  secondaryButton: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
     paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
   },
-  statusContainer: {
+  secondaryButtonText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+  },
+  solidButton: {
+    flexDirection: "row",
+    minHeight: 44,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  solidButtonText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+    marginLeft: 8,
+  },
+  accountGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
-  statusItem: {
-    flexDirection: "row",
-    alignItems: "center",
+  accountTile: {
+    width: "48%",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    minHeight: 112,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: SPACING.xs,
-  },
-  statusText: {
-    fontSize: SIZES.md,
+  accountTileLabel: {
+    fontSize: SIZES.xs,
     fontFamily: FONTS.regular,
+    marginTop: 14,
   },
-  statusLabel: {
+  accountTileValue: {
     fontSize: SIZES.sm,
-    fontFamily: FONTS.regular,
-    marginRight: SPACING.xs,
-  },
-  statusValue: {
-    fontSize: SIZES.sm,
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.bold,
+    marginTop: 4,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: SPACING.md,
-    borderRadius: 12,
-    marginTop: SPACING.lg,
+    paddingVertical: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 4,
   },
   logoutButtonText: {
     fontSize: SIZES.md,
