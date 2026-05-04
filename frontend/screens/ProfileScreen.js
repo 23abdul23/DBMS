@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  ImageBackground,
 } from "react-native"
 import { useState, useEffect } from "react"
 import { useTheme } from "../context/ThemeContext"
@@ -436,7 +437,13 @@ export default function ProfileScreen() {
   const profileCompletion = Math.round((completedFields / profileFields.length) * 100)
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
+    >
+      <View style={[styles.screen, { backgroundColor: "transparent" }]}> 
       {banner.visible ? (
         <View style={[styles.banner, { backgroundColor: getBannerBackground(banner.type) }]}>
           <View style={styles.bannerContent}>
@@ -450,21 +457,21 @@ export default function ProfileScreen() {
       ) : null}
 
       <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={[styles.container, { backgroundColor: "transparent" }]}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroShell}>
-          <View
-            style={[
-              styles.heroCard,
-              {
-                backgroundColor: colors.cardElevated,
-                borderColor: colors.border,
-                shadowColor: colors.shadowStrong,
-              },
-            ]}
-          >
+            <View
+              style={[
+                styles.heroCard,
+                {
+                  backgroundColor: colors.cardElevated + "E8",
+                  borderColor: colors.border,
+                  shadowColor: colors.shadowStrong,
+                },
+              ]}
+            >
             <View style={styles.heroTopRow}>
               <View style={[styles.avatar, { backgroundColor: roleAccent.bg }]}>
                 <Text style={[styles.avatarText, { color: roleAccent.fg }]}>{getInitials(profile?.name)}</Text>
@@ -822,7 +829,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </ImageBackground>
   )
 }
 
