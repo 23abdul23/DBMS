@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  ImageBackground,
 } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
@@ -132,7 +133,13 @@ export default function SACScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <ScrollView
         style={{ flex: 1 }}
@@ -185,60 +192,6 @@ export default function SACScreen({ navigation, route }) {
               >
                 <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
               </TouchableOpacity>
-            </View>
-
-            <View
-              style={{
-                marginTop: 18,
-                borderRadius: 28,
-                padding: 20,
-                backgroundColor: colors.cardElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 18,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
-                  }}
-                >
-                  <Ionicons
-                    name={entrySource === "qr" ? "qr-code-outline" : "color-wand-outline"}
-                    size={28}
-                    color={entrySource === "qr" ? colors.success : colors.warning}
-                  />
-                </View>
-
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20, marginTop: 15 , marginLeft : 30}}>Shared Spaces</Text>
-                </View>
-              </View>
-
-              <View
-                style={{
-                  marginTop: 18,
-                  borderRadius: 20,
-                  padding: 14,
-                  backgroundColor: colors.cardMuted,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
-                  {isSacOpenNow
-                    ? `SAC is open now until ${sacClosesAt}`
-                    : `SAC is closed right now. Closing time remains ${sacClosesAt}`}
-                </Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
-                  Open the club room and equipment sections to manage only your own participation.
-                </Text>
-              </View>
             </View>
           </View>
         </View>
@@ -308,6 +261,60 @@ export default function SACScreen({ navigation, route }) {
                 </Text>
               </View>
             ))}
+          </View>
+
+          <View
+            style={{
+              marginBottom: 16,
+              borderRadius: 28,
+              padding: 20,
+              backgroundColor: colors.cardElevated,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: entrySource === "qr" ? colors.successSoft : colors.warningSoft,
+                }}
+              >
+                <Ionicons
+                  name={entrySource === "qr" ? "qr-code-outline" : "color-wand-outline"}
+                  size={28}
+                  color={entrySource === "qr" ? colors.success : colors.warning}
+                />
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20, marginTop: 2 }}>Shared Spaces</Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 18,
+                borderRadius: 20,
+                padding: 14,
+                backgroundColor: colors.cardMuted,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
+                {isSacOpenNow
+                  ? `SAC is open now until ${sacClosesAt}`
+                  : `SAC is closed right now. Closing time remains ${sacClosesAt}`}
+              </Text>
+              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
+                Open the club room and equipment sections to manage only your own participation.
+              </Text>
+            </View>
           </View>
 
           <View
@@ -411,6 +418,7 @@ export default function SACScreen({ navigation, route }) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   )
 }
