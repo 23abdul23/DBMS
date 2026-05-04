@@ -197,7 +197,7 @@ const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
 }
 
 const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
-  if (!outpass || isLongVisitOutpass(outpass)) {
+  if (!outpass) {
     return false
   }
 

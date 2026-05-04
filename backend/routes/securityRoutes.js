@@ -150,7 +150,6 @@ const createWithoutOutpassWarning = async ({
   const latestOutpass = await prisma.outpass.findFirst({
     where: {
       userId: scannedUser.id,
-      requestType: OUTPASS_REQUEST_TYPE.REGULAR,
     },
     orderBy: [{ outDate: "desc" }, { createdAt: "desc" }],
     include: outpassInclude,
@@ -333,7 +332,6 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
       const candidateOutpass = await prisma.outpass.findFirst({
         where: {
           userId: scannedUser.id,
-          requestType: OUTPASS_REQUEST_TYPE.REGULAR,
           status: "approved",
           actualReturnDate: null,
           outDate: {
@@ -463,7 +461,6 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
   const candidateOutpass = await prisma.outpass.findFirst({
     where: {
       userId: scannedUser.id,
-      requestType: OUTPASS_REQUEST_TYPE.REGULAR,
       status: {
         in: ["approved", "expired"],
       },

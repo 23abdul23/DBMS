@@ -12,6 +12,8 @@ const {
   runCampusClosingSweep,
   CAMPUS_TIMEZONE,
 } = require("./utils/campusActivitySimulation")
+const { getPrismaClient } = require("./config/prisma")
+const { expireOldOutpasses } = require("./utils/outpassLifecycle")
 
 // Import routes
 const authRoutes = require("./routes/authRoutes")
@@ -28,6 +30,7 @@ const libraryRoutes = require("./routes/libraryRoutes")
 const app = express()
 const PORT = process.env.PORT || 5000
 const DB_MODE = getDatabaseMode()
+const prisma = getPrismaClient()
 const ENABLE_CAMPUS_SIMULATION =
   String(process.env.ENABLE_CAMPUS_SIMULATION || "").toLowerCase() === "true" ||
   String(process.env.ENABLE_LIBRARY_SIMULATION || "").toLowerCase() === "true"
@@ -119,6 +122,21 @@ cron.schedule("*/5 * * * *", async () => {
     console.error("Password OTP cleanup failed:", error)
   }
 })
+
+cron.schedule(
+  "0 2 * * *",
+  async () => {
+    try {
+      const expiredCount = await expireOldOutpasses(prisma)
+      if (expiredCount > 0) {
+        console.log(`Nightly outpass expiry marked ${expiredCount} outpass(es) as expired.`)
+      }
+    } catch (error) {
+      console.error("Nightly outpass expiry cron failed:", error)
+    }
+  },
+  { timezone: CAMPUS_TIMEZONE },
+)
 
 if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(

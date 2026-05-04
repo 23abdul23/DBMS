@@ -260,8 +260,8 @@ export default function CreateOutpassScreen({ navigation }) {
             <View style={[localStyles.noticeCard, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
               <Text style={[localStyles.noticeTitle, { color: colors.warning }]}>Physical Warden Approval Required</Text>
               <Text style={[localStyles.noticeText, { color: colors.text }]}>
-                This outpass will be granted only by physically visiting the warden. Same-day and 10:30 PM rules do not
-                apply to this request.
+                Submit this request and visit the warden for approval. Once approved, it can be used through the normal
+                gate scan flow. Same-day and 10:30 PM rules do not apply to this request.
               </Text>
             </View>
           ) : (

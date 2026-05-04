@@ -118,16 +118,8 @@ export default function DashboardScreen({ navigation }) {
         return
       }
 
-      if ((activeOutpass.requestType || activeOutpass.type) === "long_visit") {
-        Alert.alert(
-          "Long Visit Request",
-          "Long visit requests are handled physically by the warden and are not used through the standard QR outpass flow.",
-        )
-        return
-      }
-
       if (!activeOutpass.canUseOutpass) {
-        Alert.alert("Outpass Not Usable", "Your approved regular outpass is not currently usable for exit.")
+        Alert.alert("Outpass Not Usable", "Your approved outpass is not currently usable for exit.")
         return
       }
 
