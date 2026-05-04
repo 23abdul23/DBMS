@@ -59,7 +59,13 @@ const normalizeRole = (value, fallback = "student") => {
   }
 
   const normalized = String(value).trim().toLowerCase()
-  return roleValues.has(normalized) ? normalized : fallback
+  if (roleValues.has(normalized)) {
+    return normalized
+  }
+  if (normalized === "sac_admin" || normalized === "library_admin") {
+    return "admin"
+  }
+  return fallback
 }
 
 const normalizeGender = (value) => {
