@@ -1,74 +1,68 @@
 # Aegis ID
 
-Aegis ID is a mobile-first campus management system built as a DBMS-oriented project for digitizing student movement, hostel outpass handling, security logging, library seating, SAC activity, and emergency support. The repository contains a React Native Expo client, a Node.js/Express backend, and a PostgreSQL database managed through Prisma.
+Aegis ID is a mobile-first campus management system built as a DBMS-oriented project. It digitizes student identity and movement workflows across hostels, campus gates, emergency reporting, SAC spaces, and the library. The repository contains an Expo-based frontend, a Node.js/Express backend, and a PostgreSQL database managed through Prisma.
 
-## What The Project Covers
+## Project Overview
 
-The current codebase is organized around real campus workflows instead of a single ID-card module. It supports:
+The project is designed around real campus operations instead of a single ID-card screen. Its main goal is to centralize movement, approval, and safety workflows in one system so students, wardens, guards, and admins all work against the same database-backed records.
 
-- Role-based access for `student`, `warden`, `security`, and `admin`
-- Student registration, login, profile updates, and password change flows
-- Hostel outpass requests with approval, rejection, cancellation, expiry, and audit trails
-- Warden dashboards for request handling and hostel-level student monitoring
-- Security gate logging with QR-based entry and exit tracking
-- Detection and recording of exit attempts without an approved outpass
-- Emergency alert creation with location, media attachments, and admin response tracking
-- SAC club room occupancy and equipment checkout management
-- Library token and seat allocation with occupancy overview
-- Central logging and activity history for DB-backed traceability
+The current implementation is centered on:
 
-## Why It Is A DBMS Project
+- student authentication and profile management
+- hostel outpass request and approval workflows
+- security gate logging and QR-based movement tracking
+- emergency alert creation and response handling
+- SAC room presence and equipment checkout tracking
+- library seat allocation and release flows
+- auditability through relational records, status history, and logs
 
-This project is not only a frontend app. Its core design depends on database modeling and relational workflows:
+## Tech Stack Used
 
-- Users are normalized into a shared `users` table with role-specific profile tables
-- Outpasses, emergencies, security logs, SAC sessions, equipment checkouts, and library seats are stored as separate relational entities
-- Prisma schema enums encode role, status, action, and workflow constraints
-- Audit trail tables preserve state changes for accountability
-- Indexed queries support dashboards, monitoring views, filtering, and history screens
-- Transactions are used in critical workflows such as outpass state changes, SAC activity, and library seat assignment
+- Frontend: React Native with Expo
+- Navigation and mobile UI: React Navigation, React Native libraries, Expo modules
+- Backend: Node.js with Express
+- Database: PostgreSQL
+- ORM and schema management: Prisma
+- Authentication and security: JWT, bcrypt, helmet, express-rate-limit
+- Email/OTP support: Nodemailer
+- Containerization: Docker and Docker Compose
 
-## Main Features
+## Features And Functionality
 
-### Student Features
+### Student
 
-- Sign up and log in with role-aware authentication
-- Maintain personal profile, hostel, room, department, and contact details
-- Request regular or long-visit outpasses
-- Track current outpass status and full history
-- Cancel valid requests before departure
-- View personal movement and workflow logs
-- Raise emergency alerts with location and optional media
-- Join SAC rooms, leave rooms, take equipment, and return equipment
-- Claim and release library seats
-- Scan guard/location QR flows where enabled by the security workflow
+- register, log in, and manage profile data
+- request regular or long-visit outpasses
+- track outpass status and history
+- cancel eligible outpass requests
+- raise emergency alerts with location and optional media
+- use SAC room and equipment workflows
+- claim and release library seats
 
-### Warden Features
+### Warden
 
-- Hostel-specific dashboard with pending, approved, expired, and returned counts
-- Request approval, rejection, and cancellation actions
-- View detailed outpass records and audit remarks
-- Monitor which hostel students are inside or outside campus
-- Detect yellow-alert, danger, overdue, and ongoing outpass states
+- review hostel-specific outpass requests
+- approve or reject student requests
+- monitor student movement states
+- view dashboard counts and outpass history
 
-### Security Features
+### Security
 
-- Scan student QR data and create entry/exit movement logs
-- Validate whether an approved outpass exists before allowing exit
-- Record warning logs for students attempting exit without a valid outpass
-- Fetch searchable, filterable security logs by date range and location
+- scan QR-based student movement data
+- record entry and exit activity
+- validate whether students have valid approved outpasses
+- log attempted exits without valid authorization
 
-### Admin And System Features
+### Admin And System
 
-- Emergency administration endpoints for active alerts, history, status updates, and statistics
-- Student listing and status management endpoints
-- Health check endpoint and database-mode aware backend startup
-- Optional ingestion and backfill scripts for role/profile data
-- Docker-based local deployment for database, backend, and Expo web
+- manage emergency workflows and status updates
+- maintain student and operational records
+- keep audit trails and movement logs
+- run scheduled cleanup and lifecycle jobs on the backend
 
-## Data Model Overview
+## Data Model Summary
 
-The Prisma schema currently models these major entities:
+The Prisma schema in [backend/prisma/schema.prisma](backend/prisma/schema.prisma) models the core entities behind the workflows, including:
 
 - `User`, `StudentProfile`, `WardenProfile`, `SecurityProfile`
 - `Outpass`, `OutpassAuditTrail`
@@ -79,54 +73,44 @@ The Prisma schema currently models these major entities:
 - `Location`
 - `PasswordUpdateOtp`
 
-This schema is the backbone of the project and is what makes the workflow traceable and reportable as a DBMS system.
-
-## Tech Stack
-
-- Frontend: React Native, Expo, React Navigation
-- Backend: Node.js, Express
-- Database: PostgreSQL
-- ORM and schema management: Prisma
-- Authentication: JWT, bcrypt
-- DevOps: Docker Compose
+This schema is what makes Aegis a DBMS project rather than just a frontend app. The workflows are relational, stateful, and traceable.
 
 ## Repository Structure
 
 ```text
 backend/
-  config/        Database, Prisma, JWT configuration
-  middleware/    Auth and outpass expiry middleware
+  config/        Database, Prisma, and auth configuration
+  docs/          Backend-specific notes and migration helpers
+  middleware/    Auth and lifecycle middleware
   prisma/        Prisma schema and migrations
   routes/        API route modules
-  scripts/       Data ingestion and maintenance helpers
-  utils/         Shared workflow and business logic
+  scripts/       Data ingestion and maintenance scripts
+  utils/         Shared workflow logic
 
 frontend/
-  screens/       Student, warden, and guard-facing screens
-  navigation/    Main navigation stacks and tabs
+  assets/        App assets and static resources
   components/    Reusable UI blocks
-  context/       Auth, location, screenshot, and theme state
+  context/       Shared app state providers
+  navigation/    Navigation stacks and tabs
+  screens/       Role-based screens
   services/      API client wrappers
   styles/        Screen-level styling
 ```
 
-## Key Backend Modules
+## Steps To Run The Project
 
-- `backend/routes/authRoutes.js`: registration, login, shared profile endpoints
-- `backend/routes/outpassRoutes.js`: student outpass creation, history, and cancellation
-- `backend/routes/wardenRoutes.js`: warden dashboard, approvals, and monitoring
-- `backend/routes/securityRoutes.js`: gate logging and log retrieval
-- `backend/routes/emergencyRoutes.js`: emergency alert creation and admin handling
-- `backend/routes/sacRoutes.js`: SAC room and equipment workflows
-- `backend/routes/libraryRoutes.js`: library seat assignment and release
-- `backend/prisma/schema.prisma`: complete relational schema and enums
+For complete setup details, see [installation.md](installation.md). The short version is:
+
+1. Install dependencies in `backend` and `frontend`.
+2. Create `backend/.env` from `backend/.env.example`.
+3. Start PostgreSQL and set `DATABASE_URL`.
+4. Run Prisma setup commands from `backend`.
+5. Start the backend with `npm run dev`.
+6. Start the frontend with `npm start`.
 
 ## Documentation
 
-- Setup guide: [INSTALLATION.md](INSTALLATION.md)
-- Team contribution breakdown: [Work_Distribution.md](Work_Distribution.md)
-- Refactoring notes: [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)
-
-## Current Status
-
-The project already contains an operational backend route structure, Prisma migrations, Docker support, and a multi-role Expo frontend. The strongest implemented modules at present are outpass management, gate/security logging, SAC tracking, library seating, profile handling, and emergency workflows.
+- Project setup and local run guide: [installation.md](installation.md)
+- Team work split: [Work_Distribution.md](Work_Distribution.md)
+- Backend SQL bootstrap note: [backend/docs/sql-migration-bootstrap.md](backend/docs/sql-migration-bootstrap.md)
+- Script command reference: [backend/scripts/commands.md](backend/scripts/commands.md)

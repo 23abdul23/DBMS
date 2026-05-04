@@ -1,6 +1,6 @@
 # Installation And Setup
 
-This guide separates environment setup from the project overview and focuses on how to run the current repository correctly.
+This guide explains how to run the current Aegis repository locally. Use [README.md](README.md) for the project overview, tech stack, and feature summary, and use this document for environment setup and startup commands.
 
 ## 1. Prerequisites
 
@@ -36,9 +36,9 @@ cd ..
 
 ## 4. Configure The Backend Environment
 
-Create `backend/.env`.
+Create `backend/.env` by copying `backend/.env.example`.
 
-Minimum recommended values:
+Recommended starting values:
 
 ```env
 DB_MODE=sql
@@ -71,7 +71,7 @@ Notes:
 - `DATABASE_URL` is required for Prisma and PostgreSQL connectivity
 - `JWT_SECRET` is required for auth tokens
 - `GMAIL_ID` and `GMAIL_PASSWORD` are used for OTP mail delivery
-- `frontend/app.config.js` reads API-related values from `backend/.env`, so setting them once here is usually enough
+- `frontend/app.config.js` reads API-related values from `backend/.env`, so setting them here is usually enough for local development
 
 ## 5. Prepare The Database
 
@@ -151,8 +151,8 @@ Useful Expo variants:
 
 ```bash
 npm run web
-npx expo start --android
-npx expo start --ios
+npm run android
+npm run ios
 npx expo start --tunnel
 ```
 
@@ -178,10 +178,10 @@ Docker notes:
 - The compose file injects a container-safe `DATABASE_URL`
 - Expo in Docker is best for the web target; native device testing is easier when Expo runs on the host machine
 
-## 10. Common Local Workflow
+## 10. Quick Run Checklist
 
 1. Start PostgreSQL
-2. Create `backend/.env`
+2. Copy `backend/.env.example` to `backend/.env` and fill in the values
 3. Install dependencies in `backend` and `frontend`
 4. Run Prisma generate and deploy commands
 5. Start the backend with `npm run dev`
@@ -212,6 +212,7 @@ If you are using a temporary dev database, `npm run prisma:push` is also valid.
 
 - Check that the backend is running on port `3000`
 - Confirm `API_BASE_URL` or `API_HOST` and `API_PORT` are correct in `backend/.env`
+- Restart the frontend after changing `backend/.env` because Expo config is read at startup
 - If using a physical phone, use a reachable LAN IP instead of `localhost`
 
 ### OTP email is not working
