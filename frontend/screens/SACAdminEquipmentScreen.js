@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react"
 import {
   Alert,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
   View,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"

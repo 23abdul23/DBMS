@@ -6,11 +6,11 @@ import {
   Text,
   TouchableOpacity,
   Alert,
-  SafeAreaView,
   Modal,
   StatusBar,
   TextInput,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import Constants from "expo-constants"
 import { Ionicons } from "@expo/vector-icons"
 import { CameraView, useCameraPermissions } from "expo-camera"

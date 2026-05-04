@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from "@expo/vector-icons"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useTheme } from "../context/ThemeContext"
 
 import WardenDashboardScreen from "../screens/WardenDashboardScreen"
@@ -11,6 +12,9 @@ const Tab = createBottomTabNavigator()
 
 export default function WardenTabNavigator() {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
+  const tabBarPaddingBottom = Math.max(insets.bottom, 10)
+  const tabBarHeight = 62 + tabBarPaddingBottom
 
   return (
     <Tab.Navigator
@@ -35,9 +39,9 @@ export default function WardenTabNavigator() {
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
-          height: 72,
+          height: tabBarHeight,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: tabBarPaddingBottom,
         },
         tabBarLabelStyle: {
           fontSize: 12,
