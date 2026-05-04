@@ -1,5 +1,5 @@
-const SAC_ADMIN_EMAIL = "sacAdmin@iiita.ac.in"
-const LIBRARY_ADMIN_EMAIL = "libAdmin@iiita.ac.in"
+const SAC_ADMIN_EMAIL = "sac@iiita.ac.in"
+const LIBRARY_ADMIN_EMAIL = "library@iiita.ac.in"
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase()
 
