@@ -88,9 +88,9 @@ export default StyleSheet.create({
     lineHeight: 18,
   },
   body: {
-    marginTop: 30,
+    marginTop: 8,
     paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingTop: 4,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -115,6 +115,72 @@ export default StyleSheet.create({
   },
   quickActions: {
     marginBottom: 22,
+  },
+  announcementCard: {
+    borderRadius: 26,
+    padding: 18,
+    borderWidth: 1,
+    marginBottom: 22,
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  announcementHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  announcementTitle: {
+    fontSize: 19,
+    fontFamily: FONTS.bold,
+    letterSpacing: 0.2,
+  },
+  announcementSubtitle: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    marginTop: 4,
+  },
+  announcementPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  announcementPillText: {
+    fontSize: 11,
+    fontFamily: FONTS.bold,
+    marginLeft: 6,
+  },
+  announcementRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  announcementTone: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  announcementRowTitle: {
+    fontSize: 14,
+    fontFamily: FONTS.bold,
+  },
+  announcementRowMessage: {
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+    marginTop: 3,
+    lineHeight: 17,
+  },
+  announcementTime: {
+    fontSize: 11,
+    fontFamily: FONTS.bold,
+    marginLeft: 10,
+    marginTop: 2,
   },
   actionsGrid: {
     flexDirection: "row",

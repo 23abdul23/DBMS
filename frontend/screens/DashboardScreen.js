@@ -150,6 +150,40 @@ export default function DashboardScreen({ navigation }) {
     [navigation, currentOutpass],
   )
 
+  const announcements = useMemo(
+    () => [
+      {
+        id: "dbms-project-vacancy",
+        title: "10/10 DBMS project group vacancy open",
+        message: "Due to betrayal issues by a group memeber, a team member was fired...",
+        time: "1m ago",
+        toneKey: "success",
+      },
+      {
+        id: "cn-update",
+        title: "112 students recieve course drop notice",
+        message: "Kya ye sasish ahi ya sirf ek aur din hai IIITians ki zindagi mein? Stay tuned for more updates.",
+        time: "6m ago",
+        toneKey: "warning",
+      },
+      {
+        id: "gh-incident-review",
+        title: "Ande wala headshot",
+        message: "Due to reason unknown, a student was hit by an egg in GH1",
+        time: "21m ago",
+        toneKey: "primary",
+      },
+      {
+        id: "bh3-security-briefing",
+        title: "BH3 Brawl Night feat. Guards",
+        message: "Cycle chori hetu, guards pe uthaya gaya ungli. Students ka kehna, kya yahi hai apka duty ?",
+        time: "58m ago",
+        toneKey: "success",
+      },
+    ],
+    [],
+  )
+
   const outpassStatus = currentOutpass
     ? currentOutpass.canUseOutpass
       ? "Ready to use"
@@ -270,6 +304,56 @@ export default function DashboardScreen({ navigation }) {
                   </View>
                 </View>
               </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.announcementCard,
+            {
+              backgroundColor: colors.cardElevated + "E4",
+              borderColor: colors.border,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
+          <View style={styles.announcementHeader}>
+            <View>
+              <Text style={[styles.announcementTitle, { color: isDarkMode ? "#FFFFFF" : colors.heading }]}>News & Announcements</Text>
+              <Text style={[styles.announcementSubtitle, { color: isDarkMode ? "rgba(248,251,255,0.72)" : colors.subText }]}>
+                Fast updates for all students
+              </Text>
+            </View>
+
+            <View style={[styles.announcementPill, { backgroundColor: colors.primarySoft }]}> 
+              <Ionicons name="megaphone-outline" size={14} color={colors.primary} />
+              <Text style={[styles.announcementPillText, { color: colors.primary }]}>Broadcast</Text>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 14 }}>
+            {announcements.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.announcementRow,
+                  index !== announcements.length - 1 && { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+                ]}
+              >
+                <View style={[styles.announcementTone, { backgroundColor: colors[`${item.toneKey}Soft`] }]}> 
+                  <Ionicons name="newspaper-outline" size={18} color={colors[item.toneKey]} />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.announcementRowTitle, { color: isDarkMode ? "#FFFFFF" : colors.heading }]}>{item.title}</Text>
+                  <Text style={[styles.announcementRowMessage, { color: isDarkMode ? "rgba(248,251,255,0.72)" : colors.subText }]}>
+                    {item.message}
+                  </Text>
+                </View>
+
+                <Text style={[styles.announcementTime, { color: isDarkMode ? "rgba(248,251,255,0.58)" : colors.subText }]}>{item.time}</Text>
+              </View>
             ))}
           </View>
         </View>

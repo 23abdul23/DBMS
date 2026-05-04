@@ -153,21 +153,27 @@ export default function OutpassScreen() {
         <View
           style={[
             styles.header,
-            { backgroundColor: colors.header + "F0", flexDirection: "row", alignItems: "center", justifyContent: "center", borderBottomColor: colors.border },
+            {
+              backgroundColor: "transparent",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderBottomColor: colors.border,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+            },
           ]}
         >
-        <View style={{ flex: 1 }} />
-        <Text style={[styles.headerTitle, { color: colors.heading, textAlign: "center", flex: 2 }]}>
+        <Text style={[styles.headerTitle, { color: "#FFFFFF", fontWeight: "bold", textAlign: "left", flex: 1, marginLeft: 6, fontSize: 24 }]}> 
           Outpass Management
         </Text>
-        <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <TouchableOpacity
-            onPress={toggleTheme}
-            style={{ padding: 10, borderRadius: 14, backgroundColor: colors.cardElevated, borderWidth: 1, borderColor: colors.border }}
-          >
-            <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+
+        <TouchableOpacity
+          onPress={toggleTheme}
+          style={{ padding: 10, borderRadius: 14, backgroundColor: colors.cardElevated, borderWidth: 1, borderColor: colors.border }}
+        >
+          <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
       <FilterTabs options={filterOptions} activeFilter={activeFilter} onFilterChange={setActiveFilter} />

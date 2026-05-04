@@ -10,7 +10,7 @@ export default function FilterTabs({ options, activeFilter, onFilterChange }) {
   const totalWidth = useMemo(() => options.length * 124, [options.length])
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: "transparent", borderBottomColor: colors.border }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { minWidth: totalWidth }]}>
         {options.map((option) => {
           const active = activeFilter === option.key

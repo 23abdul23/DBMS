@@ -150,9 +150,9 @@ export default function SACScreen({ navigation, route }) {
         <View
           style={{
             paddingHorizontal: 18,
-            paddingTop: 18,
-            paddingBottom: 24,
-            backgroundColor: colors.header,
+            paddingTop: 10,
+            paddingBottom: 14,
+            backgroundColor: "transparent",
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
           }}
@@ -175,7 +175,7 @@ export default function SACScreen({ navigation, route }) {
                 <Ionicons name="arrow-back" size={22} color={colors.text} />
               </TouchableOpacity>
 
-              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>SAC</Text>
+              <Text style={{ color: "#F5F5F5", fontFamily: FONTS.bold, fontSize: 26, fontWeight: "bold" }}>SAC</Text>
 
               <TouchableOpacity
                 onPress={toggleTheme}
