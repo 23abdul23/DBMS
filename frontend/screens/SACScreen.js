@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from "react"
 import {
   Alert,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
@@ -11,6 +10,7 @@ import {
   View,
   ImageBackground,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"

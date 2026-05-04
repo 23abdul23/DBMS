@@ -4,7 +4,6 @@ import {
   Alert,
   Platform,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Picker } from "@react-native-picker/picker"
 import { Ionicons } from "@expo/vector-icons"

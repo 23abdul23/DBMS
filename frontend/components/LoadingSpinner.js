@@ -3,13 +3,13 @@ import {
   Animated,
   Easing,
   Image,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
 import { FONTS } from "../utils/constants"
@@ -306,7 +306,7 @@ export default function LoadingSpinner({
 
       <View style={styles.content}>
         {hero}
-        {copyCard}
+        {/* {copyCard} */}
       </View>
     </View>
   )

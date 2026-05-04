@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Platform, StyleSheet, View } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
 import { ThemeProvider } from './context/ThemeContext'; // Make sure to import ThemeProvider
@@ -123,22 +124,26 @@ export default function App() {
 
   if (Platform.OS === 'web') {
     return (
-      <ThemeProvider>
-        {showStartupSplash ? (
-          <AppStartupSplash />
-        ) : (
-        <ScrollView contentContainerStyle={styles.webContainer} style={{ flex: 1 }}>
-          <View style={styles.inner}>{content}</View>
-        </ScrollView>
-        )}
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          {showStartupSplash ? (
+            <AppStartupSplash />
+          ) : (
+          <ScrollView contentContainerStyle={styles.webContainer} style={{ flex: 1 }}>
+            <View style={styles.inner}>{content}</View>
+          </ScrollView>
+          )}
+        </ThemeProvider>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <ThemeProvider>
-      {showStartupSplash ? <AppStartupSplash /> : content}
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        {showStartupSplash ? <AppStartupSplash /> : content}
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

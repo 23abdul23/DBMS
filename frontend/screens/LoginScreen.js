@@ -11,11 +11,11 @@ import {
   Platform,
   ScrollView,
   Modal,
-  SafeAreaView,
   StatusBar,
   ImageBackground,
   Animated,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useState, useRef, useEffect } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { Picker } from "@react-native-picker/picker"
