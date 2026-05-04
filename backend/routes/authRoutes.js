@@ -381,74 +381,105 @@ router.put("/profile", authenticate, async (req, res) => {
     const normalizedGender = normalizeGender(gender)
     const currentRole = req.user.role
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: userSelect,
+    })
+
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" })
+    }
+
+    const currentWardenHostel = existingUser.wardenProfile?.hostel || existingUser.hostel
+    const hasRequestedWardenHostelChange =
+      currentRole === "warden" && normalizedHostel && normalizedHostel !== currentWardenHostel
+
+    if (hasRequestedWardenHostelChange) {
+      const conflictingWarden = await prisma.wardenProfile.findUnique({
+        where: { hostel: normalizedHostel },
+        select: { userId: true },
+      })
+
+      if (conflictingWarden && conflictingWarden.userId !== req.user.userId) {
+        return res.status(400).json({ message: "This hostel is already assigned to another warden" })
+      }
+    }
+
+    const updateData = {
+      name: normalizedName,
+      phoneNumber: normalizedPhoneNumber,
+      email: normalizedEmail,
+      studentId: normalizedStudentId,
+      guardId: normalizedGuardId,
+      emergencyContact: normalizedEmergencyContact,
+      roomNumber: normalizedRoomNumber,
+      year: normalizedYear,
+      department: normalizedDepartment,
+      gender: normalizedGender,
+      ...(currentRole === "student" || currentRole === "security"
+        ? {
+            hostel: currentRole === "security" ? normalizedSecurityPost : normalizedHostel,
+          }
+        : {}),
+      ...(currentRole === "student" &&
+      (normalizedStudentId || normalizedDepartment || normalizedYear || normalizedHostel || normalizedRoomNumber)
+        ? {
+            studentProfile: {
+              upsert: {
+                create: {
+                  studentId: normalizedStudentId,
+                  department: normalizedDepartment,
+                  year: normalizedYear,
+                  hostel: normalizedHostel,
+                  roomNumber: normalizedRoomNumber || null,
+                },
+                update: {
+                  studentId: normalizedStudentId,
+                  department: normalizedDepartment,
+                  year: normalizedYear,
+                  hostel: normalizedHostel,
+                  roomNumber: normalizedRoomNumber || null,
+                },
+              },
+            },
+          }
+        : {}),
+      ...(currentRole === "warden" && hasRequestedWardenHostelChange
+        ? {
+            hostel: normalizedHostel,
+            wardenProfile: {
+              upsert: {
+                create: {
+                  hostel: normalizedHostel,
+                },
+                update: {
+                  hostel: normalizedHostel,
+                },
+              },
+            },
+          }
+        : {}),
+      ...(currentRole === "security" && (normalizedGuardId || normalizedSecurityPost)
+        ? {
+            securityProfile: {
+              upsert: {
+                create: {
+                  guardId: normalizedGuardId,
+                  securityPost: normalizedSecurityPost,
+                },
+                update: {
+                  guardId: normalizedGuardId,
+                  securityPost: normalizedSecurityPost,
+                },
+              },
+            },
+          }
+        : {}),
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.userId },
-      data: {
-        name: normalizedName,
-        phoneNumber: normalizedPhoneNumber,
-        email: normalizedEmail,
-        studentId: normalizedStudentId,
-        guardId: normalizedGuardId,
-        emergencyContact: normalizedEmergencyContact,
-        hostel: currentRole === "security" ? normalizedSecurityPost : normalizedHostel,
-        roomNumber: normalizedRoomNumber,
-        year: normalizedYear,
-        department: normalizedDepartment,
-        gender: normalizedGender,
-        ...(currentRole === "student" &&
-        (normalizedStudentId || normalizedDepartment || normalizedYear || normalizedHostel || normalizedRoomNumber)
-          ? {
-              studentProfile: {
-                upsert: {
-                  create: {
-                    studentId: normalizedStudentId,
-                    department: normalizedDepartment,
-                    year: normalizedYear,
-                    hostel: normalizedHostel,
-                    roomNumber: normalizedRoomNumber || null,
-                  },
-                  update: {
-                    studentId: normalizedStudentId,
-                    department: normalizedDepartment,
-                    year: normalizedYear,
-                    hostel: normalizedHostel,
-                    roomNumber: normalizedRoomNumber || null,
-                  },
-                },
-              },
-            }
-          : {}),
-        ...(currentRole === "warden" && normalizedHostel
-          ? {
-              wardenProfile: {
-                upsert: {
-                  create: {
-                    hostel: normalizedHostel,
-                  },
-                  update: {
-                    hostel: normalizedHostel,
-                  },
-                },
-              },
-            }
-          : {}),
-        ...(currentRole === "security" && (normalizedGuardId || normalizedSecurityPost)
-          ? {
-              securityProfile: {
-                upsert: {
-                  create: {
-                    guardId: normalizedGuardId,
-                    securityPost: normalizedSecurityPost,
-                  },
-                  update: {
-                    guardId: normalizedGuardId,
-                    securityPost: normalizedSecurityPost,
-                  },
-                },
-              },
-            }
-          : {}),
-      },
+      data: updateData,
       select: userSelect,
     })
 
@@ -457,6 +488,14 @@ router.put("/profile", authenticate, async (req, res) => {
     console.error("Profile update error:", error)
 
     if (error.code === "P2002") {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.join(", ")
+        : String(error.meta?.target || "")
+
+      if (target.includes("hostel")) {
+        return res.status(400).json({ message: "This hostel is already assigned to another warden" })
+      }
+
       return res.status(400).json({ message: "Email, student ID, or guard ID already exists" })
     }
 

@@ -1,11 +1,12 @@
 "use client"
 
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useTheme } from "../context/ThemeContext"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../context/AuthContext"
 import { outpass } from "../services/api"
+import { useFocusEffect } from "@react-navigation/native"
 import styles from "../styles/DashboardStyles"
 import LoadingSpinner from "../components/LoadingSpinner"
 
@@ -53,7 +54,7 @@ const QUICK_ACTIONS = [
 
 export default function DashboardScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme()
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const [currentOutpass, setCurrentOutpass] = useState(null)
   const [stats, setStats] = useState({
     totalOutpasses: 0,
@@ -67,9 +68,15 @@ export default function DashboardScreen({ navigation }) {
     loadDashboardData()
   }, [])
 
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData()
+    }, []),
+  )
+
   const loadDashboardData = async () => {
     try {
-      const outpassesResponse = await outpass.getOutpasses()
+      const [outpassesResponse] = await Promise.all([outpass.getOutpasses(), refreshUser()])
       const nextOutpass = outpassesResponse.data?.outpass || null
 
       setCurrentOutpass(nextOutpass)

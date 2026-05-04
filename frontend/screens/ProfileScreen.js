@@ -49,7 +49,7 @@ const getBannerBackground = (type) => {
 
 export default function ProfileScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme()
-  const { logout } = useAuth()
+  const { logout, setAuthenticatedUser } = useAuth()
   const [profile, setProfile] = useState(null)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -145,12 +145,14 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await commonAPI.updateProfile(profile)
+      const response = await commonAPI.updateProfile(profile)
+      const updatedProfile = response.data?.user || response.data?.userData || profile
+      setProfile(updatedProfile)
+      await setAuthenticatedUser(updatedProfile)
       setEditing(false)
-      loadProfile()
       Alert.alert("Success", "Profile updated successfully")
     } catch (error) {
-      Alert.alert("Error", "Error in Update profile")
+      Alert.alert("Error", error?.response?.data?.message || "Error in Update profile")
     } finally {
       setSaving(false)
     }
