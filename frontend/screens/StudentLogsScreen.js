@@ -254,7 +254,7 @@ const localStyles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderLeftWidth: 4,
+    borderLeftWidth: 8,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 10,

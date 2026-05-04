@@ -121,11 +121,11 @@ export default function OutpassScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="document-text-outline" size={64} color={colors.textMuted} />
-      <Text style={[styles.emptyTitle, { color: colors.heading }]}>
+      <Ionicons name="document-text-outline" size={64} color="#D1D5DB" />
+      <Text style={[styles.emptyTitle, { color: "#F5F5F5" }]}> 
         {activeFilter === "all" ? "No Outpasses Yet" : `No ${activeFilter} outpasses`}
       </Text>
-      <Text style={[styles.emptyText, { color: colors.subText }]}>
+      <Text style={[styles.emptyText, { color: "#D1D5DB" }]}> 
         {activeFilter === "all"
           ? "Create your first outpass request to get started"
           : `You don't have any ${activeFilter} outpasses`}
