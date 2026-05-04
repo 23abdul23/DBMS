@@ -199,8 +199,22 @@ const createSacLog = async (client, { userId, action, description, details = {} 
 const getSacClosedMessage = () => `SAC is closed. It remains open till ${SAC_CLOSE_LABEL}.`
 
 const getOverview = async (viewer) => {
-  const includeUserDetails = canViewFullSacActivity(viewer)
   const viewerUserId = viewer?.userId || viewer?.id || null
+
+  let dbUser = null;
+  if (viewerUserId) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: viewerUserId },
+      select: { id: true, role: true, email: true } 
+    });
+  }
+  
+  const includeUserDetails = canViewFullSacActivity(dbUser)
+  console.log("\n=== SAC PERMISSIONS DEBUG ===");
+  console.log("Token ID received:", viewerUserId);
+  console.log("User found in DB:", dbUser ? `Yes, Role: ${dbUser.role}` : "NULL");
+  console.log("Is Admin/Security?:", includeUserDetails);
+  console.log("===============================\n");
 
   const [activeSessions, activeCheckouts, myActivePresences, myActiveEquipment, recentActivityLogs] = await prisma.$transaction([
     prisma.sacRoomSession.findMany({
@@ -604,7 +618,7 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
   }
 })
 
-router.post("/equipment/:equipmentName/return", [authenticate, authorize("student")], async (req, res) => {
+router.post("/equipment/:equipmentName/return", [authenticate, authorize("security", "admin")], async (req, res) => {
   try {
     const equipmentName = resolveEquipment(req.params.equipmentName)
 
@@ -612,17 +626,45 @@ router.post("/equipment/:equipmentName/return", [authenticate, authorize("studen
       return res.status(400).json({ message: "Invalid equipment selected." })
     }
 
-    const activeCheckout = await prisma.sacEquipmentCheckout.findFirst({
-      where: {
-        userId: req.user.userId,
-        equipmentName,
-        returnedAt: null,
-      },
-      orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
-    })
+    const { checkoutId, userId } = req.body || {}
+    let activeCheckout = null
 
-    if (!activeCheckout) {
-      return res.status(404).json({ message: `You do not have ${equipmentName} checked out.` })
+    if (checkoutId) {
+      activeCheckout = await prisma.sacEquipmentCheckout.findUnique({
+        where: { id: checkoutId },
+        include: activeEquipmentInclude,
+      })
+    } else if (userId) {
+      activeCheckout = await prisma.sacEquipmentCheckout.findFirst({
+        where: {
+          userId,
+          equipmentName,
+          returnedAt: null,
+        },
+        orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
+        include: activeEquipmentInclude,
+      })
+    } else {
+      const activeCheckouts = await prisma.sacEquipmentCheckout.findMany({
+        where: {
+          equipmentName,
+          returnedAt: null,
+        },
+        orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
+        include: activeEquipmentInclude,
+      })
+
+      if (activeCheckouts.length === 1) {
+        activeCheckout = activeCheckouts[0]
+      } else if (activeCheckouts.length > 1) {
+        return res.status(400).json({
+          message: "Multiple active checkouts exist. Please provide checkoutId or userId to return a specific item.",
+        })
+      }
+    }
+
+    if (!activeCheckout || activeCheckout.returnedAt !== null) {
+      return res.status(404).json({ message: `No active checkout found for ${equipmentName}.` })
     }
 
     await prisma.$transaction(async (tx) => {
@@ -641,6 +683,8 @@ router.post("/equipment/:equipmentName/return", [authenticate, authorize("studen
         description: `Returned ${equipmentName}`,
         details: {
           equipmentName,
+          checkoutId: activeCheckout.id,
+          studentId: activeCheckout.user?.studentId || null,
         },
       })
     })

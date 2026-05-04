@@ -9,9 +9,9 @@ const isLibraryAdminEmail = (value) => normalizeEmail(value) === normalizeEmail(
 const isSacAdministrator = (user) => isSacAdminEmail(user?.email)
 const isLibraryAdministrator = (user) => isLibraryAdminEmail(user?.email)
 
-const canViewFullSacActivity = (user) =>
-  Boolean(user) && (user.role === "security" || isSacAdministrator(user))
-
+const canViewFullSacActivity = (user) => {
+  return Boolean(user) && user.role !== "student";
+}
 const canViewFullLibraryActivity = (user) =>
   Boolean(user) && (user.role === "security" || isLibraryAdministrator(user))
 
