@@ -16,7 +16,15 @@ import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../context/AuthContext"
 import { commonAPI } from "../services/api"
 import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
-import { AcademicYearList, AcademicYearMap, DepartmentList, DepartmentMap } from "../utils/enumMappings"
+import {
+  AcademicYearList,
+  AcademicYearMap,
+  DepartmentList,
+  DepartmentMap,
+  GenderList,
+  GenderMap,
+  GenderReverseMap,
+} from "../utils/enumMappings"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { Picker } from "@react-native-picker/picker"
 import { getScopedAdminLabel, isLibraryAdministrator, isSacAdministrator } from "../utils/adminScopes"
@@ -196,6 +204,7 @@ export default function ProfileScreen() {
 
   const departments = DepartmentList
   const years = AcademicYearList
+  const genders = GenderList
   const hostels = ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
 
   useEffect(() => {
@@ -415,6 +424,7 @@ export default function ProfileScreen() {
   const profileFields = [
     profile?.name,
     profile?.email,
+    profile?.gender,
     profile?.phoneNumber,
     isStudent || isSecurity ? primaryId : roleLabel,
     isStudent ? profile?.department : locationValue,
@@ -577,6 +587,19 @@ export default function ProfileScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
+                <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="person-circle-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <Picker
+                    selectedValue={GenderMap[profile?.gender] || ""}
+                    style={[styles.picker, { color: colors.inputText }]}
+                    onValueChange={(value) => updateProfile("gender", GenderReverseMap[value] || value)}
+                  >
+                    <Picker.Item label="Select Gender" value="" />
+                    {genders.map((gender) => (
+                      <Picker.Item key={gender} label={gender} value={gender} />
+                    ))}
+                  </Picker>
+                </View>
                 {isStudent || isSecurity ? (
                   <EditableTextField
                     label={idLabel}
@@ -639,6 +662,7 @@ export default function ProfileScreen() {
               <>
                 <InfoRow icon="person-outline" label="Full Name" value={profile?.name} colors={colors} />
                 <InfoRow icon="mail-outline" label="Email" value={profile?.email} colors={colors} />
+                <InfoRow icon="person-circle-outline" label="Gender" value={GenderMap[profile?.gender] || profile?.gender} colors={colors} />
                 {(isStudent || isSecurity) ? <InfoRow icon="card-outline" label={idLabel} value={primaryId} colors={colors} /> : null}
                 <InfoRow icon="call-outline" label="Phone Number" value={profile?.phoneNumber} colors={colors} />
                 {isStudent ? (
