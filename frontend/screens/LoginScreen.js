@@ -13,8 +13,10 @@ import {
   Modal,
   SafeAreaView,
   StatusBar,
+  ImageBackground,
+  Animated,
 } from "react-native"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { Picker } from "@react-native-picker/picker"
 import { useTheme } from "../context/ThemeContext"
@@ -31,11 +33,24 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const backgroundImages = [
+    require("../assets/images/iiita.jpeg"),
+    require("../assets/images/iiita2.jpeg"),
+  ]
 
   const [forgotModalVisible, setForgotModalVisible] = useState(false)
   const [forgotEmail, setForgotEmail] = useState("")
   const [sendingForgot, setSendingForgot] = useState(false)
   const forgotInputRef = useRef(null)
+
+  // Switch image every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -78,172 +93,194 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safeContainer, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <ImageBackground
+        source={backgroundImages[currentImageIndex]}
+        style={styles.backgroundImage}
+        blurRadius={0.8}
       >
-        {/* Floating Theme Toggle */}
-        <TouchableOpacity
-          onPress={toggleTheme}
-          style={[
-            styles.themeButton,
-            {
-              backgroundColor: colors.cardGlass,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
-        </TouchableOpacity>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={[styles.header, { backgroundColor: colors.cardGlass, borderColor: colors.border, shadowColor: colors.shadow }]}>
-            <Text style={[styles.title, { color: colors.text }]}>Aegis ID</Text>
-            <Text style={[styles.subtitle, { color: colors.subText }]}>Digital Campus Pass</Text>
-          </View>
-
-          {/* Role Picker */}
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="person-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-            <Picker
-              selectedValue={role}
-              style={[styles.input, { color: colors.inputText, flex: 1 }]}
-              onValueChange={(itemValue) => setRole(itemValue)}
-              dropdownIconColor={colors.subText}
-            >
-              <Picker.Item label="Student" value="student" />
-              <Picker.Item label="Warden" value="warden" />
-              <Picker.Item label="Security" value="security" />
-              <Picker.Item label="SAC Administrator" value="sac_admin" />
-              <Picker.Item label="Library Administrator" value="library_admin" />
-            </Picker>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-              <Ionicons name="mail-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.inputText }]}
-                placeholder="Email Address"
-                placeholderTextColor={colors.inputText}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-            </View>
-
-            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.inputText }]}
-                placeholder="Password"
-                placeholderTextColor={colors.placeholder}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.subText} />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.loginButton, { backgroundColor: colors.primary }]}
-              onPress={handleLogin}
-            >
-              <Text style={[styles.loginButtonText, { color: colors.onPrimary }]}>Sign In</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.forgotPassword} onPress={openForgotModal}>
-              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Forgot Password Modal */}
-          <Modal
-            visible={forgotModalVisible}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setForgotModalVisible(false)}
-            onShow={() => setTimeout(() => forgotInputRef.current?.focus?.(), 100)}
+        <View style={styles.overlayContainer}>
+          <KeyboardAvoidingView
+            style={[styles.container]}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                backgroundColor: colors.overlay,
-              }}
-            >
-              <View
-                style={{
-                  width: "90%",
-                  backgroundColor: colors.modalSurface,
-                  borderRadius: 24,
-                  padding: 20,
-                  borderWidth: 1,
+            {/* Floating Theme Toggle */}
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[
+                styles.themeButton,
+                {
+                  backgroundColor: colors.cardGlass,
                   borderColor: colors.border,
-                }}
-              >
-                <Text style={{ fontSize: 18, fontFamily: FONTS.bold, color: colors.heading, marginBottom: 8 }}>
-                  Reset Password
-                </Text>
-                <Text style={{ color: colors.subText, marginBottom: 12 }}>Enter your email to receive a reset link.</Text>
+                },
+              ]}
+            >
+              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
+            </TouchableOpacity>
 
-                <TextInput
-                  ref={forgotInputRef}
-                  autoFocus={true}
-                  value={forgotEmail}
-                  onChangeText={setForgotEmail}
-                  placeholder="Email Address"
-                  placeholderTextColor={colors.placeholder}
-                  style={{
-                    backgroundColor: colors.inputBackground,
-                    color: colors.inputText,
-                    height: 44,
-                    borderRadius: 14,
-                    paddingHorizontal: 14,
-                    borderWidth: 1,
-                    borderColor: colors.inputBorder,
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
+            <ScrollView
+              contentContainerStyle={styles.scrollContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Header */}
+              <View style={[styles.header, { backgroundColor: colors.cardGlass, borderColor: colors.border, shadowColor: colors.shadow }]}>
+                <Text style={[styles.title, { color: colors.text }]}>Aegis ID</Text>
+                <Text style={[styles.subtitle, { color: colors.subText }]}>Digital Campus Pass</Text>
+              </View>
 
-                <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 12 }}>
-                  <TouchableOpacity onPress={() => setForgotModalVisible(false)} style={{ padding: 10, marginRight: 8 }}>
-                    <Text style={{ color: colors.subText }}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={sendForgotEmail}
-                    style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colors.primary }}
-                  >
-                    <Text style={{ color: colors.onPrimary }}>{sendingForgot ? "Sending..." : "Send"}</Text>
+              {/* Role Picker */}
+              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                <Ionicons name="person-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                <Picker
+                  selectedValue={role}
+                  style={[styles.input, { color: colors.inputText, flex: 1 }]}
+                  onValueChange={(itemValue) => setRole(itemValue)}
+                  dropdownIconColor={colors.subText}
+                >
+                  <Picker.Item label="Student" value="student" />
+                  <Picker.Item label="Warden" value="warden" />
+                  <Picker.Item label="Security" value="security" />
+                  <Picker.Item label="SAC Administrator" value="sac_admin" />
+                  <Picker.Item label="Library Administrator" value="library_admin" />
+                </Picker>
+              </View>
+
+              {/* Form */}
+              <View style={styles.form}>
+                <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="mail-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.inputText }]}
+                    placeholder="Email Address"
+                    placeholderTextColor={colors.inputText}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                  />
+                </View>
+
+                <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.inputText }]}
+                    placeholder="Password"
+                    placeholderTextColor={colors.placeholder}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoComplete="password"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                    <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.subText} />
                   </TouchableOpacity>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
-          </Modal>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.subText }]}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-              <Text style={[styles.signUpText, { color: colors.primary }]}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+                <TouchableOpacity
+                  style={[styles.loginButton, { backgroundColor: colors.primary }]}
+                  onPress={handleLogin}
+                >
+                  <Text style={[styles.loginButtonText, { color: colors.onPrimary }]}>Sign In</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.forgotPassword} onPress={openForgotModal}>
+                  <Text
+                    style={[
+                      styles.forgotPasswordText,
+                      { color: "#E8F4F8" },
+                    ]}
+                  >
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Forgot Password Modal */}
+              <Modal
+                visible={forgotModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setForgotModalVisible(false)}
+                onShow={() => setTimeout(() => forgotInputRef.current?.focus?.(), 100)}
+              >
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === "ios" ? "padding" : "height"}
+                  style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: colors.overlay,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: "90%",
+                      backgroundColor: colors.modalSurface,
+                      borderRadius: 24,
+                      padding: 20,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 18, fontFamily: FONTS.bold, color: colors.heading, marginBottom: 8 }}>
+                      Reset Password
+                    </Text>
+                    <Text style={{ color: colors.subText, marginBottom: 12 }}>Enter your email to receive a reset link.</Text>
+
+                    <TextInput
+                      ref={forgotInputRef}
+                      autoFocus={true}
+                      value={forgotEmail}
+                      onChangeText={setForgotEmail}
+                      placeholder="Email Address"
+                      placeholderTextColor={colors.placeholder}
+                      style={{
+                        backgroundColor: colors.inputBackground,
+                        color: colors.inputText,
+                        height: 44,
+                        borderRadius: 14,
+                        paddingHorizontal: 14,
+                        borderWidth: 1,
+                        borderColor: colors.inputBorder,
+                      }}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 12 }}>
+                      <TouchableOpacity onPress={() => setForgotModalVisible(false)} style={{ padding: 10, marginRight: 8 }}>
+                        <Text style={{ color: colors.subText }}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={sendForgotEmail}
+                        style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colors.primary }}
+                      >
+                        <Text style={{ color: colors.onPrimary }}>{sendingForgot ? "Sending..." : "Send"}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </KeyboardAvoidingView>
+              </Modal>
+
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: "#D0D0D0" }]}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+                  <Text
+                    style={[
+                      styles.signUpText,
+                      { color: "#E8F4F8" },
+                    ]}
+                  >
+                    Sign Up
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </ImageBackground>
     </SafeAreaView>
   )
 }
@@ -251,7 +288,18 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 8 : 0,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  blurContainer: {
+    flex: 1,
+  },
+  overlayContainer: {
+    flex: 1,
+    backgroundColor: "transparent",
   },
   container: {
     flex: 1,
@@ -259,7 +307,7 @@ const styles = StyleSheet.create({
   },
   themeButton: {
     position: "absolute",
-    top: -10,
+    top: 38,
     right: 16,
     zIndex: 100,
     padding: 8,
@@ -282,6 +330,7 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
     elevation: 10,
+    opacity: 0.9,
   },
   title: {
     fontSize: SIZES.xxxl,
@@ -304,6 +353,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
+    opacity: 0.85,
   },
   inputIcon: { marginRight: SPACING.sm },
   input: {

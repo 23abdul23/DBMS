@@ -1,12 +1,11 @@
 "use client"
 
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from "react-native"
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ImageBackground } from "react-native"
+import { useState, useEffect, useMemo } from "react"
 import { useTheme } from "../context/ThemeContext"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../context/AuthContext"
 import { outpass } from "../services/api"
-import { useFocusEffect } from "@react-navigation/native"
 import styles from "../styles/DashboardStyles"
 import LoadingSpinner from "../components/LoadingSpinner"
 
@@ -54,7 +53,7 @@ const QUICK_ACTIONS = [
 
 export default function DashboardScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme()
-  const { user, logout, refreshUser } = useAuth()
+  const { user, logout } = useAuth()
   const [currentOutpass, setCurrentOutpass] = useState(null)
   const [stats, setStats] = useState({
     totalOutpasses: 0,
@@ -68,15 +67,9 @@ export default function DashboardScreen({ navigation }) {
     loadDashboardData()
   }, [])
 
-  useFocusEffect(
-    useCallback(() => {
-      loadDashboardData()
-    }, []),
-  )
-
   const loadDashboardData = async () => {
     try {
-      const [outpassesResponse] = await Promise.all([outpass.getOutpasses(), refreshUser()])
+      const outpassesResponse = await outpass.getOutpasses()
       const nextOutpass = outpassesResponse.data?.outpass || null
 
       setCurrentOutpass(nextOutpass)
@@ -125,8 +118,16 @@ export default function DashboardScreen({ navigation }) {
         return
       }
 
+      if ((activeOutpass.requestType || activeOutpass.type) === "long_visit") {
+        Alert.alert(
+          "Long Visit Request",
+          "Long visit requests are handled physically by the warden and are not used through the standard QR outpass flow.",
+        )
+        return
+      }
+
       if (!activeOutpass.canUseOutpass) {
-        Alert.alert("Outpass Not Usable", "Your approved outpass is not currently usable for exit.")
+        Alert.alert("Outpass Not Usable", "Your approved regular outpass is not currently usable for exit.")
         return
       }
 
@@ -168,12 +169,18 @@ export default function DashboardScreen({ navigation }) {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
     >
+      <ScrollView
+        style={[styles.container, { backgroundColor: "transparent" }]}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.heroShell}>
         <View
           style={[
@@ -231,9 +238,7 @@ export default function DashboardScreen({ navigation }) {
       <View style={styles.body}>
         <View style={styles.quickActions}>
           <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.heading }]}>Quick Actions</Text> 
-            </View>
+              <Text style={[styles.sectionTitle, { color: "#F5F5F5" }]}>Quick Actions</Text> 
           </View>
 
           <View style={styles.actionsGrid}>
@@ -243,29 +248,35 @@ export default function DashboardScreen({ navigation }) {
                 style={[
                   styles.actionCard,
                   {
-                    backgroundColor: colors.cardElevated,
+                    backgroundColor: colors.cardElevated + "E0",
                     borderColor: colors.border,
                     shadowColor: colors.shadow,
+                    borderRadius: 18,
+                    shadowOpacity: 0.08,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    elevation: 3,
                   },
                 ]}
                 onPress={action.onPress}
               >
-                <View style={styles.actionCardTop}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <View style={[styles.actionIcon, { backgroundColor: colors[action.iconBgKey] }]}>
-                    <Ionicons name={action.icon} size={24} color={colors[action.iconFgKey]} />
+                    <Ionicons name={action.icon} size={22} color={colors[action.iconFgKey]} />
                   </View>
-                  <View style={[styles.actionArrow, { backgroundColor: colors.cardMuted }]}>
-                    <Ionicons name="arrow-forward" size={16} color={colors[action.arrowColorKey]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.actionText, { color: "#0F0F0F", fontWeight: "800" }]}>{action.title}</Text>
+                    <Text style={[styles.actionSubText, { color: colors.subText }]} numberOfLines={1}>{action.subtitle}</Text>
                   </View>
                 </View>
-                <Text style={[styles.actionText, { color: colors.heading }]}>{action.title}</Text>
-                <Text style={[styles.actionSubText, { color: colors.subText }]}>{action.subtitle}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       </View>
+
     </ScrollView>
+    </ImageBackground>
   )
 }
 
