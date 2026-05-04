@@ -336,19 +336,14 @@ export default function EquipmentScreen({ navigation, route }) {
 
                 {user?.role === "student" ? (
                   <TouchableOpacity
-                    disabled={isBusy}
+                    disabled={isBusy || userHasItem}
                     onPress={() =>
-                      userHasItem
-                        ? runAction(
-                            `equipment-return-${item.name}`,
-                            () => sacAPI.returnEquipment(item.name),
-                            `Unable to return ${item.name}.`,
-                          )
-                        : runAction(
-                            `equipment-select-${item.name}`,
-                            () => sacAPI.selectEquipment(item.name),
-                            `Unable to mark ${item.name} as taken.`,
-                          )
+                      !userHasItem &&
+                      runAction(
+                        `equipment-select-${item.name}`,
+                        () => sacAPI.selectEquipment(item.name),
+                        `Unable to mark ${item.name} as taken.`,
+                      )
                     }
                     style={{
                       marginTop: 14,
@@ -358,17 +353,17 @@ export default function EquipmentScreen({ navigation, route }) {
                       backgroundColor: userHasItem ? colors.cardMuted : colors.accent,
                       borderWidth: userHasItem ? 1 : 0,
                       borderColor: colors.border,
-                      opacity: isBusy ? 0.6 : 1,
+                      opacity: isBusy || userHasItem ? 0.6 : 1,
                     }}
                   >
                     <Text
                       style={{
-                        color: userHasItem ? colors.heading : colors.buttonTextOnSolid,
+                        color: userHasItem ? colors.subText : colors.buttonTextOnSolid,
                         fontFamily: FONTS.bold,
                         fontSize: 14,
                       }}
                     >
-                      {userHasItem ? "Return Equipment" : "Take Equipment"}
+                      {userHasItem ? "Awaiting guard return" : "Take Equipment"}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
