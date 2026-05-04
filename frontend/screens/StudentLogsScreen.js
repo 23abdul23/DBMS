@@ -175,7 +175,7 @@ export default function StudentLogsScreen() {
       {loading ? (
         <View style={localStyles.loader}>
           <LoadingSpinner
-            variant="panel"
+            variant="screen"
             label="Loading your movement logs"
             sublabel="Pulling entry, exit, and outpass activity from Aegis."
             statusText="Records are being synced and sorted for this timeline."

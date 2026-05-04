@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ImageBackground,
 } from "react-native"
 import Constants from "expo-constants"
 import { useFocusEffect } from "@react-navigation/native"
@@ -121,7 +122,13 @@ export default function LibraryScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <ImageBackground
+      source={require("../assets/images/iiita2.jpeg")}
+      style={{ flex: 1, width: "100%", height: "100%" }}
+      blurRadius={3}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <ScrollView
         style={{ flex: 1 }}
@@ -132,7 +139,7 @@ export default function LibraryScreen({ navigation }) {
         <View
           style={{
             paddingHorizontal: 18,
-            paddingTop: 18,
+            paddingTop: 38,
             paddingBottom: 22,
             backgroundColor: colors.header,
             borderBottomWidth: 1,
@@ -174,10 +181,12 @@ export default function LibraryScreen({ navigation }) {
               <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
+        </View>
 
+        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
           <View
             style={{
-              marginTop: 18,
+              marginBottom: 18,
               borderRadius: 28,
               padding: 20,
               backgroundColor: colors.cardElevated,
@@ -240,9 +249,6 @@ export default function LibraryScreen({ navigation }) {
               </Text>
             </View>
           </View>
-        </View>
-
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
             {[
               {
@@ -392,6 +398,7 @@ export default function LibraryScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   )
 }
