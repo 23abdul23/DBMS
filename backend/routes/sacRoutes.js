@@ -563,39 +563,58 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
       return res.status(400).json({ message: "Invalid equipment selected." })
     }
 
-    const existingCheckout = await prisma.sacEquipmentCheckout.findFirst({
-      where: {
+    const checkoutResult = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${req.user.userId}))`
+
+      const activeCheckout = await tx.sacEquipmentCheckout.findFirst({
+        where: {
+          userId: req.user.userId,
+          returnedAt: null,
+        },
+        orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
+      })
+
+      if (activeCheckout) {
+        return {
+          created: false,
+          activeCheckout,
+        }
+      }
+
+      await tx.sacEquipmentCheckout.create({
+        data: {
+          id: generateId(),
+          equipmentName,
+          userId: req.user.userId,
+        },
+      })
+
+      await createSacLog(tx, {
         userId: req.user.userId,
-        equipmentName,
-        returnedAt: null,
-      },
-      orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
+        action: "sac_equipment_taken",
+        description: `Took ${equipmentName}`,
+        details: {
+          equipmentName,
+        },
+      })
+
+      return {
+        created: true,
+        activeCheckout: null,
+      }
     })
 
-    if (!existingCheckout) {
-      await prisma.$transaction(async (tx) => {
-        await tx.sacEquipmentCheckout.create({
-          data: {
-            id: generateId(),
-            equipmentName,
-            userId: req.user.userId,
-          },
-        })
+    const overview = await getOverview(req.user)
 
-        await createSacLog(tx, {
-          userId: req.user.userId,
-          action: "sac_equipment_taken",
-          description: `Took ${equipmentName}`,
-          details: {
-            equipmentName,
-          },
-        })
+    if (checkoutResult.activeCheckout && checkoutResult.activeCheckout.equipmentName !== equipmentName) {
+      return res.status(409).json({
+        message: `You already have ${checkoutResult.activeCheckout.equipmentName}. Return it before taking ${equipmentName}.`,
+        overview,
       })
     }
 
-    const overview = await getOverview(req.user)
     res.json({
-      message: existingCheckout ? `You already have ${equipmentName}.` : `${equipmentName} marked as taken.`,
+      message: checkoutResult.created ? `${equipmentName} marked as taken.` : `You already have ${equipmentName}.`,
       overview,
     })
   } catch (error) {

@@ -42,9 +42,11 @@ export default function EquipmentScreen({ navigation, route }) {
   const entrySource = route?.params?.entrySource || "manual"
   const statCardWidth = getThreeColumnCardWidth(width)
 
+  const activeEquipment = overview?.myStatus?.activeEquipment || []
+  const currentActiveEquipment = activeEquipment[0] || null
   const myEquipmentSet = useMemo(
-    () => new Set((overview?.myStatus?.activeEquipment || []).map((item) => item.name)),
-    [overview?.myStatus?.activeEquipment],
+    () => new Set(activeEquipment.map((item) => item.name)),
+    [activeEquipment],
   )
   const equipmentActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
@@ -264,6 +266,8 @@ export default function EquipmentScreen({ navigation, route }) {
             const userHasItem =
               equipmentState?.isCheckedOutByCurrentUser || myEquipmentSet.has(item.name) || false
             const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}`
+            const isBlockedByActiveItem = Boolean(currentActiveEquipment) && !userHasItem
+            const isActionDisabled = isBusy || isBlockedByActiveItem
 
             return (
               <View
@@ -330,13 +334,15 @@ export default function EquipmentScreen({ navigation, route }) {
                       ? `Assigned since ${formatTime(
                           (overview?.myStatus?.activeEquipment || []).find((entry) => entry.name === item.name)?.checkedOutAt,
                         )}`
+                      : isBlockedByActiveItem
+                        ? `Return ${currentActiveEquipment.name} before taking another item.`
                       : "No one has taken this Equipment."}
                   </Text>
                 </View>
 
                 {user?.role === "student" ? (
                   <TouchableOpacity
-                    disabled={isBusy}
+                    disabled={isActionDisabled}
                     onPress={() =>
                       userHasItem
                         ? runAction(
@@ -355,20 +361,20 @@ export default function EquipmentScreen({ navigation, route }) {
                       borderRadius: 18,
                       paddingVertical: 14,
                       alignItems: "center",
-                      backgroundColor: userHasItem ? colors.cardMuted : colors.accent,
-                      borderWidth: userHasItem ? 1 : 0,
+                      backgroundColor: userHasItem || isBlockedByActiveItem ? colors.cardMuted : colors.accent,
+                      borderWidth: userHasItem || isBlockedByActiveItem ? 1 : 0,
                       borderColor: colors.border,
                       opacity: isBusy ? 0.6 : 1,
                     }}
                   >
                     <Text
                       style={{
-                        color: userHasItem ? colors.heading : colors.buttonTextOnSolid,
+                        color: userHasItem || isBlockedByActiveItem ? colors.heading : colors.buttonTextOnSolid,
                         fontFamily: FONTS.bold,
                         fontSize: 14,
                       }}
                     >
-                      {userHasItem ? "Return Equipment" : "Take Equipment"}
+                      {userHasItem ? "Return Equipment" : isBlockedByActiveItem ? "Return Item First" : "Take Equipment"}
                     </Text>
                   </TouchableOpacity>
                 ) : null}

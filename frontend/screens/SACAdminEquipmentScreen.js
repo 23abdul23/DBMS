@@ -42,6 +42,8 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
   const entrySource = route?.params?.entrySource || "manual"
   const isStudent = user?.role === "student"
   const statCardWidth = getThreeColumnCardWidth(width)
+  const activeEquipment = overview?.myStatus?.activeEquipment || []
+  const currentActiveEquipment = activeEquipment[0] || null
 
   const equipmentActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
@@ -259,8 +261,13 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
 
           {SAC_EQUIPMENT.map((item) => {
             const equipmentState = equipmentStateMap.get(item.name)
-            const userHasItem = Boolean(equipmentState?.checkedOutBy?.some((entry) => entry.user?.id === user?.id))
+            const userHasItem = Boolean(
+              equipmentState?.checkedOutBy?.some((entry) => entry.user?.id === user?.id) ||
+                activeEquipment.some((entry) => entry.name === item.name),
+            )
             const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}`
+            const isBlockedByActiveItem = Boolean(currentActiveEquipment) && !userHasItem
+            const isActionDisabled = isBusy || isBlockedByActiveItem
 
             return (
               <View
@@ -344,7 +351,7 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
 
                 {isStudent && (
                   <TouchableOpacity
-                    disabled={isBusy}
+                    disabled={isActionDisabled}
                     onPress={() =>
                       userHasItem
                         ? runAction(
@@ -363,20 +370,20 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                       borderRadius: 18,
                       paddingVertical: 14,
                       alignItems: "center",
-                      backgroundColor: userHasItem ? colors.cardMuted : colors.accent,
-                      borderWidth: userHasItem ? 1 : 0,
+                      backgroundColor: userHasItem || isBlockedByActiveItem ? colors.cardMuted : colors.accent,
+                      borderWidth: userHasItem || isBlockedByActiveItem ? 1 : 0,
                       borderColor: colors.border,
                       opacity: isBusy ? 0.6 : 1,
                     }}
                   >
                     <Text
                       style={{
-                        color: userHasItem ? colors.heading : colors.buttonTextOnSolid,
+                        color: userHasItem || isBlockedByActiveItem ? colors.heading : colors.buttonTextOnSolid,
                         fontFamily: FONTS.bold,
                         fontSize: 14,
                       }}
                     >
-                      {userHasItem ? "Return Equipment" : "Take Equipment"}
+                      {userHasItem ? "Return Equipment" : isBlockedByActiveItem ? "Return Item First" : "Take Equipment"}
                     </Text>
                   </TouchableOpacity>
                 )}
