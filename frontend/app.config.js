@@ -84,6 +84,7 @@ module.exports = {
       backgroundColor: "#08111f",
     },
     ios: {
+      bundleIdentifier: "com.abdul.aegis",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
@@ -91,6 +92,7 @@ module.exports = {
         NSLocationWhenInUseUsageDescription:
           "Aegis uses your location to share your live position during emergency calls and alerts.",
         LSApplicationQueriesSchemes: ["tel", "telprompt", "sms", "smsto"],
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {

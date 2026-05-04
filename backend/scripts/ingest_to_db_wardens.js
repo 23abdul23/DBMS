@@ -16,14 +16,60 @@ const prisma = getPrismaClient();
 const DEFAULT_PASSWORD = "123456";
 
 const HOSTEL_WARDENS = [
-  { hostel: "BH 1", emailLocalPart: "bh1Warden", gender: "male" },
-  { hostel: "BH 2", emailLocalPart: "bh2Warden", gender: "male" },
-  { hostel: "BH 3", emailLocalPart: "bh3Warden", gender: "male" },
-  { hostel: "BH 4", emailLocalPart: "bh4Warden", gender: "male" },
-  { hostel: "BH 5", emailLocalPart: "bh5Warden", gender: "male" },
-  { hostel: "GH 1", emailLocalPart: "gh1Warden", gender: "female" },
-  { hostel: "GH 2", emailLocalPart: "gh2Warden", gender: "female" },
-  { hostel: "GH 3", emailLocalPart: "gh3Warden", gender: "female" },
+  {
+    hostel: "BH 1",
+    email: "warden.bh-1@iiita.ac.in",
+    legacyEmails: ["bh1Warden@iiita.ac.in"],
+    gender: "male",
+  },
+  {
+    hostel: "BH 2",
+    email: "warden.bh-2@iiita.ac.in",
+    legacyEmails: ["bh2Warden@iiita.ac.in"],
+    gender: "male",
+  },
+  {
+    hostel: "BH 3",
+    email: "warden.bh-3@iiita.ac.in",
+    legacyEmails: ["bh3Warden@iiita.ac.in"],
+    gender: "male",
+  },
+  {
+    hostel: "BH 4",
+    email: "warden.bh-4@iiita.ac.in",
+    legacyEmails: ["bh4Warden@iiita.ac.in"],
+    gender: "male",
+  },
+  {
+    hostel: "BH 5",
+    email: "warden.bh-5-1@iiita.ac.in",
+    legacyEmails: ["bh5Warden@iiita.ac.in"],
+    gender: "male",
+  },
+  {
+    hostel: "BH 5",
+    email: "warden.bh-5-2@iiita.ac.in",
+    legacyEmails: [],
+    gender: "male",
+  },
+  {
+    hostel: "GH 1",
+    email: "warden.gh-1@iiita.ac.in",
+    legacyEmails: ["gh1Warden@iiita.ac.in"],
+    gender: "female",
+  },
+  {
+    hostel: "GH 2",
+    email: "warden.gh-2@iiita.ac.in",
+    legacyEmails: ["gh2Warden@iiita.ac.in"],
+    gender: "female",
+  },
+  {
+    hostel: "GH 3",
+    email: "warden.gh-3@iiita.ac.in",
+    legacyEmails: ["gh3Warden@iiita.ac.in"],
+    gender: "female",
+  },
 ];
 
 const MALE_FIRST_NAMES = ["Ajay", "Amit", "Anil", "Deepak", "Dinesh", "Mahesh", "Rajesh", "Sanjay", "Suresh", "Vijay"];
@@ -58,7 +104,7 @@ const generateEmergencyContact = (seed) => {
   return `${firstName} ${lastName} (${relation}) - ${generatePhone(seed, "emergency-phone")}`;
 };
 
-const createWardenPayload = ({ hostel, emailLocalPart, gender }) => {
+const createWardenPayload = ({ hostel, email, gender }) => {
   const seed = `warden:${hostel}`;
   const firstName =
     gender === "female"
@@ -68,7 +114,7 @@ const createWardenPayload = ({ hostel, emailLocalPart, gender }) => {
 
   return {
     hostel,
-    email: `${emailLocalPart}@iiita.ac.in`,
+    email,
     name: `${firstName} ${lastName}`,
     gender,
     role: "warden",
@@ -79,38 +125,6 @@ const createWardenPayload = ({ hostel, emailLocalPart, gender }) => {
 
 const buildWardens = () => HOSTEL_WARDENS.map(createWardenPayload);
 
-const attachExistingStatus = async (wardens) => {
-  const emails = wardens.map((warden) => warden.email);
-  const hostels = wardens.map((warden) => warden.hostel);
-
-  const existingWardens = await prisma.user.findMany({
-    where: {
-      OR: [
-        { email: { in: emails } },
-        {
-          role: "warden",
-          hostel: { in: hostels },
-        },
-      ],
-    },
-    select: {
-      email: true,
-      hostel: true,
-      role: true,
-    },
-  });
-
-  const existingEmails = new Set(existingWardens.map((warden) => warden.email).filter(Boolean));
-  const existingHostels = new Set(
-    existingWardens.filter((warden) => warden.role === "warden").map((warden) => warden.hostel).filter(Boolean),
-  );
-
-  return wardens.map((warden) => ({
-    ...warden,
-    exists: existingEmails.has(warden.email) || existingHostels.has(warden.hostel),
-  }));
-};
-
 const hashPassword = async () => bcrypt.hash(DEFAULT_PASSWORD, 10);
 
 const run = async () => {
@@ -120,80 +134,98 @@ const run = async () => {
     throw new Error("DATABASE_URL is missing. The script expects backend/.env to define it.");
   }
 
-  const wardens = await attachExistingStatus(buildWardens());
-  const wardensToInsert = wardens.filter((warden) => !warden.exists);
-  const skippedCount = wardens.length - wardensToInsert.length;
-
   console.log("Warden ingestion started");
   console.log(`Mode: ${options.dryRun ? "dry-run" : "write"}`);
+  const wardens = buildWardens();
+  let inserted = 0;
+  let updated = 0;
+  let profileCreated = 0;
+  let profileSkipped = 0;
+
   console.log(`Wardens generated: ${wardens.length}`);
-  console.log(`Wardens pending insert: ${wardensToInsert.length}`);
 
   for (const warden of wardens) {
-    console.log(`- ${warden.hostel} | ${warden.gender} | ${warden.email} | ${warden.exists ? "skip" : "insert"}`);
+    const lookupEmails = [warden.email, ...(warden.legacyEmails || [])].filter(Boolean);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: lookupEmails.map((email) => ({ email })),
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (options.dryRun) {
+      const action = existingUser ? `update ${existingUser.email} -> ${warden.email}` : `insert ${warden.email}`;
+      console.log(`- ${warden.hostel} | ${warden.gender} | ${warden.email} | ${action}`);
+      continue;
+    }
+
+    let userId = existingUser?.id;
+
+    if (existingUser) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: warden.name,
+          email: warden.email,
+          role: warden.role,
+          gender: warden.gender,
+          hostel: warden.hostel,
+          phoneNumber: warden.phoneNumber,
+          emergencyContact: warden.emergencyContact,
+        },
+      });
+      updated += 1;
+    } else {
+      const createdUser = await prisma.user.create({
+        data: {
+          id: generateId(),
+          name: warden.name,
+          email: warden.email,
+          passwordHash: await hashPassword(),
+          role: warden.role,
+          gender: warden.gender,
+          hostel: warden.hostel,
+          phoneNumber: warden.phoneNumber,
+          emergencyContact: warden.emergencyContact,
+        },
+        select: { id: true },
+      });
+      userId = createdUser.id;
+      inserted += 1;
+    }
+
+    const existingProfile = await prisma.wardenProfile.findUnique({
+      where: { hostel: warden.hostel },
+      select: { userId: true },
+    });
+
+    if (!existingProfile) {
+      await prisma.wardenProfile.create({
+        data: {
+          userId,
+          hostel: warden.hostel,
+        },
+      });
+      profileCreated += 1;
+    } else if (existingProfile.userId !== userId) {
+      profileSkipped += 1;
+    }
+
+    const action = existingUser ? "update" : "insert";
+    console.log(`- ${warden.hostel} | ${warden.gender} | ${warden.email} | ${action}`);
   }
 
-  if (options.dryRun || wardensToInsert.length === 0) {
-    console.log(`\nSummary: inserted=0, skipped=${skippedCount}, total=${wardens.length}`);
+  if (options.dryRun) {
+    console.log(`\nSummary: inserted=0, updated=0, profilesCreated=0, profilesSkipped=0, total=${wardens.length}`);
     return;
   }
 
-  const rows = await Promise.all(
-    wardensToInsert.map(async (warden) => ({
-      id: generateId(),
-      name: warden.name,
-      email: warden.email,
-      passwordHash: await hashPassword(),
-      role: warden.role,
-      gender: warden.gender,
-      hostel: warden.hostel,
-      phoneNumber: warden.phoneNumber,
-      emergencyContact: warden.emergencyContact,
-    })),
+  console.log(
+    `\nSummary: inserted=${inserted}, updated=${updated}, profilesCreated=${profileCreated}, profilesSkipped=${profileSkipped}, total=${wardens.length}`,
   );
-
-  const result = await prisma.user.createMany({
-    data: rows,
-    skipDuplicates: true,
-  });
-
-  const insertedWardens = await prisma.user.findMany({
-    where: {
-      email: {
-        in: wardensToInsert.map((warden) => warden.email),
-      },
-    },
-    select: {
-      id: true,
-      email: true,
-    },
-  })
-
-  const wardenMap = new Map(wardensToInsert.map((warden) => [warden.email, warden]))
-  const wardenProfileRows = insertedWardens
-    .map((user) => {
-      const warden = wardenMap.get(user.email)
-      if (!warden) {
-        return null
-      }
-
-      return {
-        userId: user.id,
-        hostel: warden.hostel,
-      }
-    })
-    .filter(Boolean)
-
-  if (wardenProfileRows.length > 0) {
-    await prisma.wardenProfile.createMany({
-      data: wardenProfileRows,
-      skipDuplicates: true,
-    })
-  }
-
-  const duplicateConflicts = rows.length - result.count;
-
-  console.log(`\nSummary: inserted=${result.count}, skipped=${skippedCount + duplicateConflicts}, total=${wardens.length}`);
 };
 
 run()
