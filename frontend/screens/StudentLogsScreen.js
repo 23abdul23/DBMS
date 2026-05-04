@@ -155,6 +155,18 @@ export default function StudentLogsScreen() {
     </View>
   ) : null
 
+  if (loading) {
+    return (
+      <LoadingSpinner
+        variant="screen"
+        label="Loading your movement logs"
+        sublabel="Pulling entry, exit, and outpass activity from Aegis."
+        statusText="Records are being synced and sorted for this timeline."
+        showThemeToggle={false}
+      />
+    )
+  }
+
   return (
     <ImageBackground
       source={require("../assets/images/iiita2.jpeg")}
@@ -172,39 +184,27 @@ export default function StudentLogsScreen() {
         {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
       </View>
 
-      {loading ? (
-        <View style={localStyles.loader}>
-          <LoadingSpinner
-            variant="screen"
-            label="Loading your movement logs"
-            sublabel="Pulling entry, exit, and outpass activity from Aegis."
-            statusText="Records are being synced and sorted for this timeline."
-            showThemeToggle={false}
+      <FlatList
+        data={logs}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={localStyles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={emptyState}
+        onEndReachedThreshold={0.4}
+        onEndReached={onLoadMore}
+        ListFooterComponent={
+          loadingMore ? (
+                <View style={localStyles.footerLoader}>
+                  <LoadingSpinner variant="inline" label="Loading more logs" />
+                </View>
+              ) : hasMore ? (
+                <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>
+                  <Text style={[localStyles.loadMoreText, { color: colors.onPrimary }]}>Load More</Text>
+                </TouchableOpacity>
+              ) : null
+            }
           />
-        </View>
-      ) : (
-        <FlatList
-          data={logs}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={localStyles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={emptyState}
-          onEndReachedThreshold={0.4}
-          onEndReached={onLoadMore}
-          ListFooterComponent={
-            loadingMore ? (
-                  <View style={localStyles.footerLoader}>
-                    <LoadingSpinner variant="inline" label="Loading more logs" />
-                  </View>
-                ) : hasMore ? (
-                  <TouchableOpacity style={[localStyles.loadMoreButton, { backgroundColor: colors.primary }]} onPress={onLoadMore}>
-                    <Text style={[localStyles.loadMoreText, { color: colors.onPrimary }]}>Load More</Text>
-                  </TouchableOpacity>
-                ) : null
-              }
-            />
-      )}
       </View>
     </ImageBackground>
   )
@@ -239,11 +239,6 @@ const localStyles = StyleSheet.create({
     color: COLORS.error,
     fontSize: SIZES.sm,
     fontFamily: FONTS.regular,
-  },
-  loader: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   listContent: {
     padding: SPACING.md,
