@@ -268,53 +268,6 @@ export default function LoadingSpinner({
         },
       ]}
     >
-      <View style={styles.eyebrowRow}>
-        <View style={[styles.eyebrowBadge, { backgroundColor: colors.primarySoft }]}>
-          <Text style={[styles.eyebrowText, { color: colors.primary }]}>Aegis ID</Text>
-        </View>
-      </View>
-
-      <Text style={[styles.title, { color: colors.heading }]}>{label}</Text>
-      <Text style={[styles.subtitle, { color: colors.subText }]}>{sublabel}</Text>
-
-      {isScreen ? (
-        <View style={styles.chipRow}>
-          {chipMeta.map((chip) => (
-            <View key={chip.label} style={[styles.chip, { backgroundColor: chip.backgroundColor }]}>
-              <Ionicons name={chip.icon} size={14} color={chip.color} />
-              <Text style={[styles.chipText, { color: chip.color }]}>{chip.label}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      <View
-        style={[
-          styles.statusCard,
-          {
-            backgroundColor: colors.cardMuted,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <View style={styles.statusIcon}>
-          <Animated.View
-            style={[
-              styles.statusPulse,
-              {
-                backgroundColor: colors.accentSoft,
-                opacity: pulseOpacity,
-                transform: [{ scale: pulseScale }],
-              },
-            ]}
-          />
-          <View style={[styles.statusDot, { backgroundColor: colors.accent }]} />
-        </View>
-        <View style={styles.statusCopy}>
-          <Text style={[styles.statusTitle, { color: colors.heading }]}>Establishing secure session</Text>
-          <Text style={[styles.statusText, { color: colors.subText }]}>{statusText}</Text>
-        </View>
-      </View>
     </View>
   )
 
@@ -327,17 +280,6 @@ export default function LoadingSpinner({
           {
             backgroundColor: colors.primarySoft,
             opacity: pulseOpacity,
-            transform: [{ scale: pulseScale }],
-          },
-        ]}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.backgroundGlowSmall,
-          {
-            backgroundColor: colors.accentSoft,
-            opacity: smallGlowOpacity,
             transform: [{ scale: pulseScale }],
           },
         ]}
@@ -401,7 +343,7 @@ const styles = StyleSheet.create({
   },
   screenContainer: {
     paddingHorizontal: 22,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 28,
   },
   panelContainer: {
@@ -522,9 +464,9 @@ const styles = StyleSheet.create({
   copyCard: {
     width: "100%",
     maxWidth: 420,
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 22,
+    padding: 18,
     shadowOffset: { width: 0, height: 16 },
     shadowRadius: 24,
     elevation: 10,
