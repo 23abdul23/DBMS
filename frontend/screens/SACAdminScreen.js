@@ -15,7 +15,7 @@ import { useTheme } from "../context/ThemeContext"
 import { sacAPI } from "../services/api"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { FONTS } from "../utils/constants"
-import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth, getTwoColumnCardWidth } from "../utils/responsiveLayout"
+import { CONTENT_MAX_WIDTH, getTwoColumnCardWidth } from "../utils/responsiveLayout"
 
 export default function SACAdminScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
@@ -25,7 +25,6 @@ export default function SACAdminScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false)
 
   const entrySource = route?.params?.entrySource || "manual"
-  const statCardWidth = getThreeColumnCardWidth(width)
   const actionCardWidth = getTwoColumnCardWidth(width)
 
   const loadOverview = async (nextLoading = false) => {
@@ -211,7 +210,7 @@ export default function SACAdminScreen({ navigation, route }) {
             paddingTop: 20,
           }}
         >
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
             {[
               {
                 label: "Open Rooms",
@@ -234,17 +233,18 @@ export default function SACAdminScreen({ navigation, route }) {
                 toneBg: colors.primarySoft,
                 toneFg: colors.primary,
               },
-            ].map((stat) => (
+            ].map((stat, index) => (
               <View
                 key={stat.label}
                 style={{
-                  width: statCardWidth,
+                  flex: 1,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
                   marginBottom: 12,
+                  marginRight: index < 2 ? 8 : 0,
                 }}
               >
                 <View

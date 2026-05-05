@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react"
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -12,9 +13,11 @@ import Constants from "expo-constants"
 import { useFocusEffect } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "../context/ThemeContext"
+import { useAuth } from "../context/AuthContext"
 import { FONTS } from "../utils/constants"
 import LoadingSpinner from "../components/LoadingSpinner"
 import { libraryAPI } from "../services/api"
+import { isLibraryAdministrator } from "../utils/adminScopes"
 
 const LIBRARY_LIMIT = Number(Constants.expoConfig?.extra?.LIBRARY_LIMIT || 60)
 
@@ -33,9 +36,12 @@ const formatTime = (value) => {
 
 export default function LibraryScreen({ navigation }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
+  const { user } = useAuth()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [submittingKey, setSubmittingKey] = useState(null)
+  const canReleaseSeats = isLibraryAdministrator(user)
 
   const loadOverview = useCallback(async (nextLoading = false) => {
     try {
@@ -69,6 +75,20 @@ export default function LibraryScreen({ navigation }) {
     }
   }
 
+  const runAction = async (key, action, fallbackMessage) => {
+    try {
+      setSubmittingKey(key)
+      const response = await action()
+      setOverview(response?.data?.overview || null)
+      Alert.alert("Library Updated", response?.data?.message || fallbackMessage)
+    } catch (error) {
+      console.log("Library admin action error:", error?.response?.data || error)
+      Alert.alert("Action Failed", error?.response?.data?.message || fallbackMessage)
+    } finally {
+      setSubmittingKey(null)
+    }
+  }
+
   if (loading) {
     return <LoadingSpinner />
   }
@@ -94,9 +114,7 @@ export default function LibraryScreen({ navigation }) {
   };
 
   const summary = overview?.summary || {}
-  const activeSeat = overview?.myStatus?.activeSeat || null
   const occupants = overview?.occupants || []
-  const activityFeed = overview?.activityFeed || []
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -165,7 +183,9 @@ export default function LibraryScreen({ navigation }) {
           >
             <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>Live Library Occupancy</Text>
             <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 6 }}>
-              Current strength, available tokens, and who is inside from when.
+              {canReleaseSeats
+                ? "Current strength, available tokens, and one-tap seat release for any active student."
+                : "Current strength, available tokens, and who is inside from when."}
             </Text>
           </View>
         </View>
@@ -227,8 +247,6 @@ export default function LibraryScreen({ navigation }) {
             ))}
           </View>
 
-          
-
           <View
             style={{
               backgroundColor: colors.cardElevated,
@@ -247,38 +265,69 @@ export default function LibraryScreen({ navigation }) {
                 <View
                   key={entry.id}
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
                     paddingVertical: 12,
                     borderBottomWidth: index === occupants.length - 1 ? 0 : 1,
                     borderBottomColor: colors.divider,
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 }}>
-                    <View
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 14,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: colors.primarySoft,
+                          marginRight: 12,
+                        }}
+                      >
+                        <Text style={{ color: colors.primary, fontFamily: FONTS.bold }}>#{entry.seatNumber}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>
+                          {entry.user?.name}
+                        </Text>
+                        <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
+                          {entry.user?.studentId || "Student"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
+                      From {getTimeAgo(entry.enteredAt)}
+                    </Text>
+                  </View>
+                  {canReleaseSeats ? (
+                    <TouchableOpacity
+                      disabled={submittingKey === `seat-release-${entry.id}`}
+                      onPress={() =>
+                        runAction(
+                          `seat-release-${entry.id}`,
+                          () => libraryAPI.adminReleaseSeat({ sessionId: entry.id }),
+                          `Unable to release Token Number ${entry.seatNumber}.`,
+                        )
+                      }
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 14,
+                        marginTop: 10,
+                        borderRadius: 16,
+                        paddingVertical: 12,
                         alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: colors.primarySoft,
-                        marginRight: 12,
+                        backgroundColor: colors.successSoft,
+                        opacity: submittingKey === `seat-release-${entry.id}` ? 0.6 : 1,
                       }}
                     >
-                      <Text style={{ color: colors.primary, fontFamily: FONTS.bold }}>#{entry.seatNumber}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{entry.user?.name}</Text>
-                      <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 }}>
-                        {entry.user?.studentId || "Student"}
+                      <Text style={{ color: colors.success, fontFamily: FONTS.bold, fontSize: 13 }}>
+                        {submittingKey === `seat-release-${entry.id}` ? "Releasing..." : "Release Seat"}
                       </Text>
-                    </View>
-                  </View>
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
-                    From {getTimeAgo(entry.enteredAt)}
-                  </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ))
             ) : (

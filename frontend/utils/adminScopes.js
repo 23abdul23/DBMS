@@ -1,10 +1,14 @@
-export const SAC_ADMIN_EMAIL = "sacAdmin@iiita.ac.in"
-export const LIBRARY_ADMIN_EMAIL = "libAdmin@iiita.ac.in"
+export const SAC_ADMIN_EMAILS = ["sacAdmin@iiita.ac.in", "sac@iiita.ac.in"]
+export const LIBRARY_ADMIN_EMAILS = ["libAdmin@iiita.ac.in", "library@iiita.ac.in"]
+export const SAC_ADMIN_EMAIL = SAC_ADMIN_EMAILS[0]
+export const LIBRARY_ADMIN_EMAIL = LIBRARY_ADMIN_EMAILS[0]
 
 export const normalizeEmail = (value) => String(value || "").trim().toLowerCase()
 
-export const isSacAdministrator = (user) => normalizeEmail(user?.email) === normalizeEmail(SAC_ADMIN_EMAIL)
-export const isLibraryAdministrator = (user) => normalizeEmail(user?.email) === normalizeEmail(LIBRARY_ADMIN_EMAIL)
+const matchesAnyEmail = (value, emails) => emails.some((email) => normalizeEmail(value) === normalizeEmail(email))
+
+export const isSacAdministrator = (user) => matchesAnyEmail(user?.email, SAC_ADMIN_EMAILS)
+export const isLibraryAdministrator = (user) => matchesAnyEmail(user?.email, LIBRARY_ADMIN_EMAILS)
 
 export const getScopedAdminLabel = (user) => {
   if (isSacAdministrator(user)) {

@@ -18,7 +18,7 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import { sacAPI } from "../services/api"
 import { SAC_CLUB_ROOMS } from "../constants/sacCatalog"
 import { FONTS } from "../utils/constants"
-import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth } from "../utils/responsiveLayout"
+import { CONTENT_MAX_WIDTH } from "../utils/responsiveLayout"
 
 const formatTime = (value) => {
   if (!value) {
@@ -54,7 +54,6 @@ export default function SACAdminClubRoomScreen({ navigation, route }) {
 
   const entrySource = route?.params?.entrySource || "manual"
   const isStudent = user?.role === "student"
-  const statCardWidth = getThreeColumnCardWidth(width)
   const isCompact = width < 520
 
   const roomStateMap = useMemo(
@@ -218,7 +217,7 @@ export default function SACAdminClubRoomScreen({ navigation, route }) {
             paddingTop: 18,
           }}
         >
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
             {[
               {
                 label: "Open Rooms",
@@ -241,17 +240,18 @@ export default function SACAdminClubRoomScreen({ navigation, route }) {
                 toneBg: colors.primarySoft,
                 toneFg: colors.primary,
               },
-            ].map((stat) => (
+            ].map((stat, index) => (
               <View
                 key={stat.label}
                 style={{
-                  width: statCardWidth,
+                  flex: 1,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
                   marginBottom: 12,
+                  marginRight: index < 2 ? 8 : 0,
                 }}
               >
                 <View

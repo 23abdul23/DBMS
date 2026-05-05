@@ -6,7 +6,6 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -17,7 +16,8 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import { sacAPI } from "../services/api"
 import { SAC_EQUIPMENT } from "../constants/sacCatalog"
 import { FONTS } from "../utils/constants"
-import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth } from "../utils/responsiveLayout"
+import { CONTENT_MAX_WIDTH } from "../utils/responsiveLayout"
+import { isSacAdministrator } from "../utils/adminScopes"
 
 const formatTime = (value) => {
   if (!value) {
@@ -33,15 +33,13 @@ const formatTime = (value) => {
 export default function SACAdminEquipmentScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
   const { user } = useAuth()
-  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [submittingKey, setSubmittingKey] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
-  const isStudent = user?.role === "student"
-  const statCardWidth = getThreeColumnCardWidth(width)
+  const canMarkReturned = isSacAdministrator(user)
 
   const equipmentActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
@@ -183,7 +181,9 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                 <View style={{ flex: 1, marginLeft: 14 }}>
                   <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18 }}>Guard equipment activity</Text>
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                    Mark sports equipment as taken or returned, and see who currently has each item.
+                    {canMarkReturned
+                      ? "See who currently has each item and mark returns student by student."
+                      : "See who currently has each item. Only SAC admin can mark equipment as returned."}
                   </Text>
                 </View>
               </View>
@@ -200,7 +200,7 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
             paddingTop: 18,
           }}
         >
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 }}>
+          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
             {[
               {
                 label: "In Use",
@@ -223,17 +223,18 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                 toneBg: colors.warningSoft,
                 toneFg: colors.warning,
               },
-            ].map((stat) => (
+            ].map((stat, index) => (
               <View
                 key={stat.label}
                 style={{
-                  width: statCardWidth,
+                  flex: 1,
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 24,
                   padding: 14,
                   marginBottom: 12,
+                  marginRight: index < 2 ? 8 : 0,
                 }}
               >
                 <View
@@ -260,7 +261,11 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
           {SAC_EQUIPMENT.map((item) => {
             const equipmentState = equipmentStateMap.get(item.name)
             const userHasItem = Boolean(equipmentState?.checkedOutBy?.some((entry) => entry.user?.id === user?.id))
-            const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}` || equipmentState.checkedOutBy.some((entry) => submittingKey === `equipment-return-${entry.id}`)
+            const checkedOutBy = equipmentState?.checkedOutBy || []
+            const isBusy =
+              submittingKey === `equipment-select-${item.name}` ||
+              submittingKey === `equipment-return-${item.name}` ||
+              checkedOutBy.some((entry) => submittingKey === `equipment-return-${entry.id}`)
 
             return (
               <View
@@ -312,35 +317,37 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                   </View>
                 </View>
 
-                {Boolean(equipmentState?.checkedOutBy?.length) && (
+                {Boolean(checkedOutBy.length) && (
                   <View style={{ marginTop: 14 }}>
                     <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13, marginBottom: 8 }}>
                       Taken by
                     </Text>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                      {equipmentState.checkedOutBy.map((entry) => (
+                    <View>
+                      {checkedOutBy.map((entry) => (
                         <View
                           key={entry.id}
                           style={{
-                            marginRight: 8,
                             marginBottom: 8,
-                            borderRadius: 999,
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
+                            borderRadius: 18,
+                            paddingHorizontal: 14,
+                            paddingVertical: 12,
                             backgroundColor: colors.cardMuted,
                             borderWidth: 1,
                             borderColor: colors.border,
                             flexDirection: "row",
                             alignItems: "center",
+                            justifyContent: "space-between",
                           }}
                         >
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>{entry.user?.name}</Text>
-                            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 11 }}>
-                              {formatTime(entry.checkedOutAt)}
+                          <View style={{ flex: 1, paddingRight: 12 }}>
+                            <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 13 }}>
+                              {entry.user?.name || "Student"}
+                            </Text>
+                            <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 11, marginTop: 3 }}>
+                              {entry.user?.studentId || "Student checkout"}{` • `}{formatTime(entry.checkedOutAt)}
                             </Text>
                           </View>
-                          {!isStudent && (
+                          {canMarkReturned && (
                             <TouchableOpacity
                               disabled={submittingKey === `equipment-return-${entry.id}`}
                               onPress={() =>
@@ -351,15 +358,26 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                                 )
                               }
                               style={{
-                                marginLeft: 8,
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 12,
-                                backgroundColor: colors.successSoft,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                paddingHorizontal: 12,
+                                paddingVertical: 10,
+                                borderRadius: 14,
+                                backgroundColor: colors.success,
                                 opacity: submittingKey === `equipment-return-${entry.id}` ? 0.6 : 1,
                               }}
                             >
-                              <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+                              <Ionicons name="checkmark-circle-outline" size={16} color={colors.buttonTextOnSolid} />
+                              <Text
+                                style={{
+                                  color: colors.buttonTextOnSolid,
+                                  fontFamily: FONTS.bold,
+                                  fontSize: 12,
+                                  marginLeft: 6,
+                                }}
+                              >
+                                {submittingKey === `equipment-return-${entry.id}` ? "Taking..." : "Take Back"}
+                              </Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -368,39 +386,22 @@ export default function SACAdminEquipmentScreen({ navigation, route }) {
                   </View>
                 )}
 
-                {isStudent && (
-                  <TouchableOpacity
-                    disabled={isBusy || userHasItem}
-                    onPress={() =>
-                      !userHasItem &&
-                      runAction(
-                        `equipment-select-${item.name}`,
-                        () => sacAPI.selectEquipment(item.name),
-                        `Unable to mark ${item.name} as taken.`,
-                      )
-                    }
+                {!canMarkReturned && checkedOutBy.length > 0 ? (
+                  <View
                     style={{
                       marginTop: 14,
                       borderRadius: 18,
-                      paddingVertical: 14,
-                      alignItems: "center",
-                      backgroundColor: userHasItem ? colors.cardMuted : colors.accent,
-                      borderWidth: userHasItem ? 1 : 0,
+                      padding: 14,
+                      backgroundColor: colors.cardMuted,
+                      borderWidth: 1,
                       borderColor: colors.border,
-                      opacity: (submittingKey === `equipment-select-${item.name}` || userHasItem) ? 0.6 : 1,
                     }}
                   >
-                    <Text
-                      style={{
-                        color: userHasItem ? colors.subText : colors.buttonTextOnSolid,
-                        fontFamily: FONTS.bold,
-                        fontSize: 14,
-                      }}
-                    >
-                      {userHasItem ? "Awaiting guard return" : "Take Equipment"}
+                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12 }}>
+                      SAC admin access is required to mark these checkouts returned.
                     </Text>
-                  </TouchableOpacity>
-                )}
+                  </View>
+                ) : null}
               </View>
             )
           })}

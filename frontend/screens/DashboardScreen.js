@@ -299,7 +299,7 @@ export default function DashboardScreen({ navigation }) {
                     <Ionicons name={action.icon} size={22} color={colors[action.iconFgKey]} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.actionText, { color: "#0F0F0F", fontWeight: "800" }]}>{action.title}</Text>
+                    <Text style={[styles.actionText, { color: colors.heading, fontWeight: "800" }]}>{action.title}</Text>
                     <Text style={[styles.actionSubText, { color: colors.subText }]} numberOfLines={1}>{action.subtitle}</Text>
                   </View>
                 </View>

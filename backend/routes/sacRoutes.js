@@ -4,7 +4,7 @@ const { authenticate, authorize } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
 const { SAC_CLUB_ROOMS, SAC_EQUIPMENT, resolveClubRoom, resolveEquipment } = require("../utils/sacCatalog")
 const { isSacOpenAt, SAC_CLOSE_LABEL } = require("../utils/campusActivityRules")
-const { canViewFullSacActivity } = require("../utils/adminScopes")
+const { canViewFullSacActivity, isSacAdministrator } = require("../utils/adminScopes")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -151,7 +151,7 @@ const buildSacActivityFeed = (logs, includeUserDetails) =>
         id: log.id,
         type: "equipment_returned",
         timestamp: log.createdAt,
-        title: includeUserDetails ? `${actorName} returned ${equipmentName}` : `${equipmentName} returned`,
+        title: includeUserDetails ? `${actorName} took back ${equipmentName}` : `${equipmentName} returned`,
         subtitle,
         equipmentName,
         user: includeUserDetails && log.user ? buildStudentSummary(log.user) : null,
@@ -210,11 +210,11 @@ const getOverview = async (viewer) => {
   }
   
   const includeUserDetails = canViewFullSacActivity(dbUser)
-  console.log("\n=== SAC PERMISSIONS DEBUG ===");
-  console.log("Token ID received:", viewerUserId);
-  console.log("User found in DB:", dbUser ? `Yes, Role: ${dbUser.role}` : "NULL");
-  console.log("Is Admin/Security?:", includeUserDetails);
-  console.log("===============================\n");
+  // console.log("\n=== SAC PERMISSIONS DEBUG ===");
+  // console.log("Token ID received:", viewerUserId);
+  // console.log("User found in DB:", dbUser ? `Yes, Role: ${dbUser.role}` : "NULL");
+  // console.log("Is Admin/Security?:", includeUserDetails);
+  // console.log("===============================\n");
 
   const [activeSessions, activeCheckouts, myActivePresences, myActiveEquipment, recentActivityLogs] = await prisma.$transaction([
     prisma.sacRoomSession.findMany({
@@ -580,36 +580,50 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
     const existingCheckout = await prisma.sacEquipmentCheckout.findFirst({
       where: {
         userId: req.user.userId,
-        equipmentName,
         returnedAt: null,
       },
       orderBy: [{ checkedOutAt: "desc" }, { id: "desc" }],
     })
 
-    if (!existingCheckout) {
-      await prisma.$transaction(async (tx) => {
-        await tx.sacEquipmentCheckout.create({
-          data: {
-            id: generateId(),
-            equipmentName,
-            userId: req.user.userId,
-          },
-        })
+    if (existingCheckout) {
+      const overview = await getOverview(req.user)
 
-        await createSacLog(tx, {
-          userId: req.user.userId,
-          action: "sac_equipment_taken",
-          description: `Took ${equipmentName}`,
-          details: {
-            equipmentName,
-          },
+      if (existingCheckout.equipmentName === equipmentName) {
+        return res.json({
+          message: `You already have ${equipmentName}.`,
+          overview,
         })
+      }
+
+      return res.status(409).json({
+        code: "ACTIVE_EQUIPMENT_EXISTS",
+        message: `You already have ${existingCheckout.equipmentName}. SAC admin must mark it returned before you can take another item.`,
+        overview,
       })
     }
 
+    await prisma.$transaction(async (tx) => {
+      await tx.sacEquipmentCheckout.create({
+        data: {
+          id: generateId(),
+          equipmentName,
+          userId: req.user.userId,
+        },
+      })
+
+      await createSacLog(tx, {
+        userId: req.user.userId,
+        action: "sac_equipment_taken",
+        description: `Took ${equipmentName}`,
+        details: {
+          equipmentName,
+        },
+      })
+    })
+
     const overview = await getOverview(req.user)
     res.json({
-      message: existingCheckout ? `You already have ${equipmentName}.` : `${equipmentName} marked as taken.`,
+      message: `${equipmentName} marked as taken.`,
       overview,
     })
   } catch (error) {
@@ -618,8 +632,12 @@ router.post("/equipment/:equipmentName/select", [authenticate, authorize("studen
   }
 })
 
-router.post("/equipment/:equipmentName/return", [authenticate, authorize("security", "admin")], async (req, res) => {
+router.post("/equipment/:equipmentName/return", authenticate, async (req, res) => {
   try {
+    if (!isSacAdministrator(req.user)) {
+      return res.status(403).json({ message: "Only SAC admin can mark equipment as returned." })
+    }
+
     const equipmentName = resolveEquipment(req.params.equipmentName)
 
     if (!equipmentName) {
@@ -680,17 +698,18 @@ router.post("/equipment/:equipmentName/return", [authenticate, authorize("securi
       await createSacLog(tx, {
         userId: req.user.userId,
         action: "sac_equipment_returned",
-        description: `Returned ${equipmentName}`,
+        description: `Marked ${equipmentName} returned for ${activeCheckout.user?.name || "student"}`,
         details: {
           equipmentName,
           checkoutId: activeCheckout.id,
+          returnedForUserId: activeCheckout.userId,
           studentId: activeCheckout.user?.studentId || null,
         },
       })
     })
 
     const overview = await getOverview(req.user)
-    res.json({ message: `${equipmentName} returned.`, overview })
+    res.json({ message: `${equipmentName} marked returned for ${activeCheckout.user?.name || "student"}.`, overview })
   } catch (error) {
     console.error("SAC equipment return error:", error)
     res.status(500).json({ message: "Server error returning equipment" })

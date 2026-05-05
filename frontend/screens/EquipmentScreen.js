@@ -6,7 +6,6 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -17,7 +16,7 @@ import LoadingSpinner from "../components/LoadingSpinner"
 import { sacAPI } from "../services/api"
 import { SAC_EQUIPMENT } from "../constants/sacCatalog"
 import { FONTS } from "../utils/constants"
-import { CONTENT_MAX_WIDTH, getThreeColumnCardWidth } from "../utils/responsiveLayout"
+import { CONTENT_MAX_WIDTH } from "../utils/responsiveLayout"
 
 const formatTime = (value) => {
   if (!value) {
@@ -33,19 +32,17 @@ const formatTime = (value) => {
 export default function EquipmentScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme()
   const { user } = useAuth()
-  const { width } = useWindowDimensions()
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [submittingKey, setSubmittingKey] = useState(null)
 
   const entrySource = route?.params?.entrySource || "manual"
-  const statCardWidth = getThreeColumnCardWidth(width)
 
-  const myEquipmentSet = useMemo(
-    () => new Set((overview?.myStatus?.activeEquipment || []).map((item) => item.name)),
-    [overview?.myStatus?.activeEquipment],
-  )
+  const activeEquipment = overview?.myStatus?.activeEquipment || []
+  const currentEquipment = activeEquipment[0] || null
+  const myEquipmentSet = useMemo(() => new Set(activeEquipment.map((item) => item.name)), [activeEquipment])
+  const hasAnyActiveEquipment = activeEquipment.length > 0
   const equipmentActivity = (overview?.activityFeed || []).filter(
     (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
   )
@@ -263,6 +260,7 @@ export default function EquipmentScreen({ navigation, route }) {
             const equipmentState = equipmentStateMap.get(item.name)
             const userHasItem =
               equipmentState?.isCheckedOutByCurrentUser || myEquipmentSet.has(item.name) || false
+            const hasAnotherItem = hasAnyActiveEquipment && !userHasItem
             const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}`
 
             return (
@@ -328,17 +326,19 @@ export default function EquipmentScreen({ navigation, route }) {
                   <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
                     {userHasItem
                       ? `Assigned since ${formatTime(
-                          (overview?.myStatus?.activeEquipment || []).find((entry) => entry.name === item.name)?.checkedOutAt,
+                          activeEquipment.find((entry) => entry.name === item.name)?.checkedOutAt,
                         )}`
+                      : hasAnotherItem
+                        ? `You already have ${currentEquipment?.name}. SAC admin must mark it returned first.`
                       : "No one has taken this Equipment."}
                   </Text>
                 </View>
 
                 {user?.role === "student" ? (
                   <TouchableOpacity
-                    disabled={isBusy || userHasItem}
+                    disabled={isBusy || hasAnyActiveEquipment}
                     onPress={() =>
-                      !userHasItem &&
+                      !hasAnyActiveEquipment &&
                       runAction(
                         `equipment-select-${item.name}`,
                         () => sacAPI.selectEquipment(item.name),
@@ -350,20 +350,24 @@ export default function EquipmentScreen({ navigation, route }) {
                       borderRadius: 18,
                       paddingVertical: 14,
                       alignItems: "center",
-                      backgroundColor: userHasItem ? colors.cardMuted : colors.accent,
-                      borderWidth: userHasItem ? 1 : 0,
+                      backgroundColor: hasAnyActiveEquipment ? colors.cardMuted : colors.accent,
+                      borderWidth: hasAnyActiveEquipment ? 1 : 0,
                       borderColor: colors.border,
-                      opacity: isBusy || userHasItem ? 0.6 : 1,
+                      opacity: isBusy || hasAnyActiveEquipment ? 0.6 : 1,
                     }}
                   >
                     <Text
                       style={{
-                        color: userHasItem ? colors.subText : colors.buttonTextOnSolid,
+                        color: hasAnyActiveEquipment ? colors.subText : colors.buttonTextOnSolid,
                         fontFamily: FONTS.bold,
                         fontSize: 14,
                       }}
                     >
-                      {userHasItem ? "Awaiting guard return" : "Take Equipment"}
+                      {userHasItem
+                        ? "Awaiting SAC admin return"
+                        : hasAnotherItem
+                          ? `Return ${currentEquipment?.name || "current item"} first`
+                          : "Take Equipment"}
                     </Text>
                   </TouchableOpacity>
                 ) : null}

@@ -9,6 +9,7 @@ const {
   claimLibrarySeat,
   releaseLibrarySeat,
 } = require("../utils/libraryActivity")
+const { isLibraryAdministrator } = require("../utils/adminScopes")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -191,6 +192,82 @@ router.post("/release-seat", [authenticate, authorize("student")], async (req, r
     console.error("Library release seat error:", error)
     res.status(error.statusCode || 500).json({
       code: error.code || "LIBRARY_RELEASE_ERROR",
+      message: error.message || "Server error releasing library seat",
+    })
+  }
+})
+
+router.post("/admin/release-seat", authenticate, async (req, res) => {
+  try {
+    if (!isLibraryAdministrator(req.user)) {
+      return res.status(403).json({ message: "Only library admin can release seats." })
+    }
+
+    const sessionId = String(req.body?.sessionId || "").trim()
+    const userId = String(req.body?.userId || "").trim()
+    const seatNumber = req.body?.seatNumber !== undefined ? parseSeatNumber(req.body?.seatNumber) : NaN
+
+    let activeSeat = null
+
+    if (sessionId) {
+      activeSeat = await prisma.librarySeatSession.findFirst({
+        where: {
+          id: sessionId,
+          leftAt: null,
+        },
+        include: {
+          user: true,
+        },
+      })
+    } else if (userId) {
+      activeSeat = await getActiveSeatSession(prisma, userId)
+    } else if (Number.isInteger(seatNumber)) {
+      activeSeat = await getSeatSessionByNumber(prisma, seatNumber)
+    } else {
+      return res.status(400).json({
+        message: "Provide sessionId, userId, or seatNumber to release a seat.",
+      })
+    }
+
+    if (!activeSeat) {
+      return res.status(404).json({ message: "No active library seat found for this request." })
+    }
+
+    const timestamp = new Date()
+    await prisma.$transaction(async (tx) => {
+      const currentSeat = await tx.librarySeatSession.findFirst({
+        where: {
+          id: activeSeat.id,
+          leftAt: null,
+        },
+      })
+
+      if (!currentSeat) {
+        throw createHttpError(404, "No active library seat found for this request.", "NO_ACTIVE_SEAT")
+      }
+
+      await releaseLibrarySeat(tx, {
+        session: currentSeat,
+        timestamp,
+        description: `Library admin released Token Number ${activeSeat.seatNumber} for ${activeSeat.user?.name || "student"}.`,
+        details: {
+          source: "library_admin_release",
+          releasedByUserId: req.user.userId,
+          releasedForUserId: activeSeat.userId,
+          releasedForStudentId: activeSeat.user?.studentId || null,
+        },
+      })
+    })
+
+    const overview = await getLibraryOverview(prisma, req.user)
+    res.json({
+      message: `Token Number ${activeSeat.seatNumber} released for ${activeSeat.user?.name || "student"}.`,
+      overview,
+    })
+  } catch (error) {
+    console.error("Library admin release seat error:", error)
+    res.status(error.statusCode || 500).json({
+      code: error.code || "LIBRARY_ADMIN_RELEASE_ERROR",
       message: error.message || "Server error releasing library seat",
     })
   }

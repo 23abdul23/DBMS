@@ -178,7 +178,7 @@ const claimLibrarySeat = async (client, { userId, seatNumber, timestamp = new Da
   return sessionId
 }
 
-const releaseLibrarySeat = async (client, { session, timestamp = new Date(), details = {} }) => {
+const releaseLibrarySeat = async (client, { session, timestamp = new Date(), details = {}, description = null }) => {
   if (!session) {
     return null
   }
@@ -198,7 +198,7 @@ const releaseLibrarySeat = async (client, { session, timestamp = new Date(), det
     action: "library_seat_released",
     seatNumber: session.seatNumber,
     createdAt: timestamp,
-    description: `Released the Token Number ${session.seatNumber} seat`,
+    description: description || `Released the Token Number ${session.seatNumber} seat`,
     details,
   })
 

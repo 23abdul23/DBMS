@@ -237,6 +237,7 @@ export const libraryAPI = {
   getStatus: () => api.get("/library/status", { validateStatus: allowOpenClosedStatus }),
   claimSeat: (seatNumber) => api.post("/library/claim-seat", { seatNumber }),
   releaseSeat: () => api.post("/library/release-seat"),
+  adminReleaseSeat: (data = {}) => api.post("/library/admin/release-seat", data),
 }
 
 export default api
