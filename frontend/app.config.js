@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require('fs');
+const path = require('path');
+const fileURLToPath = require('url');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,7 +57,6 @@ const apiSecondaryBaseUrl = getConfigValue(
 );
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
 
-// const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
 const apiPort = Number(
   getConfigValue('API_PORT', getConfigValue('PORT', 8080))
 );

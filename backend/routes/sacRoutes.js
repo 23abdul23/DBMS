@@ -1,18 +1,18 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate, authorize } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate, authorize } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   SAC_CLUB_ROOMS,
   SAC_EQUIPMENT,
   resolveClubRoom,
   resolveEquipment,
-} = require("../utils/sacCatalog")
-const { isSacOpenAt, SAC_CLOSE_LABEL } = require("../utils/campusActivityRules")
-const {
+} from "../utils/sacCatalog.js"
+import { isSacOpenAt, SAC_CLOSE_LABEL } from "../utils/campusActivityRules.js"
+import {
   canViewFullSacActivity,
   isSacAdministrator,
-} = require("../utils/adminScopes")
+} from "../utils/adminScopes.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -818,4 +818,4 @@ router.post(
   },
 )
 
-module.exports = router
+export default router

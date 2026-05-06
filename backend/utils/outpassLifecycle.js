@@ -1,7 +1,7 @@
-const { generateId } = require("./hashGenerator")
-const { isExitGate } = require("./locationPolicy")
+import { generateId } from "./hashGenerator.js"
+import { isExitGate } from "./locationPolicy.js"
 
-const userSelect = {
+export const userSelect = {
   id: true,
   name: true,
   email: true,
@@ -15,7 +15,7 @@ const userSelect = {
   year: true,
 }
 
-const approverSelect = {
+export const approverSelect = {
   id: true,
   name: true,
   email: true,
@@ -23,30 +23,30 @@ const approverSelect = {
   hostel: true,
 }
 
-const auditUserSelect = {
+export const auditUserSelect = {
   id: true,
   name: true,
   role: true,
 }
 
-const OUTPASS_REQUEST_TYPE = {
+export const OUTPASS_REQUEST_TYPE = {
   REGULAR: "regular",
   LONG_VISIT: "long_visit",
 }
 
-const CAMPUS_RISK_LEVEL = {
+export const CAMPUS_RISK_LEVEL = {
   NORMAL: "normal",
   YELLOW: "yellow",
   DANGER: "danger",
 }
 
-const MAX_ADVANCE_DAYS = 1
-const RETURN_CUTOFF_HOUR = 22
-const RETURN_CUTOFF_MINUTE = 30
-const YELLOW_ALERT_HOUR = 21
-const YELLOW_ALERT_MINUTE = 30
+export const MAX_ADVANCE_DAYS = 1
+export const RETURN_CUTOFF_HOUR = 22
+export const RETURN_CUTOFF_MINUTE = 30
+export const YELLOW_ALERT_HOUR = 21
+export const YELLOW_ALERT_MINUTE = 30
 
-const outpassInclude = {
+export const outpassInclude = {
   user: {
     select: userSelect,
   },
@@ -65,31 +65,31 @@ const outpassInclude = {
   },
 }
 
-const getStartOfDay = (value = new Date()) => {
+export const getStartOfDay = (value = new Date()) => {
   const date = new Date(value)
   date.setHours(0, 0, 0, 0)
   return date
 }
 
-const addDays = (value, days) => {
+export const addDays = (value, days) => {
   const date = new Date(value)
   date.setDate(date.getDate() + days)
   return date
 }
 
-const getDayRange = (value = new Date()) => {
+export const getDayRange = (value = new Date()) => {
   const start = getStartOfDay(value)
   const end = addDays(start, 1)
   return { start, end }
 }
 
-const getCutoffTimeForDate = (value, hours, minutes) => {
+export const getCutoffTimeForDate = (value, hours, minutes) => {
   const date = new Date(value)
   date.setHours(hours, minutes, 0, 0)
   return date
 }
 
-const toDate = (value) => {
+export const toDate = (value) => {
   if (!value) {
     return null
   }
@@ -98,7 +98,7 @@ const toDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-const combineDateAndTime = (dateValue, timeValue) => {
+export const combineDateAndTime = (dateValue, timeValue) => {
   const datePart = toDate(dateValue)
   const timePart = toDate(timeValue)
 
@@ -117,7 +117,7 @@ const combineDateAndTime = (dateValue, timeValue) => {
   return combined
 }
 
-const resolveOutpassDateTimes = (payload = {}) => {
+export const resolveOutpassDateTimes = (payload = {}) => {
   const exitDate =
     combineDateAndTime(payload.fromDate, payload.fromTime) ||
     combineDateAndTime(payload.outDate, payload.fromTime) ||
@@ -138,14 +138,14 @@ const resolveOutpassDateTimes = (payload = {}) => {
   }
 }
 
-const normalizeOutpassRequestType = (value) =>
+export const normalizeOutpassRequestType = (value) =>
   String(value || "")
     .trim()
     .toLowerCase() === OUTPASS_REQUEST_TYPE.LONG_VISIT
     ? OUTPASS_REQUEST_TYPE.LONG_VISIT
     : OUTPASS_REQUEST_TYPE.REGULAR
 
-const resolveOutpassRequestType = (payload = {}) => {
+export const resolveOutpassRequestType = (payload = {}) => {
   if (
     payload.longVisit === true ||
     String(payload.longVisit || "")
@@ -158,11 +158,11 @@ const resolveOutpassRequestType = (payload = {}) => {
   return normalizeOutpassRequestType(payload.requestType || payload.type)
 }
 
-const isLongVisitOutpass = (outpass) =>
+export const isLongVisitOutpass = (outpass) =>
   normalizeOutpassRequestType(outpass?.requestType || outpass?.type) ===
   OUTPASS_REQUEST_TYPE.LONG_VISIT
 
-const isSameCalendarDay = (left, right) => {
+export const isSameCalendarDay = (left, right) => {
   if (!left || !right) {
     return false
   }
@@ -174,17 +174,21 @@ const isSameCalendarDay = (left, right) => {
   )
 }
 
-const isWithinAdvanceWindow = (exitDate, now = new Date()) => {
+export const isWithinAdvanceWindow = (exitDate, now = new Date()) => {
   const startOfToday = getStartOfDay(now)
   const endOfTomorrow = addDays(startOfToday, MAX_ADVANCE_DAYS + 1)
   return exitDate >= startOfToday && exitDate < endOfTomorrow
 }
 
-const hasExitedForOutpass = (outpass, latestMovement) =>
+export const hasExitedForOutpass = (outpass, latestMovement) =>
   latestMovement?.action === "exit" &&
   latestMovement?.createdAt >= outpass.outDate
 
-const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
+export const getCampusRiskLevel = (
+  outpass,
+  latestMovement,
+  now = new Date(),
+) => {
   if (
     !outpass ||
     isLongVisitOutpass(outpass) ||
@@ -216,7 +220,7 @@ const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
   return CAMPUS_RISK_LEVEL.NORMAL
 }
 
-const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
+export const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
   if (!outpass) {
     return false
   }
@@ -232,7 +236,7 @@ const canUseOutpass = (outpass, latestMovement, now = new Date()) => {
   return outpass.outDate <= now && outpass.expectedReturnDate > now
 }
 
-const canCancelOutpass = (outpass, latestMovement, now = new Date()) => {
+export const canCancelOutpass = (outpass, latestMovement, now = new Date()) => {
   if (!outpass) {
     return false
   }
@@ -251,7 +255,7 @@ const canCancelOutpass = (outpass, latestMovement, now = new Date()) => {
   return outpass.expectedReturnDate > now
 }
 
-const validateOutpassWindow = ({
+export const validateOutpassWindow = ({
   exitDate,
   returnDate,
   requestType,
@@ -322,7 +326,11 @@ const buildEmergencyContact = (outpass) => {
   }
 }
 
-const deriveMonitoringState = (outpass, latestMovement, now = new Date()) => {
+export const deriveMonitoringState = (
+  outpass,
+  latestMovement,
+  now = new Date(),
+) => {
   if (outpass.actualReturnDate) {
     return outpass.status === "expired" ? "returned_late" : "returned"
   }
@@ -390,7 +398,7 @@ const deriveMonitoringState = (outpass, latestMovement, now = new Date()) => {
   return outpass.status
 }
 
-const buildOutpassResponse = (outpass, options = {}) => {
+export const buildOutpassResponse = (outpass, options = {}) => {
   const latestMovement = options.latestMovement || null
   const now = options.now || new Date()
   const auditTrail = Array.isArray(outpass.auditTrail)
@@ -483,7 +491,7 @@ const buildOutpassResponse = (outpass, options = {}) => {
   }
 }
 
-const getLatestMovementMap = async (prisma, userIds = []) => {
+export const getLatestMovementMap = async (prisma, userIds = []) => {
   const distinctUserIds = [...new Set(userIds.filter(Boolean))]
 
   if (distinctUserIds.length === 0) {
@@ -513,7 +521,7 @@ const getLatestMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
-const getLatestGateMovementMap = async (prisma, userIds = []) => {
+export const getLatestGateMovementMap = async (prisma, userIds = []) => {
   const distinctUserIds = [...new Set(userIds.filter(Boolean))]
 
   if (distinctUserIds.length === 0) {
@@ -547,7 +555,7 @@ const getLatestGateMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
-const getRecentMovementTrailMap = async (
+export const getRecentMovementTrailMap = async (
   prisma,
   userIds = [],
   limitPerUser = 3,
@@ -585,7 +593,7 @@ const getRecentMovementTrailMap = async (
   return movementMap
 }
 
-const expireOldOutpasses = async (prisma) => {
+export const expireOldOutpasses = async (prisma) => {
   const now = new Date()
 
   const expiredCandidates = await prisma.outpass.findMany({
@@ -655,38 +663,4 @@ const expireOldOutpasses = async (prisma) => {
   ])
 
   return outpassIds.length
-}
-
-module.exports = {
-  CAMPUS_RISK_LEVEL,
-  MAX_ADVANCE_DAYS,
-  OUTPASS_REQUEST_TYPE,
-  RETURN_CUTOFF_HOUR,
-  RETURN_CUTOFF_MINUTE,
-  YELLOW_ALERT_HOUR,
-  YELLOW_ALERT_MINUTE,
-  userSelect,
-  approverSelect,
-  outpassInclude,
-  getStartOfDay,
-  getDayRange,
-  getCutoffTimeForDate,
-  toDate,
-  combineDateAndTime,
-  resolveOutpassDateTimes,
-  normalizeOutpassRequestType,
-  resolveOutpassRequestType,
-  isLongVisitOutpass,
-  isSameCalendarDay,
-  hasExitedForOutpass,
-  getCampusRiskLevel,
-  canUseOutpass,
-  canCancelOutpass,
-  validateOutpassWindow,
-  buildOutpassResponse,
-  deriveMonitoringState,
-  getLatestMovementMap,
-  getLatestGateMovementMap,
-  getRecentMovementTrailMap,
-  expireOldOutpasses,
 }

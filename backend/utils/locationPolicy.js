@@ -1,5 +1,5 @@
-const EXIT_GATES = ["Gate 1", "Gate 2", "Gate 3 (Main Gate)", "Gate 4"]
-const CAMPUS_BUILDINGS = [
+export const EXIT_GATES = ["Gate 1", "Gate 2", "Gate 3 (Main Gate)", "Gate 4"]
+export const CAMPUS_BUILDINGS = [
   "Library",
   "SAC",
   "Auditorium",
@@ -9,12 +9,21 @@ const CAMPUS_BUILDINGS = [
   "AAA",
   "Lecture Theatre",
 ]
-const HOSTELS = ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
+export const HOSTELS = [
+  "BH 1",
+  "BH 2",
+  "BH 3",
+  "BH 4",
+  "BH 5",
+  "GH 1",
+  "GH 2",
+  "GH 3",
+]
 
-const GATE_EXIT_CUTOFF_HOUR = 18
-const GATE_EXIT_CUTOFF_MINUTE = 0
+export const GATE_EXIT_CUTOFF_HOUR = 18
+export const GATE_EXIT_CUTOFF_MINUTE = 0
 
-const normalizeLocationKey = (value) =>
+export const normalizeLocationKey = (value) =>
   String(value || "")
     .trim()
     .toLowerCase()
@@ -34,7 +43,7 @@ const locationAliases = new Map([
   ["lecture theatre", "Lecture Theatre"],
 ])
 
-const resolveCanonicalLocation = (value) => {
+export const resolveCanonicalLocation = (value) => {
   const normalized = normalizeLocationKey(value)
   if (!normalized) {
     return null
@@ -47,7 +56,7 @@ const resolveCanonicalLocation = (value) => {
   )
 }
 
-const classifyLocation = (value) => {
+export const classifyLocation = (value) => {
   const name = resolveCanonicalLocation(value)
 
   if (!name) {
@@ -69,38 +78,22 @@ const classifyLocation = (value) => {
   return { name, type: "unknown" }
 }
 
-const isExitGate = (value) => classifyLocation(value).type === "exit_gate"
+export const isExitGate = (value) =>
+  classifyLocation(value).type === "exit_gate"
 
-const isCampusBuilding = (value) =>
+export const isCampusBuilding = (value) =>
   classifyLocation(value).type === "campus_building"
 
-const isHostel = (value) => classifyLocation(value).type === "hostel"
+export const isHostel = (value) => classifyLocation(value).type === "hostel"
 
-const getGateExitCutoffTime = (value = new Date()) => {
+export const getGateExitCutoffTime = (value = new Date()) => {
   const cutoff = new Date(value)
   cutoff.setHours(GATE_EXIT_CUTOFF_HOUR, GATE_EXIT_CUTOFF_MINUTE, 0, 0)
   return cutoff
 }
 
-const isAfterGateExitCutoff = (value = new Date()) =>
+export const isAfterGateExitCutoff = (value = new Date()) =>
   value >= getGateExitCutoffTime(value)
 
-const requiresOutpassForExit = (location, now = new Date()) =>
+export const requiresOutpassForExit = (location, now = new Date()) =>
   isExitGate(location) && isAfterGateExitCutoff(now)
-
-module.exports = {
-  EXIT_GATES,
-  CAMPUS_BUILDINGS,
-  HOSTELS,
-  GATE_EXIT_CUTOFF_HOUR,
-  GATE_EXIT_CUTOFF_MINUTE,
-  normalizeLocationKey,
-  resolveCanonicalLocation,
-  classifyLocation,
-  isExitGate,
-  isCampusBuilding,
-  isHostel,
-  getGateExitCutoffTime,
-  isAfterGateExitCutoff,
-  requiresOutpassForExit,
-}

@@ -1,9 +1,9 @@
-const express = require("express")
-const { Prisma } = require("@prisma/client")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const adminAuth = require("../middleware/adminAuth")
-const { generateId } = require("../utils/hashGenerator")
+import express from "express"
+import { Prisma } from "@prisma/client"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import adminAuth from "../middleware/adminAuth.js"
+import { generateId } from "../utils/hashGenerator.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -473,4 +473,4 @@ router.get("/contacts", authenticate, async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

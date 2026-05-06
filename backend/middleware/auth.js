@@ -1,6 +1,6 @@
-const { verifyToken } = require("../config/jwt")
-const { getPrismaClient } = require("../config/prisma")
-const { userSelect, serializeUser } = require("../utils/userProfiles")
+import { verifyToken } from "../config/jwt.js"
+import { getPrismaClient } from "../config/prisma.js"
+import { userSelect, serializeUser } from "../utils/userProfiles.js"
 
 const prisma = getPrismaClient()
 
@@ -58,7 +58,4 @@ const authorize = (...roles) => {
   }
 }
 
-module.exports = {
-  authenticate,
-  authorize,
-}
+export { authenticate, authorize }

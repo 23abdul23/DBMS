@@ -1,14 +1,14 @@
-const { generateId } = require("./hashGenerator")
-const {
+import { generateId } from "./hashGenerator.js"
+import {
   getLibraryLimit,
   isLibOpenAt,
   LIB_CLOSE_LABEL,
-} = require("./campusActivityRules")
-const { canViewFullLibraryActivity } = require("./adminScopes")
+} from "./campusActivityRules.js"
+import { canViewFullLibraryActivity } from "./adminScopes.js"
 
-const LIBRARY_LOCATION = "Library"
+export const LIBRARY_LOCATION = "Library"
 
-const libraryUserSelect = {
+export const libraryUserSelect = {
   id: true,
   name: true,
   studentId: true,
@@ -19,7 +19,7 @@ const libraryUserSelect = {
   profilePhoto: true,
 }
 
-const buildLibraryStudentSummary = (user) => ({
+export const buildLibraryStudentSummary = (user) => ({
   id: user.id,
   name: user.name,
   studentId: user.studentId || null,
@@ -36,7 +36,7 @@ const activeSeatInclude = {
   },
 }
 
-const getActiveSeatSession = async (client, userId) =>
+export const getActiveSeatSession = async (client, userId) =>
   client.librarySeatSession.findFirst({
     where: {
       userId,
@@ -46,7 +46,7 @@ const getActiveSeatSession = async (client, userId) =>
     orderBy: [{ enteredAt: "desc" }, { id: "desc" }],
   })
 
-const getSeatSessionByNumber = async (client, seatNumber) =>
+export const getSeatSessionByNumber = async (client, seatNumber) =>
   client.librarySeatSession.findFirst({
     where: {
       seatNumber,
@@ -66,7 +66,7 @@ const sanitizeLibraryActivityItem = (item, includeUserDetails) => ({
   user: includeUserDetails ? item.user : null,
 })
 
-const getLibraryOverview = async (client, viewer) => {
+export const getLibraryOverview = async (client, viewer) => {
   const includeUserDetails = canViewFullLibraryActivity(viewer)
   const viewerUserId = viewer?.userId || viewer?.id || null
   const limit = getLibraryLimit()
@@ -170,7 +170,7 @@ const createSeatLog = async (
     },
   })
 
-const claimLibrarySeat = async (
+export const claimLibrarySeat = async (
   client,
   { userId, seatNumber, timestamp = new Date(), details = {} },
 ) => {
@@ -198,7 +198,7 @@ const claimLibrarySeat = async (
   return sessionId
 }
 
-const releaseLibrarySeat = async (
+export const releaseLibrarySeat = async (
   client,
   { session, timestamp = new Date(), details = {}, description = null },
 ) => {
@@ -227,15 +227,4 @@ const releaseLibrarySeat = async (
   })
 
   return session.id
-}
-
-module.exports = {
-  LIBRARY_LOCATION,
-  libraryUserSelect,
-  buildLibraryStudentSummary,
-  getActiveSeatSession,
-  getSeatSessionByNumber,
-  getLibraryOverview,
-  claimLibrarySeat,
-  releaseLibrarySeat,
 }

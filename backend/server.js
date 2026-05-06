@@ -1,35 +1,70 @@
-const express = require("express")
-const cors = require("cors")
-const helmet = require("helmet")
-const rateLimit = require("express-rate-limit")
-const cron = require("node-cron")
-require("dotenv").config()
+import dotenv from "dotenv"
 
-const {
-  connectDatabase,
-  disconnectDatabase,
-  getDatabaseMode,
-} = require("./config/database")
-const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
-const {
-  runCampusActivitySimulation,
-  runCampusClosingSweep,
-  CAMPUS_TIMEZONE,
-} = require("./utils/campusActivitySimulation")
-const { getPrismaClient } = require("./config/prisma")
-const { expireOldOutpasses } = require("./utils/outpassLifecycle")
+dotenv.config()
 
-// Import routes
-const authRoutes = require("./routes/authRoutes")
-const outpassRoutes = require("./routes/outpassRoutes")
-const emergencyRoutes = require("./routes/emergencyRoutes")
-const adminRoutes = require("./routes/adminRoutes")
-const securityRoutes = require("./routes/securityRoutes")
-const studentRoutes = require("./routes/studentRoutes")
-const wardenRoutes = require("./routes/wardenRoutes")
-const forgotRoutes = require("./routes/forgotRoute")
-const sacRoutes = require("./routes/sacRoutes")
-const libraryRoutes = require("./routes/libraryRoutes")
+const [
+  { default: express },
+  { default: cors },
+  { default: helmet },
+  { default: rateLimit },
+  { default: cron },
+  databaseModule,
+  passwordOtpModule,
+  campusActivitySimulationModule,
+  campusActivityRulesModule,
+  prismaModule,
+  outpassLifecycleModule,
+  authRoutesModule,
+  outpassRoutesModule,
+  emergencyRoutesModule,
+  adminRoutesModule,
+  securityRoutesModule,
+  studentRoutesModule,
+  wardenRoutesModule,
+  forgotRoutesModule,
+  sacRoutesModule,
+  libraryRoutesModule,
+] = await Promise.all([
+  import("express"),
+  import("cors"),
+  import("helmet"),
+  import("express-rate-limit"),
+  import("node-cron"),
+  import("./config/database.js"),
+  import("./utils/passwordOtp.js"),
+  import("./utils/campusActivitySimulation.js"),
+  import("./utils/campusActivityRules.js"),
+  import("./config/prisma.js"),
+  import("./utils/outpassLifecycle.js"),
+  import("./routes/authRoutes.js"),
+  import("./routes/outpassRoutes.js"),
+  import("./routes/emergencyRoutes.js"),
+  import("./routes/adminRoutes.js"),
+  import("./routes/securityRoutes.js"),
+  import("./routes/studentRoutes.js"),
+  import("./routes/wardenRoutes.js"),
+  import("./routes/forgotRoute.js"),
+  import("./routes/sacRoutes.js"),
+  import("./routes/libraryRoutes.js"),
+])
+
+const { connectDatabase, disconnectDatabase, getDatabaseMode } = databaseModule
+const { cleanupExpiredPasswordOtps } = passwordOtpModule
+const { runCampusActivitySimulation, runCampusClosingSweep } =
+  campusActivitySimulationModule
+const { CAMPUS_TIMEZONE } = campusActivityRulesModule
+const { getPrismaClient } = prismaModule
+const { expireOldOutpasses } = outpassLifecycleModule
+const authRoutes = authRoutesModule.default
+const outpassRoutes = outpassRoutesModule.default
+const emergencyRoutes = emergencyRoutesModule.default
+const adminRoutes = adminRoutesModule.default
+const securityRoutes = securityRoutesModule.default
+const studentRoutes = studentRoutesModule.default
+const wardenRoutes = wardenRoutesModule.default
+const forgotRoutes = forgotRoutesModule.default
+const sacRoutes = sacRoutesModule.default
+const libraryRoutes = libraryRoutesModule.default
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -67,7 +102,7 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
 })
 app.use(limiter)
@@ -136,7 +171,7 @@ cron.schedule(
 
 if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(
-    "*/40 * * * *",
+    "*/59 * * * *",
     async () => {
       try {
         const result = await runCampusActivitySimulation()
@@ -209,4 +244,4 @@ process.on("SIGTERM", () => shutdown("SIGTERM"))
 
 startServer()
 
-module.exports = app
+export default app

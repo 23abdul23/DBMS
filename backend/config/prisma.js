@@ -1,31 +1,22 @@
+import { PrismaClient } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
+
+const { Pool } = pg
+
 let prisma
-let PrismaClient
-
-const loadPrismaClient = () => {
-  if (!PrismaClient) {
-    try {
-      ;({ PrismaClient } = require("@prisma/client"))
-    } catch (error) {
-      throw new Error(
-        "Prisma client is not generated. Run npm run prisma:generate before using DB_MODE=sql or hybrid.",
-        { cause: error },
-      )
-    }
-  }
-
-  return PrismaClient
-}
 
 const getPrismaClient = () => {
   if (!prisma) {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required when DB_MODE is sql or hybrid")
     }
-    const PrismaClientClass = loadPrismaClient()
+
     // Prisma 7+ requires the PrismaPg adapter for PostgreSQL
-    const { PrismaPg } = require("@prisma/adapter-pg")
-    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
-    prisma = new PrismaClientClass({
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+    const adapter = new PrismaPg(pool)
+
+    prisma = new PrismaClient({
       adapter,
       log:
         process.env.NODE_ENV === "development"
@@ -52,8 +43,4 @@ const disconnectSQL = async () => {
   prisma = null
 }
 
-module.exports = {
-  getPrismaClient,
-  connectSQL,
-  disconnectSQL,
-}
+export { getPrismaClient, connectSQL, disconnectSQL }

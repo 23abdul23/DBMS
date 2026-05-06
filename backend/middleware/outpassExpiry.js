@@ -1,5 +1,5 @@
-const { getPrismaClient } = require("../config/prisma")
-const { expireOldOutpasses } = require("../utils/outpassLifecycle")
+import { getPrismaClient } from "../config/prisma.js"
+import { expireOldOutpasses } from "../utils/outpassLifecycle.js"
 
 const prisma = getPrismaClient()
 
@@ -19,4 +19,4 @@ const checkOutpassExpiry = async (req, res, next) => {
   }
 }
 
-module.exports = { checkOutpassExpiry }
+export { checkOutpassExpiry }

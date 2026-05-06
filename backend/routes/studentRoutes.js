@@ -1,16 +1,16 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const { userSelect, serializeUser } = require("../utils/userProfiles")
-const { sendMail } = require("../utils/mailer")
-const {
+import express from "express"
+import bcrypt from "bcryptjs"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import { userSelect, serializeUser } from "../utils/userProfiles.js"
+import { sendMail } from "../utils/mailer.js"
+import {
   PASSWORD_OTP_EXPIRY_SECONDS,
   cleanupExpiredPasswordOtps,
   createPasswordOtpRecord,
   generatePasswordOtp,
   hashPasswordOtp,
-} = require("../utils/passwordOtp")
+} from "../utils/passwordOtp.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -417,4 +417,4 @@ router.get("/logs", authenticate, async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

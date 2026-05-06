@@ -1,19 +1,19 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate, authorize } = require("../middleware/auth")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate, authorize } from "../middleware/auth.js"
+import {
   getLibraryLimit,
   isLibOpenAt,
   LIB_CLOSE_LABEL,
-} = require("../utils/campusActivityRules")
-const {
+} from "../utils/campusActivityRules.js"
+import {
   getActiveSeatSession,
   getSeatSessionByNumber,
   getLibraryOverview,
   claimLibrarySeat,
   releaseLibrarySeat,
-} = require("../utils/libraryActivity")
-const { isLibraryAdministrator } = require("../utils/adminScopes")
+} from "../utils/libraryActivity.js"
+import { isLibraryAdministrator } from "../utils/adminScopes.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -305,4 +305,4 @@ router.post("/admin/release-seat", authenticate, async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

@@ -7,7 +7,7 @@
  */
 
 // Academic Year enum values (as stored in database)
-const AcademicYearEnum = {
+export const AcademicYearEnum = {
   FIRST_YEAR: "FIRST_YEAR",
   SECOND_YEAR: "SECOND_YEAR",
   THIRD_YEAR: "THIRD_YEAR",
@@ -16,7 +16,7 @@ const AcademicYearEnum = {
 
 // Backend mapping for normalizing user input to enum values
 // This accepts various input formats and normalizes them to uppercase enum values
-const yearNormalizationMap = {
+export const yearNormalizationMap = {
   1: "FIRST_YEAR",
   2: "SECOND_YEAR",
   3: "THIRD_YEAR",
@@ -44,7 +44,7 @@ const yearNormalizationMap = {
 }
 
 // User Role enum values
-const UserRoleEnum = {
+export const UserRoleEnum = {
   student: "student",
   warden: "warden",
   security: "security",
@@ -52,23 +52,15 @@ const UserRoleEnum = {
 }
 
 // Gender enum values
-const GenderEnum = {
+export const GenderEnum = {
   male: "male",
   female: "female",
   other: "other",
 }
 
 // Department enum values
-const DepartmentEnum = {
+export const DepartmentEnum = {
   IT: "IT",
   IT_BI: "IT_BI",
   Electronics: "Electronics",
-}
-
-module.exports = {
-  AcademicYearEnum,
-  yearNormalizationMap,
-  UserRoleEnum,
-  GenderEnum,
-  DepartmentEnum,
 }

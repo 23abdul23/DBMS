@@ -1,14 +1,14 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const jwt = require("jsonwebtoken")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   userSelect,
   userSelectWithPassword,
   serializeUser,
-} = require("../utils/userProfiles")
+} from "../utils/userProfiles.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -615,4 +615,4 @@ router.get("/fetchProfile", async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

@@ -1,14 +1,13 @@
-const path = require("path")
-const { createRequire } = require("module")
+import dotenv from "dotenv"
+import path from "path"
+import { fileURLToPath } from "url"
+import { getPrismaClient, disconnectSQL } from "../config/prisma.js"
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 const backendRoot = path.resolve(__dirname, "..")
-const backendRequire = createRequire(path.join(backendRoot, "package.json"))
 
-backendRequire("dotenv").config({ path: path.join(backendRoot, ".env") })
-
-const { getPrismaClient, disconnectSQL } = require(
-  path.join(backendRoot, "config", "prisma"),
-)
+dotenv.config({ path: path.join(backendRoot, ".env") })
 
 const prisma = getPrismaClient()
 

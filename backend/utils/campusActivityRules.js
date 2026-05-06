@@ -44,7 +44,7 @@ const isSacOpenAt = (value = new Date(), timeZone = CAMPUS_TIMEZONE) =>
 const isLibOpenAt = (value = new Date(), timeZone = CAMPUS_TIMEZONE) =>
   getLocalizedMinutes(value, timeZone) < LIB_CLOSE_HOUR * 60 + LIB_CLOSE_MINUTE
 
-module.exports = {
+export {
   CAMPUS_TIMEZONE,
   SAC_CLOSE_HOUR,
   SAC_CLOSE_MINUTE,

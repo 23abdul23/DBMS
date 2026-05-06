@@ -1,4 +1,4 @@
-const profileSelect = {
+export const profileSelect = {
   studentProfile: {
     select: {
       userId: true,
@@ -24,7 +24,7 @@ const profileSelect = {
   },
 }
 
-const userSelect = {
+export const userSelect = {
   id: true,
   name: true,
   email: true,
@@ -45,27 +45,27 @@ const userSelect = {
   ...profileSelect,
 }
 
-const userSelectWithPassword = {
+export const userSelectWithPassword = {
   ...userSelect,
   passwordHash: true,
 }
 
-const getStudentProfile = (user) => user?.studentProfile || null
-const getWardenProfile = (user) => user?.wardenProfile || null
-const getSecurityProfile = (user) => user?.securityProfile || null
+export const getStudentProfile = (user) => user?.studentProfile || null
+export const getWardenProfile = (user) => user?.wardenProfile || null
+export const getSecurityProfile = (user) => user?.securityProfile || null
 
-const getUserStudentId = (user) =>
+export const getUserStudentId = (user) =>
   getStudentProfile(user)?.studentId || user?.studentId || null
-const getUserGuardId = (user) =>
+export const getUserGuardId = (user) =>
   getSecurityProfile(user)?.guardId || user?.guardId || null
-const getUserDepartment = (user) =>
+export const getUserDepartment = (user) =>
   getStudentProfile(user)?.department || user?.department || null
-const getUserYear = (user) =>
+export const getUserYear = (user) =>
   getStudentProfile(user)?.year || user?.year || null
-const getUserRoomNumber = (user) =>
+export const getUserRoomNumber = (user) =>
   getStudentProfile(user)?.roomNumber || user?.roomNumber || null
 
-const getUserHostel = (user) => {
+export const getUserHostel = (user) => {
   if (!user) {
     return null
   }
@@ -85,7 +85,7 @@ const getUserHostel = (user) => {
   return user.hostel || null
 }
 
-const getUserSecurityPost = (user) => {
+export const getUserSecurityPost = (user) => {
   if (!user) {
     return null
   }
@@ -96,7 +96,7 @@ const getUserSecurityPost = (user) => {
   )
 }
 
-const serializeUser = (user) => {
+export const serializeUser = (user) => {
   if (!user) {
     return null
   }
@@ -127,18 +127,4 @@ const serializeUser = (user) => {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   }
-}
-
-module.exports = {
-  profileSelect,
-  userSelect,
-  userSelectWithPassword,
-  serializeUser,
-  getUserHostel,
-  getUserStudentId,
-  getUserGuardId,
-  getUserDepartment,
-  getUserYear,
-  getUserRoomNumber,
-  getUserSecurityPost,
 }

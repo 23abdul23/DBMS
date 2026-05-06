@@ -1,13 +1,13 @@
-const { getPrismaClient } = require("../config/prisma")
-const { generateId } = require("./hashGenerator")
-const {
+import { getPrismaClient } from "../config/prisma.js"
+import { generateId } from "./hashGenerator.js"
+import {
   EXIT_GATES,
   CAMPUS_BUILDINGS,
   HOSTELS,
   isExitGate,
   isCampusBuilding,
-} = require("./locationPolicy")
-const {
+} from "./locationPolicy.js"
+import {
   OUTPASS_REQUEST_TYPE,
   RETURN_CUTOFF_HOUR,
   RETURN_CUTOFF_MINUTE,
@@ -17,28 +17,28 @@ const {
   getCutoffTimeForDate,
   getLatestGateMovementMap,
   getLatestMovementMap,
-} = require("./outpassLifecycle")
-const { SAC_CLUB_ROOMS, SAC_EQUIPMENT } = require("./sacCatalog")
-const {
+} from "./outpassLifecycle.js"
+import { SAC_CLUB_ROOMS, SAC_EQUIPMENT } from "./sacCatalog.js"
+import {
   CAMPUS_TIMEZONE,
   getLibraryLimit,
   getLocalizedMinutes,
   isLibOpenAt,
   isSacOpenAt,
-} = require("./campusActivityRules")
-const {
+} from "./campusActivityRules.js"
+import {
   LIBRARY_LOCATION,
   claimLibrarySeat,
   getActiveSeatSession,
   releaseLibrarySeat,
-} = require("./libraryActivity")
+} from "./libraryActivity.js"
 
 const prisma = getPrismaClient()
 
-const LIBRARY_TIMEZONE = CAMPUS_TIMEZONE
-const LEGACY_SIMULATION_SOURCE = "library_cron_simulation"
-const SIMULATION_SOURCE = "campus_cron_simulation"
-const CLOSING_SWEEP_SOURCE = "campus_closing_sweep"
+export const LIBRARY_TIMEZONE = CAMPUS_TIMEZONE
+export const LEGACY_SIMULATION_SOURCE = "library_cron_simulation"
+export const SIMULATION_SOURCE = "campus_cron_simulation"
+export const CLOSING_SWEEP_SOURCE = "campus_closing_sweep"
 const MOVEMENT_SCAN_TYPE = "manual"
 
 const ACADEMIC_BUILDINGS = CAMPUS_BUILDINGS.filter(
@@ -2168,7 +2168,7 @@ const buildCounters = () => ({
   sacClosures: 0,
 })
 
-const runCampusActivitySimulation = async (now = new Date()) => {
+export const runCampusActivitySimulation = async (now = new Date()) => {
   if (simulationInFlight) {
     return {
       skipped: true,
@@ -2359,7 +2359,7 @@ const runCampusActivitySimulation = async (now = new Date()) => {
   }
 }
 
-const runCampusClosingSweep = async (now = new Date()) => {
+export const runCampusClosingSweep = async (now = new Date()) => {
   if (closingSweepInFlight) {
     return {
       skipped: true,
@@ -2430,18 +2430,5 @@ const runCampusClosingSweep = async (now = new Date()) => {
   }
 }
 
-const runLibraryVisitSimulation = runCampusActivitySimulation
-const runLibraryClosingSweep = runCampusClosingSweep
-
-module.exports = {
-  LIBRARY_LOCATION,
-  LIBRARY_TIMEZONE,
-  CAMPUS_TIMEZONE,
-  SIMULATION_SOURCE,
-  LEGACY_SIMULATION_SOURCE,
-  CLOSING_SWEEP_SOURCE,
-  runCampusActivitySimulation,
-  runCampusClosingSweep,
-  runLibraryVisitSimulation,
-  runLibraryClosingSweep,
-}
+export const runLibraryVisitSimulation = runCampusActivitySimulation
+export const runLibraryClosingSweep = runCampusClosingSweep

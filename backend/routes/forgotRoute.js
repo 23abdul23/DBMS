@@ -1,8 +1,8 @@
-const dotenv = require("dotenv")
-const express = require("express")
-const bcrypt = require("bcrypt")
-const { getPrismaClient } = require("../config/prisma")
-const { sendMail } = require("../utils/mailer")
+import dotenv from "dotenv"
+import express from "express"
+import bcrypt from "bcryptjs"
+import { getPrismaClient } from "../config/prisma.js"
+import { sendMail } from "../utils/mailer.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -42,4 +42,4 @@ router.post("/", async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

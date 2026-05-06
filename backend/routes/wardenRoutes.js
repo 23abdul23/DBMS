@@ -1,8 +1,8 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate, authorize } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate, authorize } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   outpassInclude,
   buildOutpassResponse,
   getLatestMovementMap,
@@ -11,8 +11,8 @@ const {
   expireOldOutpasses,
   getDayRange,
   canCancelOutpass,
-} = require("../utils/outpassLifecycle")
-const { requiresOutpassForExit } = require("../utils/locationPolicy")
+} from "../utils/outpassLifecycle.js"
+import { requiresOutpassForExit } from "../utils/locationPolicy.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -751,4 +751,4 @@ router.get(
   },
 )
 
-module.exports = router
+export default router

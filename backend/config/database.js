@@ -1,4 +1,4 @@
-const { connectSQL, disconnectSQL } = require("./prisma")
+import { connectSQL, disconnectSQL } from "./prisma.js"
 
 const VALID_DB_MODES = ["sql"]
 
@@ -24,8 +24,4 @@ const disconnectDatabase = async () => {
   await disconnectSQL()
 }
 
-module.exports = {
-  connectDatabase,
-  disconnectDatabase,
-  getDatabaseMode,
-}
+export { connectDatabase, disconnectDatabase, getDatabaseMode }

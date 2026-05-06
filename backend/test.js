@@ -1,6 +1,7 @@
-require("dotenv").config()
+import dotenv from "dotenv"
+import { getPrismaClient, disconnectSQL } from "./config/prisma.js"
 
-const { getPrismaClient, disconnectSQL } = require("./config/prisma")
+dotenv.config()
 
 const prisma = getPrismaClient()
 

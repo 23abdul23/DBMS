@@ -1,4 +1,4 @@
-const SAC_CLUB_ROOMS = [
+export const SAC_CLUB_ROOMS = [
   "Virtuosi",
   "Sarasva",
   "GeneticX",
@@ -6,7 +6,7 @@ const SAC_CLUB_ROOMS = [
   "AMS",
 ]
 
-const SAC_EQUIPMENT = [
+export const SAC_EQUIPMENT = [
   "Table Tennis",
   "Tennis",
   "Carrom",
@@ -31,12 +31,7 @@ const resolveCatalogItem = (value, lookup) => {
   return lookup.get(value.trim().toLowerCase()) || null
 }
 
-const resolveClubRoom = (value) => resolveCatalogItem(value, clubRoomLookup)
-const resolveEquipment = (value) => resolveCatalogItem(value, equipmentLookup)
-
-module.exports = {
-  SAC_CLUB_ROOMS,
-  SAC_EQUIPMENT,
-  resolveClubRoom,
-  resolveEquipment,
-}
+export const resolveClubRoom = (value) =>
+  resolveCatalogItem(value, clubRoomLookup)
+export const resolveEquipment = (value) =>
+  resolveCatalogItem(value, equipmentLookup)
