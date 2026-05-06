@@ -1,19 +1,34 @@
-"use client"
+'use client';
 
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native"
-import { useMemo } from "react"
-import { FONTS, SIZES, SPACING } from "../utils/constants"
-import { useTheme } from "../context/ThemeContext"
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { useMemo } from 'react';
+import { FONTS, SIZES, SPACING } from '../utils/constants';
+import { useTheme } from '../context/ThemeContext';
 
 export default function FilterTabs({ options, activeFilter, onFilterChange }) {
-  const { colors } = useTheme()
-  const totalWidth = useMemo(() => options.length * 124, [options.length])
+  const { colors } = useTheme();
+  const totalWidth = useMemo(() => options.length * 124, [options.length]);
 
   return (
-    <View style={[styles.container, { backgroundColor: "transparent", borderBottomColor: colors.border }]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { minWidth: totalWidth }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: 'transparent', borderBottomColor: colors.border },
+      ]}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { minWidth: totalWidth }]}
+      >
         {options.map((option) => {
-          const active = activeFilter === option.key
+          const active = activeFilter === option.key;
 
           return (
             <TouchableOpacity
@@ -27,18 +42,41 @@ export default function FilterTabs({ options, activeFilter, onFilterChange }) {
               ]}
               onPress={() => onFilterChange(option.key)}
             >
-              <Text style={[styles.tabText, { color: active ? colors.onPrimary : colors.subText }]}>{option.label}</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: active ? colors.onPrimary : colors.subText },
+                ]}
+              >
+                {option.label}
+              </Text>
               {option.count > 0 ? (
-                <View style={[styles.badge, { backgroundColor: active ? "rgba(255,255,255,0.18)" : colors.cardElevated }]}>
-                  <Text style={[styles.badgeText, { color: active ? colors.onPrimary : colors.text }]}>{option.count}</Text>
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: active
+                        ? 'rgba(255,255,255,0.18)'
+                        : colors.cardElevated,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      { color: active ? colors.onPrimary : colors.text },
+                    ]}
+                  >
+                    {option.count}
+                  </Text>
                 </View>
               ) : null}
             </TouchableOpacity>
-          )
+          );
         })}
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -50,8 +88,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
   },
   tab: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     marginRight: SPACING.sm,
@@ -68,10 +106,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginLeft: SPACING.xs,
     minWidth: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   badgeText: {
     fontSize: SIZES.xs,
     fontFamily: FONTS.bold,
   },
-})
+});

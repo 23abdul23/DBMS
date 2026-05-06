@@ -5,7 +5,11 @@ const rateLimit = require("express-rate-limit")
 const cron = require("node-cron")
 require("dotenv").config()
 
-const { connectDatabase, disconnectDatabase, getDatabaseMode } = require("./config/database")
+const {
+  connectDatabase,
+  disconnectDatabase,
+  getDatabaseMode,
+} = require("./config/database")
 const { cleanupExpiredPasswordOtps } = require("./utils/passwordOtp")
 const {
   runCampusActivitySimulation,
@@ -38,35 +42,27 @@ const ENABLE_CAMPUS_SIMULATION =
 // Security middleware
 app.use(helmet())
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 
-  "http://localhost:3000", 
-  "http://172.19.13.123:3000",
-  "http://localhost:8081", // Expo web dev
-]
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow mobile apps, Postman, curl (no origin)
+      if (!origin) {
+        return callback(null, true)
+      }
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow mobile apps, Postman, curl (no origin)
-    if (!origin) {
-      return callback(null, true);
-    }
+      // Allow browser frontend if needed
+      const allowedOrigins = ["http://localhost:3000"]
 
-    // Allow browser frontend if needed
-    const allowedOrigins = [
-      "http://localhost:3000"
-    ];
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Allow mobile API access
-    return callback(null, true);
-  },
-  credentials: true
-}));
-
+      // Allow mobile API access
+      return callback(null, true)
+    },
+    credentials: true,
+  }),
+)
 
 // Rate limiting
 const limiter = rateLimit({
@@ -103,8 +99,6 @@ app.get("/api/health", (req, res) => {
   })
 })
 
-
-
 if (app._router && app._router.stack) {
   app._router.stack.forEach((r) => {
     if (r.route && r.route.path) {
@@ -129,7 +123,9 @@ cron.schedule(
     try {
       const expiredCount = await expireOldOutpasses(prisma)
       if (expiredCount > 0) {
-        console.log(`Nightly outpass expiry marked ${expiredCount} outpass(es) as expired.`)
+        console.log(
+          `Nightly outpass expiry marked ${expiredCount} outpass(es) as expired.`,
+        )
       }
     } catch (error) {
       console.error("Nightly outpass expiry cron failed:", error)
@@ -162,7 +158,9 @@ if (ENABLE_CAMPUS_SIMULATION) {
       try {
         const result = await runCampusClosingSweep()
         if (!result?.skipped) {
-          console.log(`Campus closing sweep settled ${result.settledCount} student(s) back to hostels.`)
+          console.log(
+            `Campus closing sweep settled ${result.settledCount} student(s) back to hostels.`,
+          )
         }
       } catch (error) {
         console.error("Campus closing sweep cron failed:", error)
@@ -173,7 +171,7 @@ if (ENABLE_CAMPUS_SIMULATION) {
 }
 
 // Error handling middleware (keep this above 404 handler)
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error(err.stack)
   res.status(500).json({
     message: "Something went wrong!",
@@ -185,8 +183,6 @@ app.use((err, req, res, next) => {
 app.all("*", (req, res) => {
   res.status(404).json({ message: "Route not found" })
 })
-
-
 
 const shutdown = async (signal) => {
   console.log(`${signal} received. Shutting down server...`)

@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
     "test:prisma": "node test.js",
     "sql": "node sql.js",
     "prisma:generate": "prisma generate --config ./prisma.config.ts --schema ./prisma/schema.prisma",
@@ -30,7 +35,10 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
     "nodemon": "^3.1.10",
+    "prettier": "^3.8.3",
     "prisma": "^7.7.0"
   }
 }

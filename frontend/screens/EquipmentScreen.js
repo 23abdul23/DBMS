@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -7,103 +7,119 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
-import { useAuth } from "../context/AuthContext"
-import LoadingSpinner from "../components/LoadingSpinner"
-import { sacAPI } from "../services/api"
-import { SAC_EQUIPMENT } from "../constants/sacCatalog"
-import { FONTS } from "../utils/constants"
-import { CONTENT_MAX_WIDTH } from "../utils/responsiveLayout"
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { sacAPI } from '../services/api';
+import { SAC_EQUIPMENT } from '../constants/sacCatalog';
+import { FONTS } from '../utils/constants';
+import { CONTENT_MAX_WIDTH } from '../utils/responsiveLayout';
 
 const formatTime = (value) => {
   if (!value) {
-    return ""
+    return '';
   }
 
   return new Date(value).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  })
-}
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 export default function EquipmentScreen({ navigation, route }) {
-  const { colors, isDarkMode, toggleTheme } = useTheme()
-  const { user } = useAuth()
-  const [overview, setOverview] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [submittingKey, setSubmittingKey] = useState(null)
+  const { colors, isDarkMode, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [submittingKey, setSubmittingKey] = useState(null);
 
-  const entrySource = route?.params?.entrySource || "manual"
+  const entrySource = route?.params?.entrySource || 'manual';
 
-  const activeEquipment = overview?.myStatus?.activeEquipment || []
-  const currentEquipment = activeEquipment[0] || null
-  const myEquipmentSet = useMemo(() => new Set(activeEquipment.map((item) => item.name)), [activeEquipment])
-  const hasAnyActiveEquipment = activeEquipment.length > 0
+  const activeEquipment = overview?.myStatus?.activeEquipment || [];
+  const currentEquipment = activeEquipment[0] || null;
+  const myEquipmentSet = useMemo(
+    () => new Set(activeEquipment.map((item) => item.name)),
+    [activeEquipment]
+  );
+  const hasAnyActiveEquipment = activeEquipment.length > 0;
   const equipmentActivity = (overview?.activityFeed || []).filter(
-    (item) => item.type === "equipment_checked_out" || item.type === "equipment_returned",
-  )
-  const equipmentStateMap = new Map((overview?.equipment || []).map((equipment) => [equipment.name, equipment]))
+    (item) =>
+      item.type === 'equipment_checked_out' ||
+      item.type === 'equipment_returned'
+  );
+  const equipmentStateMap = new Map(
+    (overview?.equipment || []).map((equipment) => [equipment.name, equipment])
+  );
 
   const loadOverview = async (nextLoading = false) => {
     try {
       if (nextLoading) {
-        setLoading(true)
+        setLoading(true);
       }
 
-      const response = await sacAPI.getOverview()
-      setOverview(response?.data?.overview || null)
+      const response = await sacAPI.getOverview();
+      setOverview(response?.data?.overview || null);
     } catch (error) {
-      console.log("Equipment overview error:", error?.response?.data || error)
-      Alert.alert("SAC Error", error?.response?.data?.message || "Unable to load equipment activity right now.")
+      console.log('Equipment overview error:', error?.response?.data || error);
+      Alert.alert(
+        'SAC Error',
+        error?.response?.data?.message ||
+          'Unable to load equipment activity right now.'
+      );
     } finally {
       if (nextLoading) {
-        setLoading(false)
+        setLoading(false);
       }
     }
-  }
+  };
 
   useEffect(() => {
-    loadOverview(true)
-  }, [])
+    loadOverview(true);
+  }, []);
 
   const onRefresh = async () => {
     try {
-      setRefreshing(true)
-      await loadOverview(false)
+      setRefreshing(true);
+      await loadOverview(false);
     } finally {
-      setRefreshing(false)
+      setRefreshing(false);
     }
-  }
+  };
 
   const runAction = async (key, action, fallbackMessage) => {
     try {
-      setSubmittingKey(key)
-      const response = await action()
-      setOverview(response?.data?.overview || null)
-      Alert.alert("SAC Updated", response?.data?.message || fallbackMessage)
+      setSubmittingKey(key);
+      const response = await action();
+      setOverview(response?.data?.overview || null);
+      Alert.alert('SAC Updated', response?.data?.message || fallbackMessage);
     } catch (error) {
-      console.log("Equipment action error:", error?.response?.data || error)
-      Alert.alert("Action Failed", error?.response?.data?.message || fallbackMessage)
+      console.log('Equipment action error:', error?.response?.data || error);
+      Alert.alert(
+        'Action Failed',
+        error?.response?.data?.message || fallbackMessage
+      );
     } finally {
-      setSubmittingKey(null)
+      setSubmittingKey(null);
     }
-  }
+  };
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         showsVerticalScrollIndicator={false}
       >
         <View
@@ -116,16 +132,28 @@ export default function EquipmentScreen({ navigation, route }) {
             borderBottomColor: colors.border,
           }}
         >
-          <View style={{ width: "100%", alignSelf: "center", maxWidth: CONTENT_MAX_WIDTH }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View
+            style={{
+              width: '100%',
+              alignSelf: 'center',
+              maxWidth: CONTENT_MAX_WIDTH,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={{
                   width: 44,
                   height: 44,
                   borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
@@ -134,7 +162,15 @@ export default function EquipmentScreen({ navigation, route }) {
                 <Ionicons name="arrow-back" size={22} color={colors.text} />
               </TouchableOpacity>
 
-              <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 22 }}>Equipments</Text>
+              <Text
+                style={{
+                  color: colors.heading,
+                  fontFamily: FONTS.bold,
+                  fontSize: 22,
+                }}
+              >
+                Equipments
+              </Text>
 
               <TouchableOpacity
                 onPress={toggleTheme}
@@ -142,14 +178,18 @@ export default function EquipmentScreen({ navigation, route }) {
                   width: 44,
                   height: 44,
                   borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   backgroundColor: colors.cardElevated,
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
               >
-                <Ionicons name={isDarkMode ? "sunny" : "moon"} size={22} color={colors.text} />
+                <Ionicons
+                  name={isDarkMode ? 'sunny' : 'moon'}
+                  size={22}
+                  color={colors.text}
+                />
               </TouchableOpacity>
             </View>
 
@@ -163,26 +203,44 @@ export default function EquipmentScreen({ navigation, route }) {
                 borderColor: colors.border,
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                 <View
                   style={{
                     width: 54,
                     height: 54,
                     borderRadius: 18,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: entrySource === "qr" ? colors.successSoft : colors.primarySoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor:
+                      entrySource === 'qr'
+                        ? colors.successSoft
+                        : colors.primarySoft,
                   }}
                 >
                   <Ionicons
-                    name={entrySource === "qr" ? "qr-code-outline" : "football-outline"}
+                    name={
+                      entrySource === 'qr'
+                        ? 'qr-code-outline'
+                        : 'football-outline'
+                    }
                     size={26}
-                    color={entrySource === "qr" ? colors.success : colors.primary}
+                    color={
+                      entrySource === 'qr' ? colors.success : colors.primary
+                    }
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 18, marginTop: 15, marginLeft: 20 }}>Shared Equipment</Text>
-                  
+                  <Text
+                    style={{
+                      color: colors.heading,
+                      fontFamily: FONTS.bold,
+                      fontSize: 18,
+                      marginTop: 15,
+                      marginLeft: 20,
+                    }}
+                  >
+                    Shared Equipment
+                  </Text>
                 </View>
               </View>
             </View>
@@ -191,33 +249,39 @@ export default function EquipmentScreen({ navigation, route }) {
 
         <View
           style={{
-            width: "100%",
-            alignSelf: "center",
+            width: '100%',
+            alignSelf: 'center',
             maxWidth: CONTENT_MAX_WIDTH,
             paddingHorizontal: 18,
             paddingTop: 18,
           }}
         >
-          <View style={{ flexDirection: "row", flexWrap: "nowrap", marginBottom: 4 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              marginBottom: 4,
+            }}
+          >
             {[
               {
-                label: "In Use",
+                label: 'In Use',
                 value: overview?.summary?.equipmentInUse || 0,
-                icon: "football-outline",
+                icon: 'football-outline',
                 toneBg: colors.primarySoft,
                 toneFg: colors.primary,
               },
               {
-                label: "Equipment Types",
+                label: 'Equipment Types',
                 value: overview?.summary?.activeEquipmentTypes || 0,
-                icon: "apps-outline",
+                icon: 'apps-outline',
                 toneBg: colors.accentSoft,
                 toneFg: colors.accent,
               },
               {
-                label: "Your Items",
+                label: 'Your Items',
                 value: overview?.myStatus?.activeEquipment?.length || 0,
-                icon: "person-outline",
+                icon: 'person-outline',
                 toneBg: colors.warningSoft,
                 toneFg: colors.warning,
               },
@@ -240,16 +304,31 @@ export default function EquipmentScreen({ navigation, route }) {
                     width: 38,
                     height: 38,
                     borderRadius: 14,
-                    alignItems: "center",
-                    justifyContent: "center",
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     backgroundColor: stat.toneBg,
                     marginBottom: 10,
                   }}
                 >
                   <Ionicons name={stat.icon} size={18} color={stat.toneFg} />
                 </View>
-                <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20 }}>{stat.value}</Text>
-                <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 }}>
+                <Text
+                  style={{
+                    color: colors.heading,
+                    fontFamily: FONTS.bold,
+                    fontSize: 20,
+                  }}
+                >
+                  {stat.value}
+                </Text>
+                <Text
+                  style={{
+                    color: colors.subText,
+                    fontFamily: FONTS.regular,
+                    fontSize: 12,
+                    marginTop: 3,
+                  }}
+                >
                   {stat.label}
                 </Text>
               </View>
@@ -257,11 +336,15 @@ export default function EquipmentScreen({ navigation, route }) {
           </View>
 
           {SAC_EQUIPMENT.map((item) => {
-            const equipmentState = equipmentStateMap.get(item.name)
+            const equipmentState = equipmentStateMap.get(item.name);
             const userHasItem =
-              equipmentState?.isCheckedOutByCurrentUser || myEquipmentSet.has(item.name) || false
-            const hasAnotherItem = hasAnyActiveEquipment && !userHasItem
-            const isBusy = submittingKey === `equipment-select-${item.name}` || submittingKey === `equipment-return-${item.name}`
+              equipmentState?.isCheckedOutByCurrentUser ||
+              myEquipmentSet.has(item.name) ||
+              false;
+            const hasAnotherItem = hasAnyActiveEquipment && !userHasItem;
+            const isBusy =
+              submittingKey === `equipment-select-${item.name}` ||
+              submittingKey === `equipment-return-${item.name}`;
 
             return (
               <View
@@ -275,25 +358,47 @@ export default function EquipmentScreen({ navigation, route }) {
                   padding: 16,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View
                     style={{
                       width: 48,
                       height: 48,
                       borderRadius: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: userHasItem ? colors.successSoft : colors.primarySoft,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: userHasItem
+                        ? colors.successSoft
+                        : colors.primarySoft,
                       marginRight: 14,
                     }}
                   >
-                    <Ionicons name={item.icon} size={22} color={userHasItem ? colors.success : colors.primary} />
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      color={userHasItem ? colors.success : colors.primary}
+                    />
                   </View>
 
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 16 }}>{item.name}</Text>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13, marginTop: 3 }}>
-                      {equipmentState?.activeCount || 0} active checkout{equipmentState?.activeCount === 1 ? "" : "s"}
+                    <Text
+                      style={{
+                        color: colors.heading,
+                        fontFamily: FONTS.bold,
+                        fontSize: 16,
+                      }}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.subText,
+                        fontFamily: FONTS.regular,
+                        fontSize: 13,
+                        marginTop: 3,
+                      }}
+                    >
+                      {equipmentState?.activeCount || 0} active checkout
+                      {equipmentState?.activeCount === 1 ? '' : 's'}
                     </Text>
                   </View>
 
@@ -307,7 +412,13 @@ export default function EquipmentScreen({ navigation, route }) {
                       borderColor: colors.border,
                     }}
                   >
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 12 }}>
+                    <Text
+                      style={{
+                        color: colors.heading,
+                        fontFamily: FONTS.bold,
+                        fontSize: 12,
+                      }}
+                    >
                       Count {equipmentState?.activeCount || 0}
                     </Text>
                   </View>
@@ -318,23 +429,34 @@ export default function EquipmentScreen({ navigation, route }) {
                     marginTop: 14,
                     borderRadius: 18,
                     padding: 14,
-                    backgroundColor: userHasItem ? colors.successSoft : colors.cardMuted,
+                    backgroundColor: userHasItem
+                      ? colors.successSoft
+                      : colors.cardMuted,
                     borderWidth: 1,
                     borderColor: colors.border,
                   }}
                 >
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 4 }}>
+                  <Text
+                    style={{
+                      color: colors.subText,
+                      fontFamily: FONTS.regular,
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
                     {userHasItem
                       ? `Assigned since ${formatTime(
-                          activeEquipment.find((entry) => entry.name === item.name)?.checkedOutAt,
+                          activeEquipment.find(
+                            (entry) => entry.name === item.name
+                          )?.checkedOutAt
                         )}`
                       : hasAnotherItem
-                        ? `You already have ${currentEquipment?.name}. SAC admin must mark it returned first.`
-                      : "No one has taken this Equipment."}
+                      ? `You already have ${currentEquipment?.name}. SAC admin must mark it returned first.`
+                      : 'No one has taken this Equipment.'}
                   </Text>
                 </View>
 
-                {user?.role === "student" ? (
+                {user?.role === 'student' ? (
                   <TouchableOpacity
                     disabled={isBusy || hasAnyActiveEquipment}
                     onPress={() =>
@@ -342,15 +464,17 @@ export default function EquipmentScreen({ navigation, route }) {
                       runAction(
                         `equipment-select-${item.name}`,
                         () => sacAPI.selectEquipment(item.name),
-                        `Unable to mark ${item.name} as taken.`,
+                        `Unable to mark ${item.name} as taken.`
                       )
                     }
                     style={{
                       marginTop: 14,
                       borderRadius: 18,
                       paddingVertical: 14,
-                      alignItems: "center",
-                      backgroundColor: hasAnyActiveEquipment ? colors.cardMuted : colors.accent,
+                      alignItems: 'center',
+                      backgroundColor: hasAnyActiveEquipment
+                        ? colors.cardMuted
+                        : colors.accent,
                       borderWidth: hasAnyActiveEquipment ? 1 : 0,
                       borderColor: colors.border,
                       opacity: isBusy || hasAnyActiveEquipment ? 0.6 : 1,
@@ -358,24 +482,36 @@ export default function EquipmentScreen({ navigation, route }) {
                   >
                     <Text
                       style={{
-                        color: hasAnyActiveEquipment ? colors.subText : colors.buttonTextOnSolid,
+                        color: hasAnyActiveEquipment
+                          ? colors.subText
+                          : colors.buttonTextOnSolid,
                         fontFamily: FONTS.bold,
                         fontSize: 14,
                       }}
                     >
                       {userHasItem
-                        ? "Awaiting SAC admin return"
+                        ? 'Awaiting SAC admin return'
                         : hasAnotherItem
-                          ? `Return ${currentEquipment?.name || "current item"} first`
-                          : "Take Equipment"}
+                        ? `Return ${
+                            currentEquipment?.name || 'current item'
+                          } first`
+                        : 'Take Equipment'}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
-            )
+            );
           })}
 
-          <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 20, marginBottom: 12, marginTop: 8 }}>
+          <Text
+            style={{
+              color: colors.heading,
+              fontFamily: FONTS.bold,
+              fontSize: 20,
+              marginBottom: 12,
+              marginTop: 8,
+            }}
+          >
             Equipment Activity
           </Text>
           <View
@@ -390,12 +526,15 @@ export default function EquipmentScreen({ navigation, route }) {
             {equipmentActivity.length ? (
               equipmentActivity.map((activity, index) => (
                 <View
-                  key={`${activity.id || activity.type}-${activity.timestamp}-${index}`}
+                  key={`${activity.id || activity.type}-${
+                    activity.timestamp
+                  }-${index}`}
                   style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
                     paddingVertical: 10,
-                    borderBottomWidth: index === equipmentActivity.length - 1 ? 0 : 1,
+                    borderBottomWidth:
+                      index === equipmentActivity.length - 1 ? 0 : 1,
                     borderBottomColor: colors.divider,
                   }}
                 >
@@ -404,32 +543,70 @@ export default function EquipmentScreen({ navigation, route }) {
                       width: 42,
                       height: 42,
                       borderRadius: 14,
-                      alignItems: "center",
-                      justifyContent: "center",
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       backgroundColor:
-                        activity.type === "equipment_returned" ? colors.successSoft : colors.primarySoft,
+                        activity.type === 'equipment_returned'
+                          ? colors.successSoft
+                          : colors.primarySoft,
                       marginRight: 12,
                     }}
                   >
                     <Ionicons
-                      name={activity.type === "equipment_returned" ? "checkmark-circle-outline" : "football-outline"}
+                      name={
+                        activity.type === 'equipment_returned'
+                          ? 'checkmark-circle-outline'
+                          : 'football-outline'
+                      }
                       size={20}
-                      color={activity.type === "equipment_returned" ? colors.success : colors.primary}
+                      color={
+                        activity.type === 'equipment_returned'
+                          ? colors.success
+                          : colors.primary
+                      }
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.heading, fontFamily: FONTS.bold, fontSize: 14 }}>{activity.title}</Text>
-                    <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 }}>
+                    <Text
+                      style={{
+                        color: colors.heading,
+                        fontFamily: FONTS.bold,
+                        fontSize: 14,
+                      }}
+                    >
+                      {activity.title}
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.subText,
+                        fontFamily: FONTS.regular,
+                        fontSize: 12,
+                        marginTop: 3,
+                      }}
+                    >
                       {activity.subtitle}
                     </Text>
                   </View>
-                  <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 12, marginLeft: 12 }}>
+                  <Text
+                    style={{
+                      color: colors.subText,
+                      fontFamily: FONTS.regular,
+                      fontSize: 12,
+                      marginLeft: 12,
+                    }}
+                  >
                     {formatTime(activity.timestamp)}
                   </Text>
                 </View>
               ))
             ) : (
-              <Text style={{ color: colors.subText, fontFamily: FONTS.regular, fontSize: 13 }}>
+              <Text
+                style={{
+                  color: colors.subText,
+                  fontFamily: FONTS.regular,
+                  fontSize: 13,
+                }}
+              >
                 No equipment activity yet.
               </Text>
             )}
@@ -437,5 +614,5 @@ export default function EquipmentScreen({ navigation, route }) {
         </View>
       </ScrollView>
     </SafeAreaView>
-  )
+  );
 }

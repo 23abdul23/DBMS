@@ -33,7 +33,8 @@ const logUserSelect = {
   studentId: true,
 }
 
-const parsePage = (value, fallback) => Math.max(Number.parseInt(value, 10) || fallback, 1)
+const parsePage = (value, fallback) =>
+  Math.max(Number.parseInt(value, 10) || fallback, 1)
 
 // Get dashboard statistics
 router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
@@ -44,12 +45,15 @@ router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const [totalStudents, pendingOutpasses, activeEmergencies, todayLogs] = await Promise.all([
-      prisma.user.count({ where: { role: "student" } }),
-      prisma.outpass.count({ where: { status: "pending" } }),
-      prisma.emergency.count({ where: { status: "active" } }),
-      prisma.log.count({ where: { createdAt: { gte: today, lt: tomorrow } } }),
-    ])
+    const [totalStudents, pendingOutpasses, activeEmergencies, todayLogs] =
+      await Promise.all([
+        prisma.user.count({ where: { role: "student" } }),
+        prisma.outpass.count({ where: { status: "pending" } }),
+        prisma.emergency.count({ where: { status: "active" } }),
+        prisma.log.count({
+          where: { createdAt: { gte: today, lt: tomorrow } },
+        }),
+      ])
 
     res.json({
       totalStudents,
@@ -59,7 +63,9 @@ router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
     })
   } catch (error) {
     console.error("Dashboard stats error:", error)
-    res.status(500).json({ message: "Server error fetching dashboard statistics" })
+    res
+      .status(500)
+      .json({ message: "Server error fetching dashboard statistics" })
   }
 })
 
@@ -280,7 +286,9 @@ router.get("/hostels/stats", [authenticate, adminAuth], async (req, res) => {
       hostelMap.get(hostelName).pendingOutpasses += 1
     }
 
-    const hostelStats = Array.from(hostelMap.values()).sort((left, right) => left._id.localeCompare(right._id))
+    const hostelStats = Array.from(hostelMap.values()).sort((left, right) =>
+      left._id.localeCompare(right._id),
+    )
 
     res.json({ hostelStats })
   } catch (error) {
@@ -290,43 +298,50 @@ router.get("/hostels/stats", [authenticate, adminAuth], async (req, res) => {
 })
 
 // Update student status (active/inactive)
-router.put("/students/:id/status", [authenticate, adminAuth], async (req, res) => {
-  try {
-    const { isActive } = req.body
-    const nextIsActive = typeof isActive === "string" ? isActive.toLowerCase() === "true" : !!isActive
+router.put(
+  "/students/:id/status",
+  [authenticate, adminAuth],
+  async (req, res) => {
+    try {
+      const { isActive } = req.body
+      const nextIsActive =
+        typeof isActive === "string"
+          ? isActive.toLowerCase() === "true"
+          : !!isActive
 
-    const student = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { isActive: nextIsActive },
-      select: userSelect,
-    })
+      const student = await prisma.user.update({
+        where: { id: req.params.id },
+        data: { isActive: nextIsActive },
+        select: userSelect,
+      })
 
-    await prisma.log.create({
-      data: {
-        id: generateId(),
-        userId: req.params.id,
-        action: "user_status_updated",
-        success: true,
-        details: {
-          message: `Student status updated to ${nextIsActive ? "active" : "inactive"} by admin`,
+      await prisma.log.create({
+        data: {
+          id: generateId(),
+          userId: req.params.id,
+          action: "user_status_updated",
+          success: true,
+          details: {
+            message: `Student status updated to ${nextIsActive ? "active" : "inactive"} by admin`,
+          },
+          scanType: "manual",
         },
-        scanType: "manual",
-      },
-    })
+      })
 
-    res.json({
-      message: "Student status updated successfully",
-      student,
-    })
-  } catch (error) {
-    console.error("Student status update error:", error)
+      res.json({
+        message: "Student status updated successfully",
+        student,
+      })
+    } catch (error) {
+      console.error("Student status update error:", error)
 
-    if (error.code === "P2025") {
-      return res.status(404).json({ message: "Student not found" })
+      if (error.code === "P2025") {
+        return res.status(404).json({ message: "Student not found" })
+      }
+
+      res.status(500).json({ message: "Server error updating student status" })
     }
-
-    res.status(500).json({ message: "Server error updating student status" })
-  }
-})
+  },
+)
 
 module.exports = router

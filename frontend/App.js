@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Platform, StyleSheet, View } from 'react-native';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+} from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -19,17 +23,19 @@ import EquipmentScreen from './screens/EquipmentScreen';
 import SACAdminScreen from './screens/SACAdminScreen';
 import SACAdminClubRoomScreen from './screens/SACAdminClubRoomScreen';
 import SACAdminEquipmentScreen from './screens/SACAdminEquipmentScreen';
-import CreateOutpassScreen from "./screens/CreateOutpassScreen"
+import CreateOutpassScreen from './screens/CreateOutpassScreen';
 import Scanner from './screens/ScannerScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import LibraryAdminScreen from './screens/LibraryAdminScreen';
 import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import { StackScreen } from 'react-native-screens';
 import GuardDashboardScreen from './screens/GuardScreen';
 import AppStartupSplash from './components/AppStartupSplash';
 import { useTheme } from './context/ThemeContext';
-import { isLibraryAdministrator, isSacAdministrator } from './utils/adminScopes';
+import {
+  isLibraryAdministrator,
+  isSacAdministrator,
+} from './utils/adminScopes';
 const Stack = createStackNavigator();
 
 function RootNavigator() {
@@ -51,68 +57,86 @@ function RootNavigator() {
       primary: colors.primary,
       notification: colors.danger,
     },
-  }
+  };
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
-        user.role == 'student' ? (
-        <>
-          <Stack.Screen name="Main" component={MainTabNavigator} />
-          <Stack.Screen name="SAC" component={SACScreen} />
-          <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
-          <Stack.Screen name="Equipments" component={EquipmentScreen} />
-          <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
-          <Stack.Screen name="Scan" component={Scanner} />  
-          <Stack.Screen name="Library" component={LibraryScreen} /> 
-        </>
-        ) : user.role == 'warden' ? (
-        <>
-          <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
-        </>
-        ) : isSacAdministrator(user) ? (
-        <>
-          <Stack.Screen name="SacAdminMain" component={SacAdminTabNavigator} />
-        </>
-        ) : isLibraryAdministrator(user) ? (
-        <>
-          <Stack.Screen name="LibraryAdminMain" component={LibraryAdminTabNavigator} />
-        </>
-        ) :
-        (<>
-          <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="SAC" component={SACAdminScreen} />
-          <Stack.Screen name="ClubRooms" component={SACAdminClubRoomScreen} />
-          <Stack.Screen name="Equipments" component={SACAdminEquipmentScreen} />
-          <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen} />
-          <Stack.Screen name="Scan" component={Scanner} />  
-          <Stack.Screen name="Library" component={LibraryAdminScreen} />
-          <Stack.Screen name="LogBook" component={LogBook} />
-        </>)  
-      ) : (
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </>
-      )}
-
+        {user ? (
+          user.role === 'student' ? (
+            <>
+              <Stack.Screen name="Main" component={MainTabNavigator} />
+              <Stack.Screen name="SAC" component={SACScreen} />
+              <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
+              <Stack.Screen name="Equipments" component={EquipmentScreen} />
+              <Stack.Screen
+                name="CreateOutpass"
+                component={CreateOutpassScreen}
+              />
+              <Stack.Screen name="Scan" component={Scanner} />
+              <Stack.Screen name="Library" component={LibraryScreen} />
+            </>
+          ) : user.role === 'warden' ? (
+            <>
+              <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
+            </>
+          ) : isSacAdministrator(user) ? (
+            <>
+              <Stack.Screen
+                name="SacAdminMain"
+                component={SacAdminTabNavigator}
+              />
+            </>
+          ) : isLibraryAdministrator(user) ? (
+            <>
+              <Stack.Screen
+                name="LibraryAdminMain"
+                component={LibraryAdminTabNavigator}
+              />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="SAC" component={SACAdminScreen} />
+              <Stack.Screen
+                name="ClubRooms"
+                component={SACAdminClubRoomScreen}
+              />
+              <Stack.Screen
+                name="Equipments"
+                component={SACAdminEquipmentScreen}
+              />
+              <Stack.Screen
+                name="CreateOutpass"
+                component={CreateOutpassScreen}
+              />
+              <Stack.Screen name="Scan" component={Scanner} />
+              <Stack.Screen name="Library" component={LibraryAdminScreen} />
+              <Stack.Screen name="LogBook" component={LogBook} />
+            </>
+          )
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default function App() {
-  const [showStartupSplash, setShowStartupSplash] = useState(true)
+  const [showStartupSplash, setShowStartupSplash] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setShowStartupSplash(false)
-    }, 2000)
+      setShowStartupSplash(false);
+    }, 2000);
 
-    return () => clearTimeout(timer)
-  }, [])
+    return () => clearTimeout(timer);
+  }, []);
 
   const content = (
     <LocationProvider>
@@ -129,9 +153,12 @@ export default function App() {
           {showStartupSplash ? (
             <AppStartupSplash />
           ) : (
-          <ScrollView contentContainerStyle={styles.webContainer} style={{ flex: 1 }}>
-            <View style={styles.inner}>{content}</View>
-          </ScrollView>
+            <ScrollView
+              contentContainerStyle={styles.webContainer}
+              style={{ flex: 1 }}
+            >
+              <View style={styles.inner}>{content}</View>
+            </ScrollView>
           )}
         </ThemeProvider>
       </SafeAreaProvider>

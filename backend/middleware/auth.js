@@ -9,7 +9,9 @@ const authenticate = async (req, res, next) => {
     const token = req.header("Authorization")?.replace("Bearer ", "")
 
     if (!token) {
-      return res.status(401).json({ message: "Access denied. No token provided." })
+      return res
+        .status(401)
+        .json({ message: "Access denied. No token provided." })
     }
 
     const decoded = verifyToken(token)
@@ -22,7 +24,9 @@ const authenticate = async (req, res, next) => {
     })
 
     if (!user || (typeof user.isActive === "boolean" && !user.isActive)) {
-      return res.status(401).json({ message: "Invalid token or user not found." })
+      return res
+        .status(401)
+        .json({ message: "Invalid token or user not found." })
     }
 
     req.user = {
@@ -39,7 +43,9 @@ const authenticate = async (req, res, next) => {
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: "Access denied. Please authenticate." })
+      return res
+        .status(401)
+        .json({ message: "Access denied. Please authenticate." })
     }
 
     if (!roles.includes(req.user.role)) {

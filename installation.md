@@ -22,6 +22,12 @@ cd <your-repository-folder>
 
 ## 3. Install Dependencies
 
+Install the root tooling once so the pre-commit hook can be enabled:
+
+```bash
+npm install
+```
+
 Install backend and frontend dependencies separately:
 
 ```bash
@@ -186,6 +192,14 @@ Docker notes:
 4. Run Prisma generate and deploy commands
 5. Start the backend with `npm run dev`
 6. Start the frontend with `npm start`
+
+The root pre-commit hook runs separate frontend and backend lint and Prettier checks on staged files. You can also run the full checks manually from the repository root with:
+
+```bash
+npm run check:frontend
+npm run check:backend
+npm run check
+```
 
 ## 11. Troubleshooting
 

@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { StyleSheet } from 'react-native';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 
 export default StyleSheet.create({
   container: {
@@ -7,9 +7,9 @@ export default StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.lg,
     paddingTop: 50,
     paddingBottom: SPACING.md,
@@ -27,8 +27,8 @@ export default StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContainer: {
     padding: SPACING.lg,
@@ -36,8 +36,8 @@ export default StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: SPACING.xxl,
     paddingHorizontal: SPACING.lg,
   },
@@ -52,7 +52,7 @@ export default StyleSheet.create({
     fontSize: SIZES.md,
     fontFamily: FONTS.regular,
     color: COLORS.gray[600],
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: SPACING.lg,
     maxWidth: 250,
   },
@@ -68,16 +68,16 @@ export default StyleSheet.create({
     color: COLORS.white,
   },
   floatingCreateButton: {
-    position: "absolute",
+    position: 'absolute',
     right: SPACING.lg,
     bottom: SPACING.xl,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     borderRadius: 999,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -89,4 +89,4 @@ export default StyleSheet.create({
     fontFamily: FONTS.bold,
     fontSize: SIZES.md,
   },
-})
+});

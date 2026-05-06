@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { StyleSheet } from 'react-native';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 
 export default StyleSheet.create({
   container: {
@@ -13,9 +13,9 @@ export default StyleSheet.create({
     borderBottomColor: COLORS.gray[200],
   },
   headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitle: {
     fontSize: SIZES.xl,
@@ -45,12 +45,12 @@ export default StyleSheet.create({
     marginBottom: SPACING.md,
   },
   statGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   statCard: {
-    width: "48%",
+    width: '48%',
     borderRadius: 16,
     padding: SPACING.md,
     marginBottom: SPACING.md,
@@ -76,16 +76,16 @@ export default StyleSheet.create({
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
   cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cardTitle: {
     fontSize: SIZES.md,
@@ -97,8 +97,8 @@ export default StyleSheet.create({
     marginTop: SPACING.xs,
   },
   badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: SPACING.sm,
   },
   badge: {
@@ -113,15 +113,15 @@ export default StyleSheet.create({
     fontFamily: FONTS.bold,
   },
   actionRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: SPACING.md,
   },
   actionButton: {
     flex: 1,
     borderRadius: 12,
     paddingVertical: SPACING.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.sm,
   },
   secondaryActionButton: {
@@ -133,8 +133,8 @@ export default StyleSheet.create({
   },
   emptyState: {
     paddingVertical: 48,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: SIZES.lg,
@@ -144,8 +144,8 @@ export default StyleSheet.create({
   emptyText: {
     fontSize: SIZES.sm,
     fontFamily: FONTS.regular,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: SPACING.xs,
     maxWidth: 260,
   },
-})
+});

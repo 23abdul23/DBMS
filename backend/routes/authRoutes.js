@@ -4,7 +4,11 @@ const jwt = require("jsonwebtoken")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
-const { userSelect, userSelectWithPassword, serializeUser } = require("../utils/userProfiles")
+const {
+  userSelect,
+  userSelectWithPassword,
+  serializeUser,
+} = require("../utils/userProfiles")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -95,7 +99,16 @@ const normalizeYear = (value) => {
   return yearMap[normalized] || undefined
 }
 
-const buildRoleProfileCreateData = ({ role, studentId, guardId, hostel, roomNumber, year, department, securityPost }) => {
+const buildRoleProfileCreateData = ({
+  role,
+  studentId,
+  guardId,
+  hostel,
+  roomNumber,
+  year,
+  department,
+  securityPost,
+}) => {
   if (role === "student" && studentId && department && year && hostel) {
     return {
       studentProfile: {
@@ -147,6 +160,10 @@ const parseRequestedUser = (value) => {
     try {
       return JSON.parse(value)
     } catch (error) {
+      // JSON parse failed, return id as-is
+      if (typeof error === "object") {
+        return { id: value }
+      }
       return { id: value }
     }
   }
@@ -175,7 +192,9 @@ router.post("/register", async (req, res) => {
     } = req.body
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" })
+      return res
+        .status(400)
+        .json({ message: "Name, email, and password are required" })
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
@@ -191,16 +210,32 @@ router.post("/register", async (req, res) => {
     const normalizedYear = normalizeYear(year)
     const normalizedDepartment = normalizeDepartment(department)
 
-    if (normalizedRole === "student" && (!normalizedStudentId || !normalizedDepartment || !normalizedYear || !normalizedHostel)) {
-      return res.status(400).json({ message: "Student registration requires student ID, department, year, and hostel" })
+    if (
+      normalizedRole === "student" &&
+      (!normalizedStudentId ||
+        !normalizedDepartment ||
+        !normalizedYear ||
+        !normalizedHostel)
+    ) {
+      return res.status(400).json({
+        message:
+          "Student registration requires student ID, department, year, and hostel",
+      })
     }
 
     if (normalizedRole === "warden" && !normalizedHostel) {
-      return res.status(400).json({ message: "Warden registration requires an assigned hostel" })
+      return res
+        .status(400)
+        .json({ message: "Warden registration requires an assigned hostel" })
     }
 
-    if (normalizedRole === "security" && (!normalizedGuardId || !normalizedSecurityPost)) {
-      return res.status(400).json({ message: "Security registration requires guard ID and security post" })
+    if (
+      normalizedRole === "security" &&
+      (!normalizedGuardId || !normalizedSecurityPost)
+    ) {
+      return res.status(400).json({
+        message: "Security registration requires guard ID and security post",
+      })
     }
 
     const existingUser = await prisma.user.findFirst({
@@ -209,15 +244,23 @@ router.post("/register", async (req, res) => {
           { email },
           normalizedStudentId ? { studentId: normalizedStudentId } : null,
           normalizedGuardId ? { guardId: normalizedGuardId } : null,
-          normalizedStudentId ? { studentProfile: { is: { studentId: normalizedStudentId } } } : null,
-          normalizedGuardId ? { securityProfile: { is: { guardId: normalizedGuardId } } } : null,
-          normalizedRole === "warden" && normalizedHostel ? { wardenProfile: { is: { hostel: normalizedHostel } } } : null,
+          normalizedStudentId
+            ? { studentProfile: { is: { studentId: normalizedStudentId } } }
+            : null,
+          normalizedGuardId
+            ? { securityProfile: { is: { guardId: normalizedGuardId } } }
+            : null,
+          normalizedRole === "warden" && normalizedHostel
+            ? { wardenProfile: { is: { hostel: normalizedHostel } } }
+            : null,
         ].filter(Boolean),
       },
     })
 
     if (existingUser) {
-      return res.status(400).json({ message: "User with this email, student ID, or guard ID already exists" })
+      return res.status(400).json({
+        message: "User with this email, student ID, or guard ID already exists",
+      })
     }
 
     const newUser = await prisma.user.create({
@@ -228,7 +271,10 @@ router.post("/register", async (req, res) => {
         passwordHash,
         studentId: normalizedStudentId,
         guardId: normalizedGuardId,
-        hostel: normalizedRole === "security" ? normalizedSecurityPost : normalizedHostel,
+        hostel:
+          normalizedRole === "security"
+            ? normalizedSecurityPost
+            : normalizedHostel,
         roomNumber: normalizedRoomNumber,
         phoneNumber: normalizedPhoneNumber,
         emergencyContact: normalizedEmergencyContact,
@@ -267,7 +313,9 @@ router.post("/register", async (req, res) => {
     console.error("Registration error:", error)
 
     if (error.code === "P2002") {
-      return res.status(400).json({ message: "A user with those details already exists" })
+      return res
+        .status(400)
+        .json({ message: "A user with those details already exists" })
     }
 
     res.status(500).json({ message: "Server error during registration" })
@@ -280,7 +328,9 @@ router.post("/login", async (req, res) => {
     const { email, password, role } = req.body
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" })
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" })
     }
 
     const normalizedRole = role ? normalizeRole(role, null) : null
@@ -297,17 +347,23 @@ router.post("/login", async (req, res) => {
     })
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials: user not found" })
+      return res
+        .status(400)
+        .json({ message: "Invalid credentials: user not found" })
     }
 
     if (!user.passwordHash) {
-      return res.status(400).json({ message: "Account password is missing. Please reset your password." })
+      return res.status(400).json({
+        message: "Account password is missing. Please reset your password.",
+      })
     }
 
     const passwordMatches = await bcrypt.compare(password, user.passwordHash)
 
     if (!passwordMatches) {
-      return res.status(400).json({ message: "Invalid credentials: incorrect password" })
+      return res
+        .status(400)
+        .json({ message: "Invalid credentials: incorrect password" })
     }
 
     const refreshedUser = await prisma.user.update({
@@ -396,9 +452,12 @@ router.put("/profile", authenticate, async (req, res) => {
       return res.status(404).json({ message: "User not found" })
     }
 
-    const currentWardenHostel = existingUser.wardenProfile?.hostel || existingUser.hostel
+    const currentWardenHostel =
+      existingUser.wardenProfile?.hostel || existingUser.hostel
     const hasRequestedWardenHostelChange =
-      currentRole === "warden" && normalizedHostel && normalizedHostel !== currentWardenHostel
+      currentRole === "warden" &&
+      normalizedHostel &&
+      normalizedHostel !== currentWardenHostel
 
     if (hasRequestedWardenHostelChange) {
       const conflictingWarden = await prisma.wardenProfile.findUnique({
@@ -407,7 +466,9 @@ router.put("/profile", authenticate, async (req, res) => {
       })
 
       if (conflictingWarden && conflictingWarden.userId !== req.user.userId) {
-        return res.status(400).json({ message: "This hostel is already assigned to another warden" })
+        return res.status(400).json({
+          message: "This hostel is already assigned to another warden",
+        })
       }
     }
 
@@ -424,11 +485,18 @@ router.put("/profile", authenticate, async (req, res) => {
       gender: normalizedGender,
       ...(currentRole === "student" || currentRole === "security"
         ? {
-            hostel: currentRole === "security" ? normalizedSecurityPost : normalizedHostel,
+            hostel:
+              currentRole === "security"
+                ? normalizedSecurityPost
+                : normalizedHostel,
           }
         : {}),
       ...(currentRole === "student" &&
-      (normalizedStudentId || normalizedDepartment || normalizedYear || normalizedHostel || normalizedRoomNumber)
+      (normalizedStudentId ||
+        normalizedDepartment ||
+        normalizedYear ||
+        normalizedHostel ||
+        normalizedRoomNumber)
         ? {
             studentProfile: {
               upsert: {
@@ -465,7 +533,8 @@ router.put("/profile", authenticate, async (req, res) => {
             },
           }
         : {}),
-      ...(currentRole === "security" && (normalizedGuardId || normalizedSecurityPost)
+      ...(currentRole === "security" &&
+      (normalizedGuardId || normalizedSecurityPost)
         ? {
             securityProfile: {
               upsert: {
@@ -489,7 +558,10 @@ router.put("/profile", authenticate, async (req, res) => {
       select: userSelect,
     })
 
-    res.json({ message: "Profile updated successfully", user: serializeUser(user) })
+    res.json({
+      message: "Profile updated successfully",
+      user: serializeUser(user),
+    })
   } catch (error) {
     console.error("Profile update error:", error)
 
@@ -499,10 +571,14 @@ router.put("/profile", authenticate, async (req, res) => {
         : String(error.meta?.target || "")
 
       if (target.includes("hostel")) {
-        return res.status(400).json({ message: "This hostel is already assigned to another warden" })
+        return res.status(400).json({
+          message: "This hostel is already assigned to another warden",
+        })
       }
 
-      return res.status(400).json({ message: "Email, student ID, or guard ID already exists" })
+      return res
+        .status(400)
+        .json({ message: "Email, student ID, or guard ID already exists" })
     }
 
     res.status(500).json({ message: "Server error updating profile" })
@@ -512,7 +588,8 @@ router.put("/profile", authenticate, async (req, res) => {
 router.get("/fetchProfile", async (req, res) => {
   try {
     const requestedUser = parseRequestedUser(req.query.user)
-    const requestedUserId = requestedUser?.id || req.query.userId || req.query.id
+    const requestedUserId =
+      requestedUser?.id || req.query.userId || req.query.id
 
     if (!requestedUserId) {
       return res.status(400).json({ message: "User id is required" })

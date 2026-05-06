@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { StyleSheet } from 'react-native';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 
 export default StyleSheet.create({
   container: {
@@ -7,9 +7,9 @@ export default StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.lg,
     paddingTop: 50,
     paddingBottom: SPACING.md,
@@ -56,7 +56,7 @@ export default StyleSheet.create({
   },
   textArea: {
     height: 100,
-    textAlignVertical: "top",
+    textAlignVertical: 'top',
   },
   dateTimeContainer: {
     marginBottom: SPACING.lg,
@@ -68,13 +68,13 @@ export default StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   dateTimeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   dateTimeButton: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.gray[300],
@@ -93,7 +93,7 @@ export default StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 8,
     paddingVertical: SPACING.md,
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: SPACING.lg,
   },
   submitButtonText: {
@@ -101,4 +101,4 @@ export default StyleSheet.create({
     fontFamily: FONTS.bold,
     color: COLORS.white,
   },
-})
+});

@@ -146,7 +146,12 @@ const normalizeOutpassRequestType = (value) =>
     : OUTPASS_REQUEST_TYPE.REGULAR
 
 const resolveOutpassRequestType = (payload = {}) => {
-  if (payload.longVisit === true || String(payload.longVisit || "").trim().toLowerCase() === "true") {
+  if (
+    payload.longVisit === true ||
+    String(payload.longVisit || "")
+      .trim()
+      .toLowerCase() === "true"
+  ) {
     return OUTPASS_REQUEST_TYPE.LONG_VISIT
   }
 
@@ -154,7 +159,8 @@ const resolveOutpassRequestType = (payload = {}) => {
 }
 
 const isLongVisitOutpass = (outpass) =>
-  normalizeOutpassRequestType(outpass?.requestType || outpass?.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT
+  normalizeOutpassRequestType(outpass?.requestType || outpass?.type) ===
+  OUTPASS_REQUEST_TYPE.LONG_VISIT
 
 const isSameCalendarDay = (left, right) => {
   if (!left || !right) {
@@ -175,15 +181,29 @@ const isWithinAdvanceWindow = (exitDate, now = new Date()) => {
 }
 
 const hasExitedForOutpass = (outpass, latestMovement) =>
-  latestMovement?.action === "exit" && latestMovement?.createdAt >= outpass.outDate
+  latestMovement?.action === "exit" &&
+  latestMovement?.createdAt >= outpass.outDate
 
 const getCampusRiskLevel = (outpass, latestMovement, now = new Date()) => {
-  if (!outpass || isLongVisitOutpass(outpass) || outpass.actualReturnDate || !hasExitedForOutpass(outpass, latestMovement)) {
+  if (
+    !outpass ||
+    isLongVisitOutpass(outpass) ||
+    outpass.actualReturnDate ||
+    !hasExitedForOutpass(outpass, latestMovement)
+  ) {
     return CAMPUS_RISK_LEVEL.NORMAL
   }
 
-  const yellowThreshold = getCutoffTimeForDate(outpass.outDate, YELLOW_ALERT_HOUR, YELLOW_ALERT_MINUTE)
-  const dangerThreshold = getCutoffTimeForDate(outpass.outDate, RETURN_CUTOFF_HOUR, RETURN_CUTOFF_MINUTE)
+  const yellowThreshold = getCutoffTimeForDate(
+    outpass.outDate,
+    YELLOW_ALERT_HOUR,
+    YELLOW_ALERT_MINUTE,
+  )
+  const dangerThreshold = getCutoffTimeForDate(
+    outpass.outDate,
+    RETURN_CUTOFF_HOUR,
+    RETURN_CUTOFF_MINUTE,
+  )
 
   if (now >= dangerThreshold) {
     return CAMPUS_RISK_LEVEL.DANGER
@@ -221,14 +241,22 @@ const canCancelOutpass = (outpass, latestMovement, now = new Date()) => {
     return false
   }
 
-  if (outpass.actualReturnDate || hasExitedForOutpass(outpass, latestMovement)) {
+  if (
+    outpass.actualReturnDate ||
+    hasExitedForOutpass(outpass, latestMovement)
+  ) {
     return false
   }
 
   return outpass.expectedReturnDate > now
 }
 
-const validateOutpassWindow = ({ exitDate, returnDate, requestType, now = new Date() }) => {
+const validateOutpassWindow = ({
+  exitDate,
+  returnDate,
+  requestType,
+  now = new Date(),
+}) => {
   if (!exitDate || !returnDate) {
     return "Please provide purpose, destination, departure, and return time"
   }
@@ -256,7 +284,11 @@ const validateOutpassWindow = ({ exitDate, returnDate, requestType, now = new Da
     return "Regular outpasses must start and end on the same day"
   }
 
-  const returnCutoff = getCutoffTimeForDate(exitDate, RETURN_CUTOFF_HOUR, RETURN_CUTOFF_MINUTE)
+  const returnCutoff = getCutoffTimeForDate(
+    exitDate,
+    RETURN_CUTOFF_HOUR,
+    RETURN_CUTOFF_MINUTE,
+  )
   if (returnDate > returnCutoff) {
     return "Regular outpasses must end by 10:30 PM"
   }
@@ -361,14 +393,23 @@ const deriveMonitoringState = (outpass, latestMovement, now = new Date()) => {
 const buildOutpassResponse = (outpass, options = {}) => {
   const latestMovement = options.latestMovement || null
   const now = options.now || new Date()
-  const auditTrail = Array.isArray(outpass.auditTrail) ? outpass.auditTrail.map(serializeAuditItem) : []
-  const requestAudit = auditTrail.find((item) => item.status === "pending") || null
-  const latestAudit = auditTrail.length > 0 ? auditTrail[auditTrail.length - 1] : null
+  const auditTrail = Array.isArray(outpass.auditTrail)
+    ? outpass.auditTrail.map(serializeAuditItem)
+    : []
+  const requestAudit =
+    auditTrail.find((item) => item.status === "pending") || null
+  const latestAudit =
+    auditTrail.length > 0 ? auditTrail[auditTrail.length - 1] : null
   const monitoringState = deriveMonitoringState(outpass, latestMovement, now)
   const timeRemainingMs = outpass.actualReturnDate
     ? 0
-    : Math.max(0, new Date(outpass.expectedReturnDate).getTime() - now.getTime())
-  const requestType = normalizeOutpassRequestType(outpass.requestType || outpass.type)
+    : Math.max(
+        0,
+        new Date(outpass.expectedReturnDate).getTime() - now.getTime(),
+      )
+  const requestType = normalizeOutpassRequestType(
+    outpass.requestType || outpass.type,
+  )
   const campusRiskLevel = getCampusRiskLevel(outpass, latestMovement, now)
   const canCancel = canCancelOutpass(outpass, latestMovement, now)
   const canUse = canUseOutpass(outpass, latestMovement, now)
@@ -506,7 +547,11 @@ const getLatestGateMovementMap = async (prisma, userIds = []) => {
   return movementMap
 }
 
-const getRecentMovementTrailMap = async (prisma, userIds = [], limitPerUser = 3) => {
+const getRecentMovementTrailMap = async (
+  prisma,
+  userIds = [],
+  limitPerUser = 3,
+) => {
   const distinctUserIds = [...new Set(userIds.filter(Boolean))]
 
   if (distinctUserIds.length === 0) {

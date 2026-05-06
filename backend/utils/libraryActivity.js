@@ -1,5 +1,9 @@
 const { generateId } = require("./hashGenerator")
-const { getLibraryLimit, isLibOpenAt, LIB_CLOSE_LABEL } = require("./campusActivityRules")
+const {
+  getLibraryLimit,
+  isLibOpenAt,
+  LIB_CLOSE_LABEL,
+} = require("./campusActivityRules")
 const { canViewFullLibraryActivity } = require("./adminScopes")
 
 const LIBRARY_LOCATION = "Library"
@@ -54,7 +58,11 @@ const getSeatSessionByNumber = async (client, seatNumber) =>
 
 const sanitizeLibraryActivityItem = (item, includeUserDetails) => ({
   ...item,
-  title: includeUserDetails ? item.title : item.seatNumber ? `Token ${item.seatNumber} activity` : item.title,
+  title: includeUserDetails
+    ? item.title
+    : item.seatNumber
+      ? `Token ${item.seatNumber} activity`
+      : item.title,
   user: includeUserDetails ? item.user : null,
 })
 
@@ -85,7 +93,9 @@ const getLibraryOverview = async (client, viewer) => {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 15,
     }),
-    viewerUserId ? getActiveSeatSession(client, viewerUserId) : Promise.resolve(null),
+    viewerUserId
+      ? getActiveSeatSession(client, viewerUserId)
+      : Promise.resolve(null),
   ])
 
   return {
@@ -121,11 +131,15 @@ const getLibraryOverview = async (client, viewer) => {
           (log.action === "library_seat_released"
             ? `${log.user?.name || "Student"} released seat ${log.details?.seatNumber || ""}`.trim()
             : `${log.user?.name || "Student"} took seat ${log.details?.seatNumber || ""}`.trim()),
-        subtitle: log.action === "library_seat_released" ? "Seat released" : "Seat occupied",
+        subtitle:
+          log.action === "library_seat_released"
+            ? "Seat released"
+            : "Seat occupied",
         seatNumber: log.details?.seatNumber || null,
         user: log.user ? buildLibraryStudentSummary(log.user) : null,
       }))
-      .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails)).slice(0,15),
+      .map((item) => sanitizeLibraryActivityItem(item, includeUserDetails))
+      .slice(0, 15),
     meta: {
       limit,
       isOpenNow: isLibOpenAt(),
@@ -135,7 +149,10 @@ const getLibraryOverview = async (client, viewer) => {
   }
 }
 
-const createSeatLog = async (client, { userId, action, seatNumber, createdAt, description, details = {} }) =>
+const createSeatLog = async (
+  client,
+  { userId, action, seatNumber, createdAt, description, details = {} },
+) =>
   client.log.create({
     data: {
       id: generateId(),
@@ -153,7 +170,10 @@ const createSeatLog = async (client, { userId, action, seatNumber, createdAt, de
     },
   })
 
-const claimLibrarySeat = async (client, { userId, seatNumber, timestamp = new Date(), details = {} }) => {
+const claimLibrarySeat = async (
+  client,
+  { userId, seatNumber, timestamp = new Date(), details = {} },
+) => {
   const sessionId = generateId()
 
   await client.librarySeatSession.create({
@@ -178,7 +198,10 @@ const claimLibrarySeat = async (client, { userId, seatNumber, timestamp = new Da
   return sessionId
 }
 
-const releaseLibrarySeat = async (client, { session, timestamp = new Date(), details = {}, description = null }) => {
+const releaseLibrarySeat = async (
+  client,
+  { session, timestamp = new Date(), details = {}, description = null },
+) => {
   if (!session) {
     return null
   }
@@ -198,7 +221,8 @@ const releaseLibrarySeat = async (client, { session, timestamp = new Date(), det
     action: "library_seat_released",
     seatNumber: session.seatNumber,
     createdAt: timestamp,
-    description: description || `Released the Token Number ${session.seatNumber} seat`,
+    description:
+      description || `Released the Token Number ${session.seatNumber} seat`,
     details,
   })
 

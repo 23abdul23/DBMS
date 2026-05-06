@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { StyleSheet } from 'react-native';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 
 export default StyleSheet.create({
   container: {
@@ -7,9 +7,9 @@ export default StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.lg,
     paddingTop: 50,
     paddingBottom: SPACING.md,
@@ -21,5 +21,5 @@ export default StyleSheet.create({
     fontSize: SIZES.xl,
     fontFamily: FONTS.bold,
     color: COLORS.gray[800],
-  }
-})
+  },
+});

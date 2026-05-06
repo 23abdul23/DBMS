@@ -1,4 +1,10 @@
-const SAC_CLUB_ROOMS = ["Virtuosi", "Sarasva", "GeneticX", "Rangtarangni", "AMS"]
+const SAC_CLUB_ROOMS = [
+  "Virtuosi",
+  "Sarasva",
+  "GeneticX",
+  "Rangtarangni",
+  "AMS",
+]
 
 const SAC_EQUIPMENT = [
   "Table Tennis",

@@ -7,13 +7,13 @@ const backendRequire = createRequire(path.join(backendRoot, "package.json"))
 backendRequire("dotenv").config({ path: path.join(backendRoot, ".env") })
 
 const bcrypt = backendRequire("bcryptjs")
-const { getPrismaClient, disconnectSQL } = require(path.join(backendRoot, "config", "prisma"))
+const { getPrismaClient, disconnectSQL } = require(
+  path.join(backendRoot, "config", "prisma"),
+)
 const { generateId } = require(path.join(backendRoot, "utils", "hashGenerator"))
-const {
-  SAC_ADMIN_EMAIL,
-  LIBRARY_ADMIN_EMAIL,
-  normalizeEmail,
-} = require(path.join(backendRoot, "utils", "adminScopes"))
+const { SAC_ADMIN_EMAIL, LIBRARY_ADMIN_EMAIL, normalizeEmail } = require(
+  path.join(backendRoot, "utils", "adminScopes"),
+)
 
 const prisma = getPrismaClient()
 
@@ -46,7 +46,9 @@ const run = async () => {
   const options = parseCliArgs(process.argv.slice(2))
 
   if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is missing. The script expects backend/.env to define it.")
+    throw new Error(
+      "DATABASE_URL is missing. The script expects backend/.env to define it.",
+    )
   }
 
   const existingUsers = await prisma.user.findMany({
@@ -60,8 +62,12 @@ const run = async () => {
     },
   })
 
-  const existingEmails = new Set(existingUsers.map((user) => normalizeEmail(user.email)))
-  const adminsToInsert = ACTIVITY_ADMINS.filter((admin) => !existingEmails.has(normalizeEmail(admin.email)))
+  const existingEmails = new Set(
+    existingUsers.map((user) => normalizeEmail(user.email)),
+  )
+  const adminsToInsert = ACTIVITY_ADMINS.filter(
+    (admin) => !existingEmails.has(normalizeEmail(admin.email)),
+  )
 
   console.log("Activity admin ingestion started")
   console.log(`Mode: ${options.dryRun ? "dry-run" : "write"}`)
@@ -69,11 +75,15 @@ const run = async () => {
   console.log(`Accounts pending insert: ${adminsToInsert.length}`)
 
   for (const admin of ACTIVITY_ADMINS) {
-    console.log(`- ${admin.email} | ${admin.name} | ${existingEmails.has(normalizeEmail(admin.email)) ? "skip" : "insert"}`)
+    console.log(
+      `- ${admin.email} | ${admin.name} | ${existingEmails.has(normalizeEmail(admin.email)) ? "skip" : "insert"}`,
+    )
   }
 
   if (options.dryRun || adminsToInsert.length === 0) {
-    console.log(`\nSummary: inserted=0, skipped=${ACTIVITY_ADMINS.length - adminsToInsert.length}, total=${ACTIVITY_ADMINS.length}`)
+    console.log(
+      `\nSummary: inserted=0, skipped=${ACTIVITY_ADMINS.length - adminsToInsert.length}, total=${ACTIVITY_ADMINS.length}`,
+    )
     return
   }
 

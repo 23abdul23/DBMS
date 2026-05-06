@@ -1,0 +1,8 @@
+node_modules
+android
+ios
+dist
+web-build
+.expo
+package-lock.json
+eslint.config.js

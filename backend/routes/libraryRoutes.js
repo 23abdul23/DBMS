@@ -1,7 +1,11 @@
 const express = require("express")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate, authorize } = require("../middleware/auth")
-const { getLibraryLimit, isLibOpenAt, LIB_CLOSE_LABEL } = require("../utils/campusActivityRules")
+const {
+  getLibraryLimit,
+  isLibOpenAt,
+  LIB_CLOSE_LABEL,
+} = require("../utils/campusActivityRules")
 const {
   getActiveSeatSession,
   getSeatSessionByNumber,
@@ -14,7 +18,8 @@ const { isLibraryAdministrator } = require("../utils/adminScopes")
 const prisma = getPrismaClient()
 const router = express.Router()
 
-const getLibraryClosedMessage = () => `Library is closed for new entry. It remains open till ${LIB_CLOSE_LABEL}.`
+const getLibraryClosedMessage = () =>
+  `Library is closed for new entry. It remains open till ${LIB_CLOSE_LABEL}.`
 
 const createHttpError = (statusCode, message, code) => {
   const error = new Error(message)
@@ -65,147 +70,168 @@ router.get("/overview", authenticate, async (req, res) => {
   }
 })
 
-router.post("/claim-seat", [authenticate, authorize("student")], async (req, res) => {
-  try {
-    const seatNumber = parseSeatNumber(req.body?.seatNumber)
-    const limit = getLibraryLimit()
+router.post(
+  "/claim-seat",
+  [authenticate, authorize("student")],
+  async (req, res) => {
+    try {
+      const seatNumber = parseSeatNumber(req.body?.seatNumber)
+      const limit = getLibraryLimit()
 
-    if (!Number.isInteger(seatNumber) || seatNumber < 1 || seatNumber > limit) {
-      return res.status(400).json({
-        code: "INVALID_SEAT",
-        message: `Seat number must be between 1 and ${limit}.`,
+      if (
+        !Number.isInteger(seatNumber) ||
+        seatNumber < 1 ||
+        seatNumber > limit
+      ) {
+        return res.status(400).json({
+          code: "INVALID_SEAT",
+          message: `Seat number must be between 1 and ${limit}.`,
+        })
+      }
+
+      const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
+      if (activeSeat) {
+        if (activeSeat.seatNumber === seatNumber) {
+          const overview = await getLibraryOverview(prisma, req.user)
+          return res.json({
+            code: "ALREADY_SEATED",
+            message: `You already have Token Number ${seatNumber}.`,
+            overview,
+          })
+        }
+
+        return res.status(409).json({
+          code: "ALREADY_SEATED",
+          message: `You already have Token Number ${activeSeat.seatNumber}. Release it before choosing another seat.`,
+        })
+      }
+
+      if (!isLibOpenAt()) {
+        return res.status(403).json({
+          code: "LIBRARY_CLOSED",
+          message: getLibraryClosedMessage(),
+          closesAt: LIB_CLOSE_LABEL,
+        })
+      }
+
+      const seatSession = await getSeatSessionByNumber(prisma, seatNumber)
+      if (seatSession) {
+        return res.status(409).json({
+          code: "SEAT_TAKEN",
+          message: "Seat already taken, choose another seat.",
+        })
+      }
+
+      const currentOverview = await getLibraryOverview(prisma, req.user)
+      if (currentOverview.summary.isFull) {
+        return res.status(409).json({
+          code: "LIBRARY_FULL",
+          message: "Library full.",
+        })
+      }
+
+      const timestamp = new Date()
+      await prisma.$transaction(async (tx) => {
+        await claimLibrarySeat(tx, {
+          userId: req.user.userId,
+          seatNumber,
+          timestamp,
+          details: {
+            source: "library_claim",
+            claimedByUserId: req.user.userId,
+          },
+        })
+      })
+
+      const overview = await getLibraryOverview(prisma, req.user)
+      res.json({
+        message: `Token Number ${seatNumber} assigned successfully.`,
+        overview,
+      })
+    } catch (error) {
+      console.error("Library claim seat error:", error)
+
+      if (error?.code === "P2002") {
+        return res.status(409).json({
+          code: "SEAT_TAKEN",
+          message: "Seat already taken, choose another seat.",
+        })
+      }
+
+      res.status(error.statusCode || 500).json({
+        code: error.code || "LIBRARY_CLAIM_ERROR",
+        message: error.message || "Server error claiming library seat",
       })
     }
+  },
+)
 
-    const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
-    if (activeSeat) {
-      if (activeSeat.seatNumber === seatNumber) {
+router.post(
+  "/release-seat",
+  [authenticate, authorize("student")],
+  async (req, res) => {
+    try {
+      const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
+
+      if (!activeSeat) {
         const overview = await getLibraryOverview(prisma, req.user)
         return res.json({
-          code: "ALREADY_SEATED",
-          message: `You already have Token Number ${seatNumber}.`,
+          code: "NO_ACTIVE_SEAT",
+          message: "No active library token to release.",
           overview,
         })
       }
 
-      return res.status(409).json({
-        code: "ALREADY_SEATED",
-        message: `You already have Token Number ${activeSeat.seatNumber}. Release it before choosing another seat.`,
+      const timestamp = new Date()
+      await prisma.$transaction(async (tx) => {
+        const currentSeat = await getActiveSeatSession(tx, req.user.userId)
+        if (!currentSeat) {
+          throw createHttpError(
+            404,
+            "No active library token to release.",
+            "NO_ACTIVE_SEAT",
+          )
+        }
+
+        await releaseLibrarySeat(tx, {
+          session: currentSeat,
+          timestamp,
+          details: {
+            source: "library_release",
+            releasedByUserId: req.user.userId,
+          },
+        })
       })
-    }
 
-    if (!isLibOpenAt()) {
-      return res.status(403).json({
-        code: "LIBRARY_CLOSED",
-        message: getLibraryClosedMessage(),
-        closesAt: LIB_CLOSE_LABEL,
-      })
-    }
-
-    const seatSession = await getSeatSessionByNumber(prisma, seatNumber)
-    if (seatSession) {
-      return res.status(409).json({
-        code: "SEAT_TAKEN",
-        message: "Seat already taken, choose another seat.",
-      })
-    }
-
-    const currentOverview = await getLibraryOverview(prisma, req.user)
-    if (currentOverview.summary.isFull) {
-      return res.status(409).json({
-        code: "LIBRARY_FULL",
-        message: "Library full.",
-      })
-    }
-
-    const timestamp = new Date()
-    await prisma.$transaction(async (tx) => {
-      await claimLibrarySeat(tx, {
-        userId: req.user.userId,
-        seatNumber,
-        timestamp,
-        details: {
-          source: "library_claim",
-          claimedByUserId: req.user.userId,
-        },
-      })
-    })
-
-    const overview = await getLibraryOverview(prisma, req.user)
-    res.json({
-      message: `Token Number ${seatNumber} assigned successfully.`,
-      overview,
-    })
-  } catch (error) {
-    console.error("Library claim seat error:", error)
-
-    if (error?.code === "P2002") {
-      return res.status(409).json({
-        code: "SEAT_TAKEN",
-        message: "Seat already taken, choose another seat.",
-      })
-    }
-
-    res.status(error.statusCode || 500).json({
-      code: error.code || "LIBRARY_CLAIM_ERROR",
-      message: error.message || "Server error claiming library seat",
-    })
-  }
-})
-
-router.post("/release-seat", [authenticate, authorize("student")], async (req, res) => {
-  try {
-    const activeSeat = await getActiveSeatSession(prisma, req.user.userId)
-
-    if (!activeSeat) {
       const overview = await getLibraryOverview(prisma, req.user)
-      return res.json({
-        code: "NO_ACTIVE_SEAT",
-        message: "No active library token to release.",
+      res.json({
+        message: `Token Number ${activeSeat.seatNumber} released successfully.`,
         overview,
       })
-    }
-
-    const timestamp = new Date()
-    await prisma.$transaction(async (tx) => {
-      const currentSeat = await getActiveSeatSession(tx, req.user.userId)
-      if (!currentSeat) {
-        throw createHttpError(404, "No active library token to release.", "NO_ACTIVE_SEAT")
-      }
-
-      await releaseLibrarySeat(tx, {
-        session: currentSeat,
-        timestamp,
-        details: {
-          source: "library_release",
-          releasedByUserId: req.user.userId,
-        },
+    } catch (error) {
+      console.error("Library release seat error:", error)
+      res.status(error.statusCode || 500).json({
+        code: error.code || "LIBRARY_RELEASE_ERROR",
+        message: error.message || "Server error releasing library seat",
       })
-    })
-
-    const overview = await getLibraryOverview(prisma, req.user)
-    res.json({
-      message: `Token Number ${activeSeat.seatNumber} released successfully.`,
-      overview,
-    })
-  } catch (error) {
-    console.error("Library release seat error:", error)
-    res.status(error.statusCode || 500).json({
-      code: error.code || "LIBRARY_RELEASE_ERROR",
-      message: error.message || "Server error releasing library seat",
-    })
-  }
-})
+    }
+  },
+)
 
 router.post("/admin/release-seat", authenticate, async (req, res) => {
   try {
     if (!isLibraryAdministrator(req.user)) {
-      return res.status(403).json({ message: "Only library admin can release seats." })
+      return res
+        .status(403)
+        .json({ message: "Only library admin can release seats." })
     }
 
     const sessionId = String(req.body?.sessionId || "").trim()
     const userId = String(req.body?.userId || "").trim()
-    const seatNumber = req.body?.seatNumber !== undefined ? parseSeatNumber(req.body?.seatNumber) : NaN
+    const seatNumber =
+      req.body?.seatNumber !== undefined
+        ? parseSeatNumber(req.body?.seatNumber)
+        : NaN
 
     let activeSeat = null
 
@@ -230,7 +256,9 @@ router.post("/admin/release-seat", authenticate, async (req, res) => {
     }
 
     if (!activeSeat) {
-      return res.status(404).json({ message: "No active library seat found for this request." })
+      return res
+        .status(404)
+        .json({ message: "No active library seat found for this request." })
     }
 
     const timestamp = new Date()
@@ -243,7 +271,11 @@ router.post("/admin/release-seat", authenticate, async (req, res) => {
       })
 
       if (!currentSeat) {
-        throw createHttpError(404, "No active library seat found for this request.", "NO_ACTIVE_SEAT")
+        throw createHttpError(
+          404,
+          "No active library seat found for this request.",
+          "NO_ACTIVE_SEAT",
+        )
       }
 
       await releaseLibrarySeat(tx, {

@@ -1,11 +1,6 @@
 {
   "defaultOption": "--select location--",
-  "exit_gates": [
-    "Gate 1",
-    "Gate 2",
-    "Gate 3 (Main Gate)",
-    "Gate 4"
-  ],
+  "exit_gates": ["Gate 1", "Gate 2", "Gate 3 (Main Gate)", "Gate 4"],
   "campus_buildings": [
     "Library",
     "Auditorium",
@@ -16,14 +11,5 @@
     "AAA",
     "Lecture Theatre"
   ],
-  "hostels": [
-    "BH 1",
-    "BH 2",
-    "BH 3",
-    "BH 4",
-    "BH 5",
-    "GH 1",
-    "GH 2",
-    "GH 3"
-  ]
+  "hostels": ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
 }

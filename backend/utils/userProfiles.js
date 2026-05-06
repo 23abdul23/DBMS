@@ -54,11 +54,16 @@ const getStudentProfile = (user) => user?.studentProfile || null
 const getWardenProfile = (user) => user?.wardenProfile || null
 const getSecurityProfile = (user) => user?.securityProfile || null
 
-const getUserStudentId = (user) => getStudentProfile(user)?.studentId || user?.studentId || null
-const getUserGuardId = (user) => getSecurityProfile(user)?.guardId || user?.guardId || null
-const getUserDepartment = (user) => getStudentProfile(user)?.department || user?.department || null
-const getUserYear = (user) => getStudentProfile(user)?.year || user?.year || null
-const getUserRoomNumber = (user) => getStudentProfile(user)?.roomNumber || user?.roomNumber || null
+const getUserStudentId = (user) =>
+  getStudentProfile(user)?.studentId || user?.studentId || null
+const getUserGuardId = (user) =>
+  getSecurityProfile(user)?.guardId || user?.guardId || null
+const getUserDepartment = (user) =>
+  getStudentProfile(user)?.department || user?.department || null
+const getUserYear = (user) =>
+  getStudentProfile(user)?.year || user?.year || null
+const getUserRoomNumber = (user) =>
+  getStudentProfile(user)?.roomNumber || user?.roomNumber || null
 
 const getUserHostel = (user) => {
   if (!user) {
@@ -85,7 +90,10 @@ const getUserSecurityPost = (user) => {
     return null
   }
 
-  return getSecurityProfile(user)?.securityPost || (user.role === "security" ? user.hostel || null : null)
+  return (
+    getSecurityProfile(user)?.securityPost ||
+    (user.role === "security" ? user.hostel || null : null)
+  )
 }
 
 const serializeUser = (user) => {

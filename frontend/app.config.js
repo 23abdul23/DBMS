@@ -1,114 +1,118 @@
-const fs = require("fs")
-const os = require("os")
-const path = require("path")
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function readEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
-    return {}
+    return {};
   }
 
   return fs
-    .readFileSync(filePath, "utf8")
+    .readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .reduce((env, line) => {
-      const trimmed = line.trim()
+      const trimmed = line.trim();
 
-      if (!trimmed || trimmed.startsWith("#")) {
-        return env
+      if (!trimmed || trimmed.startsWith('#')) {
+        return env;
       }
 
-      const separatorIndex = trimmed.indexOf("=")
+      const separatorIndex = trimmed.indexOf('=');
       if (separatorIndex === -1) {
-        return env
+        return env;
       }
 
-      const key = trimmed.slice(0, separatorIndex).trim()
-      let value = trimmed.slice(separatorIndex + 1).trim()
+      const key = trimmed.slice(0, separatorIndex).trim();
+      let value = trimmed.slice(separatorIndex + 1).trim();
 
       if (
         (value.startsWith('"') && value.endsWith('"')) ||
         (value.startsWith("'") && value.endsWith("'"))
       ) {
-        value = value.slice(1, -1)
+        value = value.slice(1, -1);
       }
 
-      env[key] = value
-      return env
-    }, {})
+      env[key] = value;
+      return env;
+    }, {});
 }
 
-function getLocalIPAddress() {
-  const interfaces = os.networkInterfaces()
-
-  for (const name in interfaces) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address
-      }
-    }
-  }
-
-  return "localhost"
-}
-
-const backendEnv = readEnvFile(path.resolve(__dirname, "../backend/.env"))
-const getConfigValue = (key, fallback) => process.env[key] || backendEnv[key] || fallback
+const backendEnv = readEnvFile(path.resolve(__dirname, '../backend/.env'));
+const getConfigValue = (key, fallback) =>
+  process.env[key] || backendEnv[key] || fallback;
 
 const apiPrimaryBaseUrl = getConfigValue(
-  "API_BASE_URL_PRIMARY",
-  getConfigValue("API_BASE_URL", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api"),
-)
-const apiSecondaryBaseUrl = getConfigValue("API_BASE_URL_SECONDARY", "https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api")
-const apiHost = getConfigValue("API_HOST", "10.145.159.171")
+  'API_BASE_URL_PRIMARY',
+  getConfigValue(
+    'API_BASE_URL',
+    'https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api'
+  )
+);
+const apiSecondaryBaseUrl = getConfigValue(
+  'API_BASE_URL_SECONDARY',
+  'https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api'
+);
+const apiHost = getConfigValue('API_HOST', '10.145.159.171');
 
 // const apiHost = getConfigValue("API_HOST", getLocalIPAddress())
-const apiPort = Number(getConfigValue("API_PORT", getConfigValue("PORT", 8080)))
-const emergencyMedicalPhone = getConfigValue("EMERGENCY_MEDICAL_PHONE", "9329594882")
-const emergencySecurityPhone = getConfigValue("EMERGENCY_SECURITY_PHONE", "7217492629")
-const emergencyFirePhone = getConfigValue("EMERGENCY_FIRE_PHONE", "8618275578")
-const emergencyOtherPhone = getConfigValue("EMERGENCY_OTHER_PHONE", "7909069340")
-const libraryLimit = Number(getConfigValue("LIBRARY_LIMIT", 60))
+const apiPort = Number(
+  getConfigValue('API_PORT', getConfigValue('PORT', 8080))
+);
+const emergencyMedicalPhone = getConfigValue(
+  'EMERGENCY_MEDICAL_PHONE',
+  '9329594882'
+);
+const emergencySecurityPhone = getConfigValue(
+  'EMERGENCY_SECURITY_PHONE',
+  '7217492629'
+);
+const emergencyFirePhone = getConfigValue('EMERGENCY_FIRE_PHONE', '8618275578');
+const emergencyOtherPhone = getConfigValue(
+  'EMERGENCY_OTHER_PHONE',
+  '7909069340'
+);
+const libraryLimit = Number(getConfigValue('LIBRARY_LIMIT', 60));
 
 module.exports = {
   expo: {
-    name: "Aegis ID",
-    slug: "aegis-id",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/aegisIdLogo_bg.png",
-    userInterfaceStyle: "light",
+    name: 'Aegis ID',
+    slug: 'aegis-id',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/aegisIdLogo_bg.png',
+    userInterfaceStyle: 'light',
     newArchEnabled: false,
     splash: {
-      image: "./assets/aegisIdLogo.png",
-      resizeMode: "contain",
-      backgroundColor: "#08111f",
+      image: './assets/aegisIdLogo.png',
+      resizeMode: 'contain',
+      backgroundColor: '#08111f',
     },
     ios: {
-      bundleIdentifier: "com.abdul.aegis",
+      bundleIdentifier: 'com.abdul.aegis',
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
-          "Aegis uses your camera to scan QR codes for entry and exit verification.",
+          'Aegis uses your camera to scan QR codes for entry and exit verification.',
         NSLocationWhenInUseUsageDescription:
-          "Aegis uses your location to share your live position during emergency calls and alerts.",
-        LSApplicationQueriesSchemes: ["tel", "telprompt", "sms", "smsto"],
+          'Aegis uses your location to share your live position during emergency calls and alerts.',
+        LSApplicationQueriesSchemes: ['tel', 'telprompt', 'sms', 'smsto'],
         ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
-      package: "com.abdul.aegis",
+      package: 'com.abdul.aegis',
       adaptiveIcon: {
-        foregroundImage: "./assets/aegisIdLogo_bg.png",
-        backgroundColor: "#ffffff",
+        foregroundImage: './assets/aegisIdLogo_bg.png',
+        backgroundColor: '#ffffff',
       },
       edgeToEdgeEnabled: true,
-      permissions: [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ],
+      permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
     },
     web: {
-      favicon: "./assets/aegisIdLogo_bg.png",
+      favicon: './assets/aegisIdLogo_bg.png',
     },
     extra: {
       API_BASE_URL: apiPrimaryBaseUrl,
@@ -121,27 +125,27 @@ module.exports = {
       EMERGENCY_SECURITY_PHONE: emergencySecurityPhone,
       EMERGENCY_FIRE_PHONE: emergencyFirePhone,
       EMERGENCY_OTHER_PHONE: emergencyOtherPhone,
-      "eas": {
-        "projectId": "0713ff11-c8b1-468c-93b8-c664dbf6d0f3"
-      }
+      eas: {
+        projectId: '0713ff11-c8b1-468c-93b8-c664dbf6d0f3',
+      },
     },
     plugins: [
-      "@react-native-community/datetimepicker",
-      "expo-font",
+      '@react-native-community/datetimepicker',
+      'expo-font',
       [
-        "expo-camera",
+        'expo-camera',
         {
           cameraPermission:
-            "Aegis uses your camera to scan QR codes for entry and exit verification.",
+            'Aegis uses your camera to scan QR codes for entry and exit verification.',
         },
       ],
       [
-        "expo-location",
+        'expo-location',
         {
           locationWhenInUsePermission:
-            "Aegis uses your location to share your live position during emergency calls and alerts.",
+            'Aegis uses your location to share your live position during emergency calls and alerts.',
         },
       ],
     ],
   },
-}
+};

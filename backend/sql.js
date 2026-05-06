@@ -71,7 +71,10 @@ const sql = args.join(" ").trim()
 const selectedExample = args[0] === "--example" ? args[1] : null
 
 const isReadQuery = (statement) => {
-  const normalized = statement.toLowerCase().replace(/^\s*--.*$/gm, "").trim()
+  const normalized = statement
+    .toLowerCase()
+    .replace(/^\s*--.*$/gm, "")
+    .trim()
   return /^(select|with|show|describe|explain)\b/.test(normalized)
 }
 

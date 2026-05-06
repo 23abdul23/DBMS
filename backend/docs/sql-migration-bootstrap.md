@@ -34,6 +34,7 @@ Existing Mongo values continue to work when `DB_MODE=mongo`.
    - `DB_MODE=sql npm run backend:dev`
 
 Useful local query helpers:
+
 - `npm run test:prisma` runs a small Prisma client playground query and prints the result table.
 - `npm run sql -- "SELECT id, name, email FROM users LIMIT 5"` runs a direct SQL query against the current database.
 
