@@ -1,24 +1,28 @@
-const path = require("path");
-const { createRequire } = require("module");
+const path = require("path")
+const { createRequire } = require("module")
 
-const backendRoot = path.resolve(__dirname, "..");
-const backendRequire = createRequire(path.join(backendRoot, "package.json"));
+const backendRoot = path.resolve(__dirname, "..")
+const backendRequire = createRequire(path.join(backendRoot, "package.json"))
 
-backendRequire("dotenv").config({ path: path.join(backendRoot, ".env") });
+backendRequire("dotenv").config({ path: path.join(backendRoot, ".env") })
 
-const { getPrismaClient, disconnectSQL } = require(path.join(backendRoot, "config", "prisma"));
+const { getPrismaClient, disconnectSQL } = require(
+  path.join(backendRoot, "config", "prisma"),
+)
 
-const prisma = getPrismaClient();
+const prisma = getPrismaClient()
 
 const parseCliArgs = (argv) => ({
   dryRun: argv.includes("--dry-run"),
-});
+})
 
 const run = async () => {
-  const options = parseCliArgs(process.argv.slice(2));
+  const options = parseCliArgs(process.argv.slice(2))
 
   if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is missing. The script expects backend/.env to define it.");
+    throw new Error(
+      "DATABASE_URL is missing. The script expects backend/.env to define it.",
+    )
   }
 
   const users = await prisma.user.findMany({
@@ -40,7 +44,14 @@ const run = async () => {
   })
 
   const studentRows = users
-    .filter((user) => user.role === "student" && user.studentId && user.department && user.year && user.hostel)
+    .filter(
+      (user) =>
+        user.role === "student" &&
+        user.studentId &&
+        user.department &&
+        user.year &&
+        user.hostel,
+    )
     .map((user) => ({
       userId: user.id,
       studentId: user.studentId,
@@ -75,33 +86,34 @@ const run = async () => {
     return
   }
 
-  const [studentResult, wardenResult, securityResult] = await prisma.$transaction([
-    prisma.studentProfile.createMany({
-      data: studentRows,
-      skipDuplicates: true,
-    }),
-    prisma.wardenProfile.createMany({
-      data: wardenRows,
-      skipDuplicates: true,
-    }),
-    prisma.securityProfile.createMany({
-      data: securityRows,
-      skipDuplicates: true,
-    }),
-  ])
+  const [studentResult, wardenResult, securityResult] =
+    await prisma.$transaction([
+      prisma.studentProfile.createMany({
+        data: studentRows,
+        skipDuplicates: true,
+      }),
+      prisma.wardenProfile.createMany({
+        data: wardenRows,
+        skipDuplicates: true,
+      }),
+      prisma.securityProfile.createMany({
+        data: securityRows,
+        skipDuplicates: true,
+      }),
+    ])
 
   console.log("\nBackfill summary")
   console.log(`- studentProfilesInserted=${studentResult.count}`)
   console.log(`- wardenProfilesInserted=${wardenResult.count}`)
   console.log(`- securityProfilesInserted=${securityResult.count}`)
-};
+}
 
 run()
   .catch((error) => {
-    console.error("\nUser profile backfill failed");
-    console.error(error);
-    process.exitCode = 1;
+    console.error("\nUser profile backfill failed")
+    console.error(error)
+    process.exitCode = 1
   })
   .finally(async () => {
-    await disconnectSQL().catch(() => null);
-  });
+    await disconnectSQL().catch(() => null)
+  })

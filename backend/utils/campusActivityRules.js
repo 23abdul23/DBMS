@@ -13,7 +13,10 @@ const getLibraryLimit = () => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LIBRARY_LIMIT
 }
 
-const getLocalizedTimeParts = (value = new Date(), timeZone = CAMPUS_TIMEZONE) => {
+const getLocalizedTimeParts = (
+  value = new Date(),
+  timeZone = CAMPUS_TIMEZONE,
+) => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     hour: "2-digit",
@@ -27,7 +30,10 @@ const getLocalizedTimeParts = (value = new Date(), timeZone = CAMPUS_TIMEZONE) =
   }
 }
 
-const getLocalizedMinutes = (value = new Date(), timeZone = CAMPUS_TIMEZONE) => {
+const getLocalizedMinutes = (
+  value = new Date(),
+  timeZone = CAMPUS_TIMEZONE,
+) => {
   const { hour, minute } = getLocalizedTimeParts(value, timeZone)
   return hour * 60 + minute
 }
@@ -38,7 +44,7 @@ const isSacOpenAt = (value = new Date(), timeZone = CAMPUS_TIMEZONE) =>
 const isLibOpenAt = (value = new Date(), timeZone = CAMPUS_TIMEZONE) =>
   getLocalizedMinutes(value, timeZone) < LIB_CLOSE_HOUR * 60 + LIB_CLOSE_MINUTE
 
-module.exports = {
+export {
   CAMPUS_TIMEZONE,
   SAC_CLOSE_HOUR,
   SAC_CLOSE_MINUTE,

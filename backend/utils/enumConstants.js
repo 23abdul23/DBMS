@@ -1,7 +1,7 @@
 /**
  * Backend Enum Mappings Documentation
  * These match the Prisma schema enum values
- * 
+ *
  * The backend receives and sends UPPERCASE enum values.
  * Frontend handles conversion to/from user-friendly labels.
  */
@@ -12,7 +12,7 @@ const AcademicYearEnum = {
   SECOND_YEAR: "SECOND_YEAR",
   THIRD_YEAR: "THIRD_YEAR",
   FOURTH_YEAR: "FOURTH_YEAR",
-};
+}
 
 // Backend mapping for normalizing user input to enum values
 // This accepts various input formats and normalizes them to uppercase enum values
@@ -41,7 +41,7 @@ const yearNormalizationMap = {
   SECOND_YEAR: "SECOND_YEAR",
   THIRD_YEAR: "THIRD_YEAR",
   FOURTH_YEAR: "FOURTH_YEAR",
-};
+}
 
 // User Role enum values
 const UserRoleEnum = {
@@ -49,21 +49,21 @@ const UserRoleEnum = {
   warden: "warden",
   security: "security",
   admin: "admin",
-};
+}
 
 // Gender enum values
 const GenderEnum = {
   male: "male",
   female: "female",
   other: "other",
-};
+}
 
 // Department enum values
 const DepartmentEnum = {
   IT: "IT",
   IT_BI: "IT_BI",
   Electronics: "Electronics",
-};
+}
 
 module.exports = {
   AcademicYearEnum,
@@ -71,4 +71,4 @@ module.exports = {
   UserRoleEnum,
   GenderEnum,
   DepartmentEnum,
-};
+}

@@ -1,13 +1,13 @@
-const { getPrismaClient } = require("../config/prisma")
-const { generateId } = require("./hashGenerator")
-const {
+import { getPrismaClient } from "../config/prisma.js"
+import { generateId } from "./hashGenerator.js"
+import {
   EXIT_GATES,
   CAMPUS_BUILDINGS,
   HOSTELS,
   isExitGate,
   isCampusBuilding,
-} = require("./locationPolicy")
-const {
+} from "./locationPolicy.js"
+import {
   OUTPASS_REQUEST_TYPE,
   RETURN_CUTOFF_HOUR,
   RETURN_CUTOFF_MINUTE,
@@ -17,31 +17,33 @@ const {
   getCutoffTimeForDate,
   getLatestGateMovementMap,
   getLatestMovementMap,
-} = require("./outpassLifecycle")
-const { SAC_CLUB_ROOMS, SAC_EQUIPMENT } = require("./sacCatalog")
-const {
+} from "./outpassLifecycle.js"
+import { SAC_CLUB_ROOMS, SAC_EQUIPMENT } from "./sacCatalog.js"
+import {
   CAMPUS_TIMEZONE,
   getLibraryLimit,
   getLocalizedMinutes,
   isLibOpenAt,
   isSacOpenAt,
-} = require("./campusActivityRules")
-const {
+} from "./campusActivityRules.js"
+import {
   LIBRARY_LOCATION,
   claimLibrarySeat,
   getActiveSeatSession,
   releaseLibrarySeat,
-} = require("./libraryActivity")
+} from "./libraryActivity.js"
 
 const prisma = getPrismaClient()
 
-const LIBRARY_TIMEZONE = CAMPUS_TIMEZONE
-const LEGACY_SIMULATION_SOURCE = "library_cron_simulation"
-const SIMULATION_SOURCE = "campus_cron_simulation"
-const CLOSING_SWEEP_SOURCE = "campus_closing_sweep"
+export const LIBRARY_TIMEZONE = CAMPUS_TIMEZONE
+export const LEGACY_SIMULATION_SOURCE = "library_cron_simulation"
+export const SIMULATION_SOURCE = "campus_cron_simulation"
+export const CLOSING_SWEEP_SOURCE = "campus_closing_sweep"
 const MOVEMENT_SCAN_TYPE = "manual"
 
-const ACADEMIC_BUILDINGS = CAMPUS_BUILDINGS.filter((location) => location !== LIBRARY_LOCATION)
+const ACADEMIC_BUILDINGS = CAMPUS_BUILDINGS.filter(
+  (location) => location !== LIBRARY_LOCATION,
+)
 const REGULAR_OUTPASS_DESTINATIONS = [
   { reason: "Evening study materials pickup", destination: "City Book Store" },
   { reason: "Medical appointment", destination: "Community Clinic" },
@@ -223,7 +225,8 @@ const WINDOW_PROFILES = [
 let simulationInFlight = false
 let closingSweepInFlight = false
 
-const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(value, maximum))
+const clamp = (value, minimum, maximum) =>
+  Math.max(minimum, Math.min(value, maximum))
 
 const randomInt = (minimum, maximum) => {
   if (maximum <= minimum) {
@@ -233,7 +236,8 @@ const randomInt = (minimum, maximum) => {
   return minimum + Math.floor(Math.random() * (maximum - minimum + 1))
 }
 
-const toDate = (value) => (value instanceof Date ? new Date(value) : new Date(value || Date.now()))
+const toDate = (value) =>
+  value instanceof Date ? new Date(value) : new Date(value || Date.now())
 
 const chance = (probability) => Math.random() < probability
 
@@ -269,7 +273,10 @@ const pickWeightedItem = (items) => {
     return null
   }
 
-  const totalWeight = items.reduce((sum, item) => sum + Math.max(0, item.weight || 0), 0)
+  const totalWeight = items.reduce(
+    (sum, item) => sum + Math.max(0, item.weight || 0),
+    0,
+  )
   if (totalWeight <= 0) {
     return items[0]
   }
@@ -315,27 +322,51 @@ const pickAcademicDestination = (profile, now) => {
     { value: "CC3", weight: 6 },
     { value: "AAA", weight: 2 },
     { value: "Lecture Theatre", weight: 2 },
-    { value: "SAC", weight: sacIsOpen ? (profile.name === "lunch" ? 2 : 1) : 0 },
-    { value: "Auditorium", weight: profile.name === "morning_classes" || profile.name === "afternoon_classes" ? 1 : 0.5 },
+    {
+      value: "SAC",
+      weight: sacIsOpen ? (profile.name === "lunch" ? 2 : 1) : 0,
+    },
+    {
+      value: "Auditorium",
+      weight:
+        profile.name === "morning_classes" ||
+        profile.name === "afternoon_classes"
+          ? 1
+          : 0.5,
+    },
   ]
 
   if (profile.name === "evening" || profile.name === "late_night") {
-    return pickRandomItem(sacIsOpen ? ACADEMIC_BUILDINGS : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC"))
+    return pickRandomItem(
+      sacIsOpen
+        ? ACADEMIC_BUILDINGS
+        : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC"),
+    )
   }
 
   return (
     pickWeightedItem(classWeights)?.value ||
-    pickRandomItem(sacIsOpen ? ACADEMIC_BUILDINGS : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC"))
+    pickRandomItem(
+      sacIsOpen
+        ? ACADEMIC_BUILDINGS
+        : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC"),
+    )
   )
 }
 
 const buildEmergencyContact = (student) => {
-  const firstName = String(student.name || "Student").trim().split(/\s+/)[0] || "Student"
-  const fallbackDigits = student.studentId?.replace(/\D/g, "").slice(-9) || String(randomInt(100000000, 999999999))
+  const firstName =
+    String(student.name || "Student")
+      .trim()
+      .split(/\s+/)[0] || "Student"
+  const fallbackDigits =
+    student.studentId?.replace(/\D/g, "").slice(-9) ||
+    String(randomInt(100000000, 999999999))
 
   return {
     name: `${firstName} Guardian`,
-    phone: student.phoneNumber || `9${fallbackDigits.padStart(9, "0").slice(-9)}`,
+    phone:
+      student.phoneNumber || `9${fallbackDigits.padStart(9, "0").slice(-9)}`,
   }
 }
 
@@ -344,7 +375,10 @@ const isMovementCoolingDown = (context, now, minutes) => {
     return false
   }
 
-  return now.getTime() - new Date(context.latestMovement.createdAt).getTime() < minutes * 60 * 1000
+  return (
+    now.getTime() - new Date(context.latestMovement.createdAt).getTime() <
+    minutes * 60 * 1000
+  )
 }
 
 const isOutpassCoolingDown = (context, now, minutes) => {
@@ -352,11 +386,13 @@ const isOutpassCoolingDown = (context, now, minutes) => {
     return false
   }
 
-  const anchor = context.activeOutpass.updatedAt || context.activeOutpass.createdAt
+  const anchor =
+    context.activeOutpass.updatedAt || context.activeOutpass.createdAt
   return now.getTime() - new Date(anchor).getTime() < minutes * 60 * 1000
 }
 
-const getCurrentHostel = (context) => context.student.hostel || context.state.hostel || HOSTELS[0]
+const getCurrentHostel = (context) =>
+  context.student.hostel || context.state.hostel || HOSTELS[0]
 
 const inferStudentState = (student, latestMovement) => {
   const fallbackHostel = student.hostel || HOSTELS[0]
@@ -422,7 +458,14 @@ const inferStudentState = (student, latestMovement) => {
   }
 }
 
-const getMovementLogPayload = ({ userId, guard, action, location, createdAt, details = {} }) => ({
+const getMovementLogPayload = ({
+  userId,
+  guard,
+  action,
+  location,
+  createdAt,
+  details = {},
+}) => ({
   id: generateId(),
   userId,
   action,
@@ -442,7 +485,10 @@ const getMovementLogPayload = ({ userId, guard, action, location, createdAt, det
 
 const getSimulationTimestamp = (now, offsetSeconds = 0) => {
   const timestamp = new Date(now)
-  timestamp.setSeconds(timestamp.getSeconds() + offsetSeconds, randomInt(0, 999))
+  timestamp.setSeconds(
+    timestamp.getSeconds() + offsetSeconds,
+    randomInt(0, 999),
+  )
   return timestamp
 }
 
@@ -550,7 +596,10 @@ const isTrackableOutpass = (outpass) => {
     return true
   }
 
-  if (["approved", "expired"].includes(outpass.status) && !outpass.actualReturnDate) {
+  if (
+    ["approved", "expired"].includes(outpass.status) &&
+    !outpass.actualReturnDate
+  ) {
     return true
   }
 
@@ -608,7 +657,13 @@ const getActiveLibrarySeatMap = async (studentIds = []) => {
   return seatMap
 }
 
-const createStudentContextMap = ({ students, movementMap, gateMovementMap, outpassMap, librarySeatMap }) =>
+const createStudentContextMap = ({
+  students,
+  movementMap,
+  gateMovementMap,
+  outpassMap,
+  librarySeatMap,
+}) =>
   new Map(
     students.map((student) => {
       const latestMovement = movementMap.get(student.id) || null
@@ -631,7 +686,9 @@ const createStudentContextMap = ({ students, movementMap, gateMovementMap, outpa
   )
 
 const getEligibleContexts = ({ contextMap, reservedIds, predicate }) =>
-  [...contextMap.values()].filter((context) => !reservedIds.has(context.student.id) && predicate(context))
+  [...contextMap.values()].filter(
+    (context) => !reservedIds.has(context.student.id) && predicate(context),
+  )
 
 const reserveContexts = (reservedIds, contexts = []) => {
   for (const context of contexts) {
@@ -639,7 +696,8 @@ const reserveContexts = (reservedIds, contexts = []) => {
   }
 }
 
-const pickGuardForLocation = (guardMap, location) => pickRandomItem(guardMap.get(location) || [])
+const pickGuardForLocation = (guardMap, location) =>
+  pickRandomItem(guardMap.get(location) || [])
 
 const syncMovementState = (context, movement) => {
   context.latestMovement = movement
@@ -680,7 +738,15 @@ const pickAvailableLibrarySeatNumber = (contextMap) => {
   return pickRandomItem(available)
 }
 
-const createInternalMovement = async ({ context, contextMap, fromLocation, toLocation, now, guardMap, transition }) => {
+const createInternalMovement = async ({
+  context,
+  contextMap,
+  fromLocation,
+  toLocation,
+  now,
+  guardMap,
+  transition,
+}) => {
   const exitGuard = pickGuardForLocation(guardMap, fromLocation)
   const entryGuard = pickGuardForLocation(guardMap, toLocation)
 
@@ -690,7 +756,9 @@ const createInternalMovement = async ({ context, contextMap, fromLocation, toLoc
 
   const enteringLibrary = toLocation === LIBRARY_LOCATION
   const leavingLibrary = fromLocation === LIBRARY_LOCATION
-  const nextLibrarySeat = enteringLibrary ? pickAvailableLibrarySeatNumber(contextMap) : null
+  const nextLibrarySeat = enteringLibrary
+    ? pickAvailableLibrarySeatNumber(contextMap)
+    : null
 
   if (enteringLibrary && !isLibOpenAt(now)) {
     return false
@@ -727,7 +795,10 @@ const createInternalMovement = async ({ context, contextMap, fromLocation, toLoc
     },
   })
 
-  const activeLibrarySeat = leavingLibrary ? context.activeLibrarySeat || (await getActiveSeatSession(prisma, context.student.id)) : null
+  const activeLibrarySeat = leavingLibrary
+    ? context.activeLibrarySeat ||
+      (await getActiveSeatSession(prisma, context.student.id))
+    : null
 
   await prisma.$transaction(async (tx) => {
     if (fromLocation === "SAC") {
@@ -800,7 +871,10 @@ const createInternalMovement = async ({ context, contextMap, fromLocation, toLoc
   return true
 }
 
-const createSacSimulationLog = async (client, { userId, action, description, now, details = {} }) =>
+const createSacSimulationLog = async (
+  client,
+  { userId, action, description, now, details = {} },
+) =>
   client.log.create({
     data: {
       id: generateId(),
@@ -863,7 +937,10 @@ const cleanupSacStateForStudent = async ({ client, userId, now, reason }) => {
       where: {
         id: presence.sessionId,
       },
-      data: remainingOccupants === 0 ? { closedAt: now, lastActivityAt: now } : { lastActivityAt: now },
+      data:
+        remainingOccupants === 0
+          ? { closedAt: now, lastActivityAt: now }
+          : { lastActivityAt: now },
     })
 
     await createSacSimulationLog(client, {
@@ -903,7 +980,12 @@ const cleanupSacStateForStudent = async ({ client, userId, now, reason }) => {
   return activePresences.length + activeCheckouts.length
 }
 
-const simulateSacRoomActivity = async ({ contextMap, reservedIds, now, counters }) => {
+const simulateSacRoomActivity = async ({
+  contextMap,
+  reservedIds,
+  now,
+  counters,
+}) => {
   if (!isSacOpenAt(now)) {
     return
   }
@@ -911,10 +993,15 @@ const simulateSacRoomActivity = async ({ contextMap, reservedIds, now, counters 
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
-    predicate: (context) => context.state.location === "SAC" && !isMovementCoolingDown(context, now, 15),
+    predicate: (context) =>
+      context.state.location === "SAC" &&
+      !isMovementCoolingDown(context, now, 15),
   })
 
-  const selected = sampleItems(eligible, Math.min(eligible.length, buildCount(contextMap.size, 0.015, 4, 1)))
+  const selected = sampleItems(
+    eligible,
+    Math.min(eligible.length, buildCount(contextMap.size, 0.015, 4, 1)),
+  )
 
   for (const context of selected) {
     const activePresence = await prisma.sacRoomPresence.findFirst({
@@ -1014,7 +1101,12 @@ const simulateSacRoomActivity = async ({ contextMap, reservedIds, now, counters 
   reserveContexts(reservedIds, selected)
 }
 
-const simulateSacEquipmentActivity = async ({ contextMap, reservedIds, now, counters }) => {
+const simulateSacEquipmentActivity = async ({
+  contextMap,
+  reservedIds,
+  now,
+  counters,
+}) => {
   if (!isSacOpenAt(now)) {
     return
   }
@@ -1022,10 +1114,15 @@ const simulateSacEquipmentActivity = async ({ contextMap, reservedIds, now, coun
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
-    predicate: (context) => context.state.location === "SAC" && !isMovementCoolingDown(context, now, 15),
+    predicate: (context) =>
+      context.state.location === "SAC" &&
+      !isMovementCoolingDown(context, now, 15),
   })
 
-  const selected = sampleItems(eligible, Math.min(eligible.length, buildCount(contextMap.size, 0.018, 5, 1)))
+  const selected = sampleItems(
+    eligible,
+    Math.min(eligible.length, buildCount(contextMap.size, 0.018, 5, 1)),
+  )
 
   for (const context of selected) {
     const activeCheckout = await prisma.sacEquipmentCheckout.findFirst({
@@ -1087,7 +1184,11 @@ const simulateSacEquipmentActivity = async ({ contextMap, reservedIds, now, coun
   reserveContexts(reservedIds, selected)
 }
 
-const closeActiveSacState = async ({ now, counters, reason = "sac_closed" }) => {
+const closeActiveSacState = async ({
+  now,
+  counters,
+  reason = "sac_closed",
+}) => {
   const [activePresences, activeCheckouts] = await Promise.all([
     prisma.sacRoomPresence.findMany({
       where: {
@@ -1107,11 +1208,21 @@ const closeActiveSacState = async ({ now, counters, reason = "sac_closed" }) => 
     }),
   ])
 
-  const affectedUserIds = [...new Set([...activePresences.map((presence) => presence.userId), ...activeCheckouts.map((checkout) => checkout.userId)])]
+  const affectedUserIds = [
+    ...new Set([
+      ...activePresences.map((presence) => presence.userId),
+      ...activeCheckouts.map((checkout) => checkout.userId),
+    ]),
+  ]
 
   for (const userId of affectedUserIds) {
     const actionAt = getSimulationTimestamp(now, -randomInt(0, 10))
-    await cleanupSacStateForStudent({ client: prisma, userId, now: actionAt, reason })
+    await cleanupSacStateForStudent({
+      client: prisma,
+      userId,
+      now: actionAt,
+      reason,
+    })
   }
 
   if (counters) {
@@ -1140,7 +1251,11 @@ const buildRegularOutpassWindow = (now) => {
     baseReturn.setHours(randomInt(19, 21), randomInt(0, 50), 0, 0)
   }
 
-  const cutoff = getCutoffTimeForDate(baseExit, RETURN_CUTOFF_HOUR, RETURN_CUTOFF_MINUTE)
+  const cutoff = getCutoffTimeForDate(
+    baseExit,
+    RETURN_CUTOFF_HOUR,
+    RETURN_CUTOFF_MINUTE,
+  )
   if (baseReturn > cutoff) {
     baseReturn.setTime(cutoff.getTime() - randomInt(5, 25) * 60 * 1000)
   }
@@ -1153,7 +1268,9 @@ const buildRegularOutpassWindow = (now) => {
       fallbackReturn.setTime(latestAllowedReturn.getTime())
     }
 
-    baseReturn.setTime(Math.max(fallbackReturn.getTime(), baseExit.getTime() + 20 * 60 * 1000))
+    baseReturn.setTime(
+      Math.max(fallbackReturn.getTime(), baseExit.getTime() + 20 * 60 * 1000),
+    )
   }
 
   return {
@@ -1182,14 +1299,19 @@ const createOutpassRequest = async ({ context, requestType, now }) => {
       ? pickRandomItem(LONG_VISIT_DESTINATIONS)
       : pickRandomItem(REGULAR_OUTPASS_DESTINATIONS)
   const window =
-    requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT ? buildLongVisitWindow(now) : buildRegularOutpassWindow(now)
+    requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
+      ? buildLongVisitWindow(now)
+      : buildRegularOutpassWindow(now)
   const emergencyContact = buildEmergencyContact(context.student)
   const createdAt = getSimulationTimestamp(now, -randomInt(10, 120))
   const remarks =
     requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
       ? "Long visit request submitted. Physical warden approval required."
       : "Outpass request submitted"
-  const logAction = requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT ? "outpass_long_visit" : "outpass_request"
+  const logAction =
+    requestType === OUTPASS_REQUEST_TYPE.LONG_VISIT
+      ? "outpass_long_visit"
+      : "outpass_request"
 
   const outpass = await prisma.$transaction(async (tx) => {
     const createdOutpass = await tx.outpass.create({
@@ -1247,7 +1369,16 @@ const createOutpassRequest = async ({ context, requestType, now }) => {
   return outpass
 }
 
-const transitionOutpassStatus = async ({ context, outpass, nextStatus, changedBy, source, remarks, rejectionReason = null, now }) => {
+const transitionOutpassStatus = async ({
+  context,
+  outpass,
+  nextStatus,
+  changedBy,
+  source,
+  remarks,
+  rejectionReason = null,
+  now,
+}) => {
   const changedAt = getSimulationTimestamp(now, -randomInt(5, 90))
 
   const updatedOutpass = await prisma.$transaction(async (tx) => {
@@ -1257,8 +1388,12 @@ const transitionOutpassStatus = async ({ context, outpass, nextStatus, changedBy
       },
       data: {
         status: nextStatus,
-        rejectionReason: nextStatus === "rejected" ? rejectionReason || "Not approved by hostel warden" : null,
-        approvedById: nextStatus === "approved" ? changedBy : outpass.approvedById,
+        rejectionReason:
+          nextStatus === "rejected"
+            ? rejectionReason || "Not approved by hostel warden"
+            : null,
+        approvedById:
+          nextStatus === "approved" ? changedBy : outpass.approvedById,
         updatedAt: changedAt,
       },
     })
@@ -1300,7 +1435,12 @@ const transitionOutpassStatus = async ({ context, outpass, nextStatus, changedBy
   return updatedOutpass
 }
 
-const createOutpassBackedGateExit = async ({ context, outpass, now, guardMap }) => {
+const createOutpassBackedGateExit = async ({
+  context,
+  outpass,
+  now,
+  guardMap,
+}) => {
   const gate = pickRandomItem(EXIT_GATES)
   const guard = pickGuardForLocation(guardMap, gate)
   const wasInLibrary = context.state.zone === "library"
@@ -1335,7 +1475,9 @@ const createOutpassBackedGateExit = async ({ context, outpass, now, guardMap }) 
     }
 
     if (wasInLibrary) {
-      const activeSeat = context.activeLibrarySeat || (await getActiveSeatSession(tx, context.student.id))
+      const activeSeat =
+        context.activeLibrarySeat ||
+        (await getActiveSeatSession(tx, context.student.id))
       if (activeSeat) {
         await releaseLibrarySeat(tx, {
           session: activeSeat,
@@ -1415,7 +1557,12 @@ const createOutpassBackedGateExit = async ({ context, outpass, now, guardMap }) 
   return true
 }
 
-const createOutpassBackedGateReturn = async ({ context, outpass, now, guardMap }) => {
+const createOutpassBackedGateReturn = async ({
+  context,
+  outpass,
+  now,
+  guardMap,
+}) => {
   const gate = pickRandomItem(EXIT_GATES)
   const guard = pickGuardForLocation(guardMap, gate)
 
@@ -1504,7 +1651,13 @@ const createOutpassBackedGateReturn = async ({ context, outpass, now, guardMap }
   return true
 }
 
-const simulateOutpassRequests = async ({ contextMap, reservedIds, profile, now, counters }) => {
+const simulateOutpassRequests = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1516,13 +1669,19 @@ const simulateOutpassRequests = async ({ contextMap, reservedIds, profile, now, 
 
   const requestCount = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.outpassRequestRatio, profile.maxOutpassRequests, 2),
+    buildCount(
+      contextMap.size,
+      profile.outpassRequestRatio,
+      profile.maxOutpassRequests,
+      2,
+    ),
   )
   const selected = sampleItems(eligible, requestCount)
 
   for (const context of selected) {
-    const requestType =
-      chance(profile.name === "evening" ? 0.08 : 0.03) ? OUTPASS_REQUEST_TYPE.LONG_VISIT : OUTPASS_REQUEST_TYPE.REGULAR
+    const requestType = chance(profile.name === "evening" ? 0.08 : 0.03)
+      ? OUTPASS_REQUEST_TYPE.LONG_VISIT
+      : OUTPASS_REQUEST_TYPE.REGULAR
     await createOutpassRequest({
       context,
       requestType,
@@ -1538,7 +1697,14 @@ const simulateOutpassRequests = async ({ contextMap, reservedIds, profile, now, 
   reserveContexts(reservedIds, selected)
 }
 
-const simulateWardenReviews = async ({ contextMap, reservedIds, profile, now, wardenMap, counters }) => {
+const simulateWardenReviews = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  wardenMap,
+  counters,
+}) => {
   const pendingContexts = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1550,7 +1716,12 @@ const simulateWardenReviews = async ({ contextMap, reservedIds, profile, now, wa
 
   const reviewCount = Math.min(
     pendingContexts.length,
-    buildCount(contextMap.size, profile.pendingReviewRatio, profile.maxPendingReviews, 2),
+    buildCount(
+      contextMap.size,
+      profile.pendingReviewRatio,
+      profile.maxPendingReviews,
+      2,
+    ),
   )
   const selected = sampleItems(pendingContexts, reviewCount)
 
@@ -1593,7 +1764,13 @@ const simulateWardenReviews = async ({ contextMap, reservedIds, profile, now, wa
   reserveContexts(reservedIds, selected)
 }
 
-const simulateRareCancellations = async ({ contextMap, reservedIds, now, counters, wardenMap }) => {
+const simulateRareCancellations = async ({
+  contextMap,
+  reservedIds,
+  now,
+  counters,
+  wardenMap,
+}) => {
   const cancellableContexts = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1604,13 +1781,21 @@ const simulateRareCancellations = async ({ contextMap, reservedIds, now, counter
       !isOutpassCoolingDown(context, now, 10),
   })
 
-  const selected = cancellableContexts.filter((context) => chance(context.activeOutpass.status === "pending" ? 0.01 : 0.006))
+  const selected = cancellableContexts.filter((context) =>
+    chance(context.activeOutpass.status === "pending" ? 0.01 : 0.006),
+  )
 
   for (const context of selected) {
     const source = chance(0.6) ? "student" : "warden"
     const warden = wardenMap.get(getCurrentHostel(context)) || null
-    const changedBy = source === "student" ? context.student.id : warden?.id || context.student.id
-    const remarks = source === "student" ? "Cancelled by student" : "Cancelled by hostel warden"
+    const changedBy =
+      source === "student"
+        ? context.student.id
+        : warden?.id || context.student.id
+    const remarks =
+      source === "student"
+        ? "Cancelled by student"
+        : "Cancelled by hostel warden"
 
     await transitionOutpassStatus({
       context,
@@ -1628,7 +1813,14 @@ const simulateRareCancellations = async ({ contextMap, reservedIds, now, counter
   reserveContexts(reservedIds, selected)
 }
 
-const simulateGateDepartures = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateGateDepartures = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1643,7 +1835,12 @@ const simulateGateDepartures = async ({ contextMap, reservedIds, profile, now, g
 
   const departureCount = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.gateDepartureRatio, profile.maxGateDepartures, 2),
+    buildCount(
+      contextMap.size,
+      profile.gateDepartureRatio,
+      profile.maxGateDepartures,
+      2,
+    ),
   )
   const selected = sampleItems(eligible, departureCount)
 
@@ -1663,7 +1860,14 @@ const simulateGateDepartures = async ({ contextMap, reservedIds, profile, now, g
   reserveContexts(reservedIds, selected)
 }
 
-const simulateGateReturns = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateGateReturns = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1677,11 +1881,16 @@ const simulateGateReturns = async ({ contextMap, reservedIds, profile, now, guar
   const selected = eligible.filter((context) => {
     const dueSoon =
       context.activeOutpass.expectedReturnDate &&
-      new Date(context.activeOutpass.expectedReturnDate).getTime() - now.getTime() <= 45 * 60 * 1000
+      new Date(context.activeOutpass.expectedReturnDate).getTime() -
+        now.getTime() <=
+        45 * 60 * 1000
 
     return chance(dueSoon ? 0.75 : 0.28)
   })
-  const limited = sampleItems(selected, Math.min(selected.length, profile.maxGateReturns))
+  const limited = sampleItems(
+    selected,
+    Math.min(selected.length, profile.maxGateReturns),
+  )
 
   for (const context of limited) {
     const returned = await createOutpassBackedGateReturn({
@@ -1699,7 +1908,14 @@ const simulateGateReturns = async ({ contextMap, reservedIds, profile, now, guar
   reserveContexts(reservedIds, limited)
 }
 
-const simulateHostelToAcademic = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateHostelToAcademic = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1709,7 +1925,12 @@ const simulateHostelToAcademic = async ({ contextMap, reservedIds, profile, now,
   })
   const count = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.hostelToAcademicRatio, profile.maxHostelToAcademic, 2),
+    buildCount(
+      contextMap.size,
+      profile.hostelToAcademicRatio,
+      profile.maxHostelToAcademic,
+      2,
+    ),
   )
   const selected = sampleItems(eligible, count)
 
@@ -1732,7 +1953,14 @@ const simulateHostelToAcademic = async ({ contextMap, reservedIds, profile, now,
   reserveContexts(reservedIds, selected)
 }
 
-const simulateHostelToLibrary = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateHostelToLibrary = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   if (!isLibOpenAt(now)) {
     return
   }
@@ -1746,7 +1974,12 @@ const simulateHostelToLibrary = async ({ contextMap, reservedIds, profile, now, 
   })
   const count = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.hostelToLibraryRatio, profile.maxHostelToLibrary, 1),
+    buildCount(
+      contextMap.size,
+      profile.hostelToLibraryRatio,
+      profile.maxHostelToLibrary,
+      1,
+    ),
   )
   const selected = sampleItems(eligible, count)
 
@@ -1769,7 +2002,14 @@ const simulateHostelToLibrary = async ({ contextMap, reservedIds, profile, now, 
   reserveContexts(reservedIds, selected)
 }
 
-const simulateAcademicToHostel = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateAcademicToHostel = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1779,7 +2019,12 @@ const simulateAcademicToHostel = async ({ contextMap, reservedIds, profile, now,
   })
   const count = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.academicToHostelRatio, profile.maxAcademicToHostel, 2),
+    buildCount(
+      contextMap.size,
+      profile.academicToHostelRatio,
+      profile.maxAcademicToHostel,
+      2,
+    ),
   )
   const selected = sampleItems(eligible, count)
 
@@ -1802,7 +2047,14 @@ const simulateAcademicToHostel = async ({ contextMap, reservedIds, profile, now,
   reserveContexts(reservedIds, selected)
 }
 
-const simulateLibraryToHostel = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateLibraryToHostel = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1812,7 +2064,12 @@ const simulateLibraryToHostel = async ({ contextMap, reservedIds, profile, now, 
   })
   const count = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.libraryToHostelRatio, profile.maxLibraryToHostel, 2),
+    buildCount(
+      contextMap.size,
+      profile.libraryToHostelRatio,
+      profile.maxLibraryToHostel,
+      2,
+    ),
   )
   const selected = sampleItems(eligible, count)
 
@@ -1835,7 +2092,14 @@ const simulateLibraryToHostel = async ({ contextMap, reservedIds, profile, now, 
   reserveContexts(reservedIds, selected)
 }
 
-const simulateBuildingShifts = async ({ contextMap, reservedIds, profile, now, guardMap, counters }) => {
+const simulateBuildingShifts = async ({
+  contextMap,
+  reservedIds,
+  profile,
+  now,
+  guardMap,
+  counters,
+}) => {
   const eligible = getEligibleContexts({
     contextMap,
     reservedIds,
@@ -1845,7 +2109,12 @@ const simulateBuildingShifts = async ({ contextMap, reservedIds, profile, now, g
   })
   const count = Math.min(
     eligible.length,
-    buildCount(contextMap.size, profile.buildingShiftRatio, profile.maxBuildingShifts, 1),
+    buildCount(
+      contextMap.size,
+      profile.buildingShiftRatio,
+      profile.maxBuildingShifts,
+      1,
+    ),
   )
   const selected = sampleItems(eligible, count)
 
@@ -1853,7 +2122,9 @@ const simulateBuildingShifts = async ({ contextMap, reservedIds, profile, now, g
     const fromLocation = context.state.location
     const sacIsOpen = isSacOpenAt(now)
     const libIsOpen = isLibOpenAt(now)
-    const academicTargets = sacIsOpen ? ACADEMIC_BUILDINGS : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC")
+    const academicTargets = sacIsOpen
+      ? ACADEMIC_BUILDINGS
+      : ACADEMIC_BUILDINGS.filter((location) => location !== "SAC")
     const destinationOptions =
       fromLocation === LIBRARY_LOCATION
         ? academicTargets
@@ -1897,7 +2168,7 @@ const buildCounters = () => ({
   sacClosures: 0,
 })
 
-const runCampusActivitySimulation = async (now = new Date()) => {
+export const runCampusActivitySimulation = async (now = new Date()) => {
   if (simulationInFlight) {
     return {
       skipped: true,
@@ -1927,12 +2198,13 @@ const runCampusActivitySimulation = async (now = new Date()) => {
     }
 
     const studentIds = students.map((student) => student.id)
-    const [movementMap, gateMovementMap, outpassMap, librarySeatMap] = await Promise.all([
-      getLatestMovementMap(prisma, studentIds),
-      getLatestGateMovementMap(prisma, studentIds),
-      getLatestRelevantOutpassMap(studentIds),
-      getActiveLibrarySeatMap(studentIds),
-    ])
+    const [movementMap, gateMovementMap, outpassMap, librarySeatMap] =
+      await Promise.all([
+        getLatestMovementMap(prisma, studentIds),
+        getLatestGateMovementMap(prisma, studentIds),
+        getLatestRelevantOutpassMap(studentIds),
+        getActiveLibrarySeatMap(studentIds),
+      ])
 
     const contextMap = createStudentContextMap({
       students,
@@ -1945,36 +2217,118 @@ const runCampusActivitySimulation = async (now = new Date()) => {
     const counters = buildCounters()
     counters.expiredOutpasses = expiredOutpasses
 
-    await simulateGateReturns({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
+    await simulateGateReturns({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
     reservedIds.clear()
 
     if (isSacOpenAt(simulationTime)) {
-      await simulateSacRoomActivity({ contextMap, reservedIds, now: simulationTime, counters })
+      await simulateSacRoomActivity({
+        contextMap,
+        reservedIds,
+        now: simulationTime,
+        counters,
+      })
       reservedIds.clear()
 
-      await simulateSacEquipmentActivity({ contextMap, reservedIds, now: simulationTime, counters })
+      await simulateSacEquipmentActivity({
+        contextMap,
+        reservedIds,
+        now: simulationTime,
+        counters,
+      })
       reservedIds.clear()
     } else {
-      await closeActiveSacState({ now: simulationTime, counters, reason: "sac_closed_at_1030_pm" })
+      await closeActiveSacState({
+        now: simulationTime,
+        counters,
+        reason: "sac_closed_at_1030_pm",
+      })
     }
 
-    await simulateOutpassRequests({ contextMap, reservedIds, profile, now: simulationTime, counters })
+    await simulateOutpassRequests({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      counters,
+    })
     reservedIds.clear()
 
-    await simulateWardenReviews({ contextMap, reservedIds, profile, now: simulationTime, wardenMap, counters })
+    await simulateWardenReviews({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      wardenMap,
+      counters,
+    })
     reservedIds.clear()
 
-    await simulateRareCancellations({ contextMap, reservedIds, now: simulationTime, counters, wardenMap })
+    await simulateRareCancellations({
+      contextMap,
+      reservedIds,
+      now: simulationTime,
+      counters,
+      wardenMap,
+    })
     reservedIds.clear()
 
-    await simulateGateDepartures({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
+    await simulateGateDepartures({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
     reservedIds.clear()
 
-    await simulateAcademicToHostel({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
-    await simulateLibraryToHostel({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
-    await simulateHostelToAcademic({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
-    await simulateHostelToLibrary({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
-    await simulateBuildingShifts({ contextMap, reservedIds, profile, now: simulationTime, guardMap, counters })
+    await simulateAcademicToHostel({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
+    await simulateLibraryToHostel({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
+    await simulateHostelToAcademic({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
+    await simulateHostelToLibrary({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
+    await simulateBuildingShifts({
+      contextMap,
+      reservedIds,
+      profile,
+      now: simulationTime,
+      guardMap,
+      counters,
+    })
 
     const totals = [...contextMap.values()].reduce(
       (summary, context) => {
@@ -2005,7 +2359,7 @@ const runCampusActivitySimulation = async (now = new Date()) => {
   }
 }
 
-const runCampusClosingSweep = async (now = new Date()) => {
+export const runCampusClosingSweep = async (now = new Date()) => {
   if (closingSweepInFlight) {
     return {
       skipped: true,
@@ -2018,7 +2372,10 @@ const runCampusClosingSweep = async (now = new Date()) => {
   try {
     const sweepTime = toDate(now)
     await closeActiveSacState({ now: sweepTime, reason: CLOSING_SWEEP_SOURCE })
-    const [students, guardMap] = await Promise.all([getActiveStudents(), resolveGuardsByLocation()])
+    const [students, guardMap] = await Promise.all([
+      getActiveStudents(),
+      resolveGuardsByLocation(),
+    ])
 
     if (students.length === 0) {
       return {
@@ -2039,7 +2396,9 @@ const runCampusClosingSweep = async (now = new Date()) => {
         ...item,
         state: inferStudentState(item.student, item.latestMovement),
       }))
-      .filter((context) => ["academic_building", "library"].includes(context.state.zone))
+      .filter((context) =>
+        ["academic_building", "library"].includes(context.state.zone),
+      )
 
     let settledCount = 0
 
@@ -2071,18 +2430,5 @@ const runCampusClosingSweep = async (now = new Date()) => {
   }
 }
 
-const runLibraryVisitSimulation = runCampusActivitySimulation
-const runLibraryClosingSweep = runCampusClosingSweep
-
-module.exports = {
-  LIBRARY_LOCATION,
-  LIBRARY_TIMEZONE,
-  CAMPUS_TIMEZONE,
-  SIMULATION_SOURCE,
-  LEGACY_SIMULATION_SOURCE,
-  CLOSING_SWEEP_SOURCE,
-  runCampusActivitySimulation,
-  runCampusClosingSweep,
-  runLibraryVisitSimulation,
-  runLibraryClosingSweep,
-}
+export const runLibraryVisitSimulation = runCampusActivitySimulation
+export const runLibraryClosingSweep = runCampusClosingSweep

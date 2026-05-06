@@ -6,7 +6,10 @@ const loadPrismaClient = () => {
     try {
       ;({ PrismaClient } = require("@prisma/client"))
     } catch (error) {
-      throw new Error("Prisma client is not generated. Run npm run prisma:generate before using DB_MODE=sql or hybrid.")
+      throw new Error(
+        "Prisma client is not generated. Run npm run prisma:generate before using DB_MODE=sql or hybrid.",
+        { cause: error },
+      )
     }
   }
 
@@ -24,7 +27,10 @@ const getPrismaClient = () => {
     const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
     prisma = new PrismaClientClass({
       adapter,
-      log: process.env.NODE_ENV === "development" ? ["query", "warn", "error"] : ["warn", "error"],
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "warn", "error"]
+          : ["warn", "error"],
     })
   }
   return prisma

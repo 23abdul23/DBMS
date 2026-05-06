@@ -102,11 +102,23 @@ const parseMediaItems = (media) => {
 // Create emergency alert
 router.post("/alert", authenticate, async (req, res) => {
   try {
-    const { type, description, location, media, emergencyContactCalled } = req.body
-    const { latitude, longitude, address } = getLocationValues(location, req.body.latitude, req.body.longitude)
+    const { type, description, location, media, emergencyContactCalled } =
+      req.body
+    const { latitude, longitude, address } = getLocationValues(
+      location,
+      req.body.latitude,
+      req.body.longitude,
+    )
 
-    if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
-      return res.status(400).json({ message: "Latitude and longitude are required" })
+    if (
+      latitude === undefined ||
+      longitude === undefined ||
+      latitude === null ||
+      longitude === null
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Latitude and longitude are required" })
     }
 
     const mediaItems = parseMediaItems(media)
@@ -276,7 +288,9 @@ router.get("/admin/active", [authenticate, adminAuth], async (req, res) => {
     res.json({ emergencies })
   } catch (error) {
     console.error("Active emergencies fetch error:", error)
-    res.status(500).json({ message: "Server error fetching active emergencies" })
+    res
+      .status(500)
+      .json({ message: "Server error fetching active emergencies" })
   }
 })
 
@@ -419,7 +433,9 @@ router.get("/admin/stats", [authenticate, adminAuth], async (req, res) => {
     })
   } catch (error) {
     console.error("Emergency stats error:", error)
-    res.status(500).json({ message: "Server error fetching emergency statistics" })
+    res
+      .status(500)
+      .json({ message: "Server error fetching emergency statistics" })
   }
 })
 
@@ -451,7 +467,9 @@ router.get("/contacts", authenticate, async (req, res) => {
     res.json({ contacts })
   } catch (error) {
     console.error("Emergency contacts error:", error)
-    res.status(500).json({ message: "Server error fetching emergency contacts" })
+    res
+      .status(500)
+      .json({ message: "Server error fetching emergency contacts" })
   }
 })
 

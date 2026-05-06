@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native"
-import { FONTS, SPACING } from "../utils/constants"
+import { StyleSheet } from 'react-native';
+import { FONTS } from '../utils/constants';
 
 export default StyleSheet.create({
   container: {
@@ -17,12 +17,12 @@ export default StyleSheet.create({
     borderRadius: 30,
     padding: 22,
     borderWidth: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   heroCopy: {
     flex: 1,
@@ -44,21 +44,21 @@ export default StyleSheet.create({
     marginTop: 8,
   },
   heroRightRail: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
   roundIconButton: {
     width: 56,
     height: 56,
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
   logoutButton: {
     marginTop: 12,
   },
   heroStatusRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginTop: 22,
   },
   heroStatusCard: {
@@ -93,16 +93,16 @@ export default StyleSheet.create({
     paddingTop: 4,
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 26,
     fontFamily: FONTS.bold,
     letterSpacing: 0.3,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   sectionCaption: {
     fontSize: 13,
@@ -127,9 +127,9 @@ export default StyleSheet.create({
     elevation: 3,
   },
   announcementHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
   },
   announcementTitle: {
@@ -143,8 +143,8 @@ export default StyleSheet.create({
     marginTop: 4,
   },
   announcementPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
@@ -155,15 +155,15 @@ export default StyleSheet.create({
     marginLeft: 6,
   },
   announcementRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   announcementTone: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   announcementRowTitle: {
@@ -183,12 +183,12 @@ export default StyleSheet.create({
     marginTop: 2,
   },
   actionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   actionCard: {
-    width: "48%",
+    width: '48%',
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 11,
@@ -196,29 +196,29 @@ export default StyleSheet.create({
     marginBottom: 10,
   },
   actionCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   actionIcon: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionArrow: {
     width: 34,
     height: 34,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionText: {
     fontSize: 15,
     fontFamily: FONTS.bold,
     marginTop: 0,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   actionSubText: {
     fontSize: 11,
@@ -227,12 +227,12 @@ export default StyleSheet.create({
     lineHeight: 15,
   },
   insightGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 18,
   },
   insightCard: {
-    width: "48%",
+    width: '48%',
     borderRadius: 24,
     padding: 16,
     borderWidth: 1,
@@ -260,16 +260,16 @@ export default StyleSheet.create({
     borderWidth: 1,
   },
   activityRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 14,
   },
   activityIcon: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   activityCopy: {
@@ -285,4 +285,4 @@ export default StyleSheet.create({
     lineHeight: 18,
     marginTop: 3,
   },
-})
+});

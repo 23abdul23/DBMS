@@ -1,13 +1,17 @@
-require("dotenv").config()
+import dotenv from "dotenv"
+import { getPrismaClient, disconnectSQL } from "./config/prisma.js"
 
-const { getPrismaClient, disconnectSQL } = require("./config/prisma")
+dotenv.config()
 
 const prisma = getPrismaClient()
 
 const sql = process.argv.slice(2).join(" ").trim()
 
 const isReadQuery = (statement) => {
-  const normalized = statement.toLowerCase().replace(/^\s*--.*$/gm, "").trim()
+  const normalized = statement
+    .toLowerCase()
+    .replace(/^\s*--.*$/gm, "")
+    .trim()
   return /^(select|with|show|describe|explain)\b/.test(normalized)
 }
 

@@ -1,5 +1,14 @@
 const EXIT_GATES = ["Gate 1", "Gate 2", "Gate 3 (Main Gate)", "Gate 4"]
-const CAMPUS_BUILDINGS = ["Library", "SAC", "Auditorium", "CC1", "CC2", "CC3", "AAA", "Lecture Theatre"]
+const CAMPUS_BUILDINGS = [
+  "Library",
+  "SAC",
+  "Auditorium",
+  "CC1",
+  "CC2",
+  "CC3",
+  "AAA",
+  "Lecture Theatre",
+]
 const HOSTELS = ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
 
 const GATE_EXIT_CUTOFF_HOUR = 18
@@ -12,7 +21,10 @@ const normalizeLocationKey = (value) =>
     .replace(/\s+/g, " ")
 
 const canonicalLocationMap = new Map(
-  [...EXIT_GATES, ...CAMPUS_BUILDINGS, ...HOSTELS].map((location) => [normalizeLocationKey(location), location]),
+  [...EXIT_GATES, ...CAMPUS_BUILDINGS, ...HOSTELS].map((location) => [
+    normalizeLocationKey(location),
+    location,
+  ]),
 )
 
 const locationAliases = new Map([
@@ -28,7 +40,11 @@ const resolveCanonicalLocation = (value) => {
     return null
   }
 
-  return locationAliases.get(normalized) || canonicalLocationMap.get(normalized) || String(value).trim()
+  return (
+    locationAliases.get(normalized) ||
+    canonicalLocationMap.get(normalized) ||
+    String(value).trim()
+  )
 }
 
 const classifyLocation = (value) => {
@@ -55,7 +71,8 @@ const classifyLocation = (value) => {
 
 const isExitGate = (value) => classifyLocation(value).type === "exit_gate"
 
-const isCampusBuilding = (value) => classifyLocation(value).type === "campus_building"
+const isCampusBuilding = (value) =>
+  classifyLocation(value).type === "campus_building"
 
 const isHostel = (value) => classifyLocation(value).type === "hostel"
 
@@ -65,9 +82,11 @@ const getGateExitCutoffTime = (value = new Date()) => {
   return cutoff
 }
 
-const isAfterGateExitCutoff = (value = new Date()) => value >= getGateExitCutoffTime(value)
+const isAfterGateExitCutoff = (value = new Date()) =>
+  value >= getGateExitCutoffTime(value)
 
-const requiresOutpassForExit = (location, now = new Date()) => isExitGate(location) && isAfterGateExitCutoff(now)
+const requiresOutpassForExit = (location, now = new Date()) =>
+  isExitGate(location) && isAfterGateExitCutoff(now)
 
 module.exports = {
   EXIT_GATES,

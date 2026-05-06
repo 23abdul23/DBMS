@@ -1,30 +1,30 @@
-"use client"
+'use client';
 
-import { View, Text, StyleSheet } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 
 export default function QuickStatsCard({ stats }) {
   const statItems = [
     {
-      icon: "document-text-outline",
-      label: "Total Outpasses",
+      icon: 'document-text-outline',
+      label: 'Total Outpasses',
       value: stats.totalOutpasses,
       color: COLORS.primary,
     },
     {
-      icon: "checkmark-circle-outline",
-      label: "Active",
+      icon: 'checkmark-circle-outline',
+      label: 'Active',
       value: stats.activeOutpasses,
       color: COLORS.success,
     },
     {
-      icon: "time-outline",
-      label: "Pending",
+      icon: 'time-outline',
+      label: 'Pending',
       value: stats.pendingOutpasses,
       color: COLORS.warning,
     },
-  ]
+  ];
 
   return (
     <View style={styles.card}>
@@ -32,7 +32,9 @@ export default function QuickStatsCard({ stats }) {
       <View style={styles.statsContainer}>
         {statItems.map((item, index) => (
           <View key={index} style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: item.color + "20" }]}>
+            <View
+              style={[styles.statIcon, { backgroundColor: item.color + '20' }]}
+            >
               <Ionicons name={item.icon} size={20} color={item.color} />
             </View>
             <Text style={styles.statValue}>{item.value}</Text>
@@ -41,7 +43,7 @@ export default function QuickStatsCard({ stats }) {
         ))}
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -63,19 +65,19 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
   statItem: {
-    alignItems: "center",
+    alignItems: 'center',
     flex: 1,
   },
   statIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: SPACING.sm,
   },
   statValue: {
@@ -88,6 +90,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.xs,
     fontFamily: FONTS.regular,
     color: COLORS.gray[600],
-    textAlign: "center",
+    textAlign: 'center',
   },
-})
+});

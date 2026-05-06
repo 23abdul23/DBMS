@@ -1,21 +1,22 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const { userSelect, serializeUser } = require("../utils/userProfiles")
-const { sendMail } = require("../utils/mailer")
-const {
+import express from "express"
+import bcrypt from "bcryptjs"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import { userSelect, serializeUser } from "../utils/userProfiles.js"
+import { sendMail } from "../utils/mailer.js"
+import {
   PASSWORD_OTP_EXPIRY_SECONDS,
   cleanupExpiredPasswordOtps,
   createPasswordOtpRecord,
   generatePasswordOtp,
   hashPasswordOtp,
-} = require("../utils/passwordOtp")
+} from "../utils/passwordOtp.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
 
-const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])(?=\S+$).{8,64}$/
+const STRONG_PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])(?=\S+$).{8,64}$/
 
 const getStrongPasswordError = (password) => {
   if (!password) {
@@ -31,7 +32,9 @@ const getStrongPasswordError = (password) => {
 
 const requireStudent = (req, res) => {
   if (req.user?.role !== "student") {
-    res.status(403).json({ message: "Only students can use OTP password verification" })
+    res
+      .status(403)
+      .json({ message: "Only students can use OTP password verification" })
     return false
   }
 
@@ -71,7 +74,9 @@ router.get("/profile", authenticate, async (req, res) => {
       return res.status(404).json({ message: "User not found" })
     }
 
-    return res.status(200).json({ message: "User Found!", userData: serializeUser(user) })
+    return res
+      .status(200)
+      .json({ message: "User Found!", userData: serializeUser(user) })
   } catch (error) {
     console.log("Error: ", error)
     res.status(500).json({ message: "Server error fetching user" })
@@ -92,7 +97,11 @@ router.put("/profile", authenticate, async (req, res) => {
         year: req.body.year || undefined,
         department: req.body.department || undefined,
         studentProfile:
-          req.body.studentId || req.body.hostel || req.body.roomNumber || req.body.year || req.body.department
+          req.body.studentId ||
+          req.body.hostel ||
+          req.body.roomNumber ||
+          req.body.year ||
+          req.body.department
             ? {
                 upsert: {
                   create: {
@@ -116,12 +125,16 @@ router.put("/profile", authenticate, async (req, res) => {
       select: userSelect,
     })
 
-    return res.status(200).json({ message: "User Data is Updated", userData: serializeUser(user) })
+    return res
+      .status(200)
+      .json({ message: "User Data is Updated", userData: serializeUser(user) })
   } catch (error) {
     console.error("Profile update error:", error)
 
     if (error.code === "P2002") {
-      return res.status(400).json({ message: "Email or student ID already exists" })
+      return res
+        .status(400)
+        .json({ message: "Email or student ID already exists" })
     }
 
     return res.status(500).json({ message: "Server error updating profile" })
@@ -137,7 +150,9 @@ router.post("/password-update/request-otp", authenticate, async (req, res) => {
     const { newPassword, confirmPassword } = req.body
 
     if (!newPassword || !confirmPassword) {
-      return res.status(400).json({ message: "New password and confirmation are required" })
+      return res
+        .status(400)
+        .json({ message: "New password and confirmation are required" })
     }
 
     if (newPassword !== confirmPassword) {
@@ -166,12 +181,19 @@ router.post("/password-update/request-otp", authenticate, async (req, res) => {
     }
 
     if (!user.email) {
-      return res.status(400).json({ message: "Student email is missing from the profile" })
+      return res
+        .status(400)
+        .json({ message: "Student email is missing from the profile" })
     }
 
-    const isCurrentPassword = await bcrypt.compare(newPassword, user.passwordHash)
+    const isCurrentPassword = await bcrypt.compare(
+      newPassword,
+      user.passwordHash,
+    )
     if (isCurrentPassword) {
-      return res.status(400).json({ message: "New password must be different from current password" })
+      return res.status(400).json({
+        message: "New password must be different from current password",
+      })
     }
 
     await cleanupExpiredPasswordOtps(prisma)
@@ -214,7 +236,9 @@ router.post("/password-update/request-otp", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Password OTP request error:", error)
-    return res.status(500).json({ message: "Server error requesting password OTP" })
+    return res
+      .status(500)
+      .json({ message: "Server error requesting password OTP" })
   }
 })
 
@@ -270,22 +294,31 @@ router.post("/password-update/verify-otp", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Password OTP verification error:", error)
-    return res.status(500).json({ message: "Server error verifying password OTP" })
+    return res
+      .status(500)
+      .json({ message: "Server error verifying password OTP" })
   }
 })
 
 router.put("/passwordUpdate", authenticate, async (req, res) => {
   try {
     if (req.user?.role === "student") {
-      return res.status(400).json({ message: "Students must verify an OTP to update password" })
+      return res
+        .status(400)
+        .json({ message: "Students must verify an OTP to update password" })
     }
 
-    const currentPassword = req.body.currentPassword || req.body?.currentPassword?.currentPassword
-    const newPassword = req.body.newPassword || req.body?.currentPassword?.newPassword
-    const confirmPassword = req.body.confirmPassword || req.body?.currentPassword?.confirmPassword
+    const currentPassword =
+      req.body.currentPassword || req.body?.currentPassword?.currentPassword
+    const newPassword =
+      req.body.newPassword || req.body?.currentPassword?.newPassword
+    const confirmPassword =
+      req.body.confirmPassword || req.body?.currentPassword?.confirmPassword
 
     if (!newPassword || !confirmPassword) {
-      return res.status(400).json({ message: "New password and confirmation are required" })
+      return res
+        .status(400)
+        .json({ message: "New password and confirmation are required" })
     }
 
     if (!currentPassword) {
@@ -312,13 +345,18 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
       return res.status(404).json({ message: "User not found" })
     }
 
-    const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash)
+    const passwordMatches = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    )
     if (!passwordMatches) {
       return res.status(400).json({ message: "Current password is incorrect" })
     }
 
     if (newPassword === currentPassword) {
-      return res.status(400).json({ message: "New password must be different from current password" })
+      return res.status(400).json({
+        message: "New password must be different from current password",
+      })
     }
 
     await prisma.user.update({
@@ -328,7 +366,9 @@ router.put("/passwordUpdate", authenticate, async (req, res) => {
       },
     })
 
-    return res.status(200).json({ success: true, message: "Password Updated Successfully" })
+    return res
+      .status(200)
+      .json({ success: true, message: "Password Updated Successfully" })
   } catch (error) {
     console.error("Password update error:", error)
     return res.status(500).json({ message: "Server error updating password" })
@@ -371,8 +411,10 @@ router.get("/logs", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Student logs error:", error)
-    return res.status(500).json({ message: "Server error fetching student logs" })
+    return res
+      .status(500)
+      .json({ message: "Server error fetching student logs" })
   }
 })
 
-module.exports = router
+export default router

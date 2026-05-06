@@ -1,0 +1,37 @@
+{
+  "name": "aegis",
+  "private": true,
+  "scripts": {
+    "check:frontend": "npm --prefix frontend run format && npm --prefix frontend run lint:fix && npm --prefix frontend run lint && npm --prefix frontend run format:check",
+    "check:backend": "npm --prefix backend run format && npm --prefix backend run lint:fix && npm --prefix backend run lint && npm --prefix backend run format:check",
+    "check": "npm run check:backend && npm run check:frontend",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "frontend/**/*.{js,jsx,ts,tsx}": [
+      "npm --prefix frontend run lint:fix",
+      "npm --prefix frontend run lint"
+    ],
+    "frontend/**/*.{json,md,yml,yaml}": [
+      "npm --prefix frontend run format",
+      "npm --prefix frontend run format:check"
+    ],
+    "backend/**/*.{js,ts}": [
+      "npm --prefix backend run lint:fix",
+      "npm --prefix backend run lint"
+    ],
+    "backend/**/*.{json,md,yml,yaml}": [
+      "npm --prefix backend run format",
+      "npm --prefix backend run format:check"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write",
+      "prettier --check"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.8.3"
+  }
+}

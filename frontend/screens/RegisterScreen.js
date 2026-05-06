@@ -1,9 +1,6 @@
-import React from 'react';
-
-"use client"
+import React, { useState } from 'react';
 import {
   View,
-  Button,
   Text,
   TextInput,
   TouchableOpacity,
@@ -12,63 +9,71 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
-} from "react-native"
-import { useState, useEffect } from "react"
-import { Ionicons } from "@expo/vector-icons"
-import { useTheme } from "../context/ThemeContext"
-import { Picker } from "@react-native-picker/picker"
-import { useAuth } from "../context/AuthContext"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
-import { AcademicYearList, AcademicYearReverseMap, DepartmentList, DepartmentReverseMap } from "../utils/enumMappings"
-import StudentRegisterCard from "../components/StudentRegisterCard";
-import WardenRegisterCard from "../components/WardenRegisterCard";
-import SecurityRegisterCard from "../components/SecurityRegisterCard";
-import LoadingSpinner from "../components/LoadingSpinner"
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { Picker } from '@react-native-picker/picker';
+import { useAuth } from '../context/AuthContext';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
+import { AcademicYearList, DepartmentList } from '../utils/enumMappings';
+import StudentRegisterCard from '../components/StudentRegisterCard';
+import WardenRegisterCard from '../components/WardenRegisterCard';
+import SecurityRegisterCard from '../components/SecurityRegisterCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 
+('use client');
 
 export default function RegisterScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
 
-  const deviceId = Application.androidId || Device.osBuildId;
+  const deviceId = Application.getAndroidId() || Device.osBuildId;
 
   const [formData, setFormData] = useState({
-    name: "Abdul Azeem",
-    email: "23abdulazeem23@gmail.com",
-    password: "123456",
-    confirmPassword: "123456",
-    department: "IT",
-    role: "student",
-    year: "SECOND_YEAR",
-    hostel: "BH 3",
-    roomNumber: "818",
-    phone: "9876543210",
-    gender: "male",
-    securityPost: "",
-    guardId: "",
-    wardenId: "",
-    studentId: "",
-    deviceId: deviceId
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { register } = useAuth()
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    department: 'IT',
+    role: 'student',
+    year: '',
+    hostel: '',
+    roomNumber: '',
+    phone: '',
+    gender: 'male',
+    securityPost: '',
+    guardId: '',
+    wardenId: '',
+    studentId: '',
+    deviceId: deviceId,
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
 
-  const departments = DepartmentList
+  const departments = DepartmentList;
 
-  const years = AcademicYearList
+  const years = AcademicYearList;
 
-  const hostels = ["BH 1", "BH 2", "BH 3", "BH 4", "BH 5", "GH 1", "GH 2", "GH 3"]
+  const hostels = [
+    'BH 1',
+    'BH 2',
+    'BH 3',
+    'BH 4',
+    'BH 5',
+    'GH 1',
+    'GH 2',
+    'GH 3',
+  ];
 
-  const roles = ["student", "warden", "security"]
+  const roles = ['student', 'warden', 'security'];
 
   const updateFormData = (key, value) => {
-    setFormData((prev) => ({ ...prev, [key]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
 
   const validateForm = () => {
     const {
@@ -85,108 +90,174 @@ export default function RegisterScreen({ navigation }) {
       gender,
       role,
       securityPost,
-    } = formData
+    } = formData;
 
-    if (!name || !email || !password || !confirmPassword || !phone || !gender || !role) {
-      Alert.alert("Error", "Please fill in all required fields")
-      return false
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !phone ||
+      !gender ||
+      !role
+    ) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return false;
     }
 
-    if (role === "student" && (!studentId || !department || !year || !hostel)) {
-      Alert.alert("Error", "Please fill in all required student fields")
-      return false
+    if (role === 'student' && (!studentId || !department || !year || !hostel)) {
+      Alert.alert('Error', 'Please fill in all required student fields');
+      return false;
     }
 
-    if (role === "warden" && !hostel) {
-      Alert.alert("Error", "Please fill in all required warden fields")
-      return false
+    if (role === 'warden' && !hostel) {
+      Alert.alert('Error', 'Please fill in all required warden fields');
+      return false;
     }
 
-    if (role === "security" && (!guardId || !securityPost)) {
-      Alert.alert("Error", "Please fill in all required security fields")
-      return false
+    if (role === 'security' && (!guardId || !securityPost)) {
+      Alert.alert('Error', 'Please fill in all required security fields');
+      return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match")
-      return false
+      Alert.alert('Error', 'Passwords do not match');
+      return false;
     }
 
     if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters long")
-      return false
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid email address")
-      return false
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleRegister = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setLoading(true)
+    setLoading(true);
     // Map phone to phoneNumber and convert display values to enum values for backend
     const payload = {
       ...formData,
       phoneNumber: formData.phone,
       // Note: year is already stored as enum value (SECOND_YEAR, etc.)
-    }
-    delete payload.phone
-    const result = await register(payload)
-    setLoading(false)
+    };
+    delete payload.phone;
+    const result = await register(payload);
+    setLoading(false);
 
     if (result.success) {
-      Alert.alert("Registration Successful", "Your account has been created.", [
-        { text: "OK", onPress: () => navigation.navigate("Login") },
-      ])
+      Alert.alert('Registration Successful', 'Your account has been created.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
     } else {
-      console.log(result)
-      Alert.alert("Registration Failed", result.error)
+      console.log(result);
+      Alert.alert('Registration Failed', result.error);
     }
-  }
+  };
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', width: '100%' }}>
-          <TouchableOpacity onPress={toggleTheme} style={{ padding: 8, alignSelf: 'flex-end' }}>
-            <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={colors.text} />
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            width: '100%',
+          }}
+        >
+          <TouchableOpacity
+            onPress={toggleTheme}
+            style={{ padding: 8, alignSelf: 'flex-end' }}
+          >
+            <Ionicons
+              name={isDarkMode ? 'sunny' : 'moon'}
+              size={24}
+              color={colors.text}
+            />
           </TouchableOpacity>
         </View>
-        <View style={[styles.header, { backgroundColor: colors.cardGlass, borderColor: colors.border, shadowColor: colors.shadow }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.cardGlass,
+              borderColor: colors.border,
+              shadowColor: colors.shadow,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.heading }]}>Create Account</Text>
-          <Text style={[styles.subtitle, { color: colors.subText }]}>Join Aegis ID Campus Pass</Text>
+          <Text style={[styles.title, { color: colors.heading }]}>
+            Create Account
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.subText }]}>
+            Join Aegis ID Campus Pass
+          </Text>
         </View>
         <View style={styles.form}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="person-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Full Name *"
               placeholderTextColor={colors.inputText}
               value={formData.name}
-              onChangeText={(value) => updateFormData("name", value)}
+              onChangeText={(value) => updateFormData('name', value)}
               autoCapitalize="words"
             />
           </View>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="library-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.pickerContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="library-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
             <Picker
               selectedValue={formData.role}
               style={[styles.picker, { color: colors.inputText }]}
-              onValueChange={(value) => updateFormData("role", value)}
+              onValueChange={(value) => updateFormData('role', value)}
             >
               <Picker.Item label="Select Role *" value="" />
               {roles.map((dept) => (
@@ -220,23 +291,49 @@ export default function RegisterScreen({ navigation }) {
             />
           )}
           {/* Common fields for all roles */}
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="call-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="call-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Phone Number *"
               placeholderTextColor={colors.inputText}
               value={formData.phone}
-              onChangeText={(value) => updateFormData("phone", value)}
+              onChangeText={(value) => updateFormData('phone', value)}
               keyboardType="phone-pad"
             />
           </View>
-          <View style={[styles.pickerContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="male-female-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.pickerContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="male-female-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
             <Picker
               selectedValue={formData.gender}
               style={[styles.picker, { color: colors.inputText }]}
-              onValueChange={(value) => updateFormData("gender", value)}
+              onValueChange={(value) => updateFormData('gender', value)}
             >
               <Picker.Item label="Select Gender *" value="" />
               <Picker.Item label="Male" value="male" />
@@ -245,46 +342,93 @@ export default function RegisterScreen({ navigation }) {
             </Picker>
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { color: colors.inputText }]}
               placeholder="Password *"
               placeholderTextColor={colors.inputText}
               value={formData.password}
-              onChangeText={(value) => updateFormData("password", value)}
+              onChangeText={(value) => updateFormData('password', value)}
               secureTextEntry={!showPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.subText} />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Confirm Password *"
-              placeholderTextColor={colors.inputText}
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateFormData("confirmPassword", value)}
-              secureTextEntry={!showConfirmPassword}
-            />
-            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeIcon}
+            >
               <Ionicons
-                name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
                 color={colors.subText}
               />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={[styles.registerButton, { backgroundColor: colors.primary }]} onPress={handleRegister}>
-            <Text style={[styles.registerButtonText, { color: colors.onPrimary }]}>Create Account</Text>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+              },
+            ]}
+          >
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color={colors.subText}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: colors.inputText }]}
+              placeholder="Confirm Password *"
+              placeholderTextColor={colors.inputText}
+              value={formData.confirmPassword}
+              onChangeText={(value) => updateFormData('confirmPassword', value)}
+              secureTextEntry={!showConfirmPassword}
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={styles.eyeIcon}
+            >
+              <Ionicons
+                name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                size={20}
+                color={colors.subText}
+              />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.registerButton, { backgroundColor: colors.primary }]}
+            onPress={handleRegister}
+          >
+            <Text
+              style={[styles.registerButtonText, { color: colors.onPrimary }]}
+            >
+              Create Account
+            </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.subText }]}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={[styles.signInText, { color: colors.primary }]}>Sign In</Text>
+          <Text style={[styles.footerText, { color: colors.subText }]}>
+            Already have an account?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={[styles.signInText, { color: colors.primary }]}>
+              Sign In
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -302,7 +446,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   header: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: SPACING.xl,
     marginTop: SPACING.xl,
     borderRadius: 28,
@@ -315,7 +459,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   backButton: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     top: 0,
     padding: SPACING.xs,
@@ -335,8 +479,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: SPACING.md,
@@ -345,8 +489,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.gray[200],
   },
   pickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: SPACING.md,
@@ -376,8 +520,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     height: 50,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: SPACING.md,
   },
   registerButtonText: {
@@ -386,9 +530,9 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: SPACING.md,
   },
   footerText: {
@@ -401,4 +545,4 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     color: COLORS.primary,
   },
-})
+});

@@ -1,65 +1,90 @@
-import React, { createContext, useContext, useMemo, useRef, useState } from "react"
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native"
-import Constants from "expo-constants"
-import { captureRef } from "react-native-view-shot"
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Constants from 'expo-constants';
+import { captureRef } from 'react-native-view-shot';
 
-import { buildScreenshotFileName, saveCapturedPng } from "../utils/screenshot"
+import { buildScreenshotFileName, saveCapturedPng } from '../utils/screenshot';
 
-const ScreenshotContext = createContext(null)
+const ScreenshotContext = createContext(null);
 
 const debugScreenshotsEnabled =
-  __DEV__ || Constants.expoConfig?.extra?.DEBUG_SCREENSHOTS_ENABLED === true || Constants.expoConfig?.extra?.DEBUG_SCREENSHOTS_ENABLED === "true"
+  __DEV__ ||
+  Constants.expoConfig?.extra?.DEBUG_SCREENSHOTS_ENABLED === true ||
+  Constants.expoConfig?.extra?.DEBUG_SCREENSHOTS_ENABLED === 'true';
 
 export function ScreenshotProvider({ children }) {
-  const captureTargetRef = useRef(null)
-  const [currentRouteName, setCurrentRouteName] = useState("unknown")
-  const [isCapturing, setIsCapturing] = useState(false)
+  const captureTargetRef = useRef(null);
+  const [currentRouteName, setCurrentRouteName] = useState('unknown');
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const captureCurrentScreen = async ({ routeName, label } = {}) => {
     if (!captureTargetRef.current) {
-      Alert.alert("Screenshot Unavailable", "The current screen is not ready to capture yet.")
-      return null
+      Alert.alert(
+        'Screenshot Unavailable',
+        'The current screen is not ready to capture yet.'
+      );
+      return null;
     }
 
     if (isCapturing) {
-      return null
+      return null;
     }
 
     try {
-      setIsCapturing(true)
-      const effectiveRouteName = routeName || currentRouteName || "screen"
+      setIsCapturing(true);
+      const effectiveRouteName = routeName || currentRouteName || 'screen';
       const capturedUri = await captureRef(captureTargetRef.current, {
-        format: "png",
+        format: 'png',
         quality: 1,
-        result: "tmpfile",
-      })
-      const fileName = buildScreenshotFileName({ routeName: effectiveRouteName, label })
-      const result = await saveCapturedPng({ capturedUri, fileName })
+        result: 'tmpfile',
+      });
+      const fileName = buildScreenshotFileName({
+        routeName: effectiveRouteName,
+        label,
+      });
+      const result = await saveCapturedPng({ capturedUri, fileName });
       const successMessage =
         result.usedDirectoryAccess && result.savedUri
           ? `Saved ${fileName}`
-          : `Saved to ${result.savedUri || fileName}`
+          : `Saved to ${result.savedUri || fileName}`;
 
-      Alert.alert("Screenshot Saved", successMessage)
-      return result
+      Alert.alert('Screenshot Saved', successMessage);
+      return result;
     } catch (error) {
-      Alert.alert("Screenshot Failed", error?.message || "Unable to save the screenshot right now.")
-      return null
+      Alert.alert(
+        'Screenshot Failed',
+        error?.message || 'Unable to save the screenshot right now.'
+      );
+      return null;
     } finally {
-      setIsCapturing(false)
+      setIsCapturing(false);
     }
-  }
+  };
 
   const openCaptureMenu = () => {
     if (!debugScreenshotsEnabled) {
-      return
+      return;
     }
 
-    Alert.alert("Debug Screenshot", `Capture the current ${currentRouteName || "screen"} view?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: isCapturing ? "Saving..." : "Save Screenshot", onPress: () => captureCurrentScreen(), style: "default" },
-    ])
-  }
+    Alert.alert(
+      'Debug Screenshot',
+      `Capture the current ${currentRouteName || 'screen'} view?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isCapturing ? 'Saving...' : 'Save Screenshot',
+          onPress: () => captureCurrentScreen(),
+          style: 'default',
+        },
+      ]
+    );
+  };
 
   const value = useMemo(
     () => ({
@@ -69,13 +94,17 @@ export function ScreenshotProvider({ children }) {
       isCapturing,
       setCurrentRouteName,
     }),
-    [currentRouteName, isCapturing],
-  )
+    [currentRouteName, isCapturing]
+  );
 
   return (
     <ScreenshotContext.Provider value={value}>
       <View style={styles.container}>
-        <View ref={captureTargetRef} collapsable={false} style={styles.captureSurface}>
+        <View
+          ref={captureTargetRef}
+          collapsable={false}
+          style={styles.captureSurface}
+        >
           {children}
         </View>
 
@@ -92,18 +121,18 @@ export function ScreenshotProvider({ children }) {
         ) : null}
       </View>
     </ScreenshotContext.Provider>
-  )
+  );
 }
 
 export const useScreenshot = () => {
-  const context = useContext(ScreenshotContext)
+  const context = useContext(ScreenshotContext);
 
   if (!context) {
-    throw new Error("useScreenshot must be used within a ScreenshotProvider")
+    throw new Error('useScreenshot must be used within a ScreenshotProvider');
   }
 
-  return context
-}
+  return context;
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -113,16 +142,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hotspot: {
-    position: "absolute",
+    position: 'absolute',
     top: 6,
-    left: "50%",
+    left: '50%',
     marginLeft: -32,
     width: 64,
     height: 18,
     zIndex: 9999,
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
   hotspotInner: {
     flex: 1,
   },
-})
+});

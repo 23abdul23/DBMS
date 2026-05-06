@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import {
   View,
@@ -11,88 +11,119 @@ import {
   Platform,
   ScrollView,
   Modal,
-  StatusBar,
   ImageBackground,
-  Animated,
-} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { useState, useRef, useEffect } from "react"
-import { Ionicons } from "@expo/vector-icons"
-import { Picker } from "@react-native-picker/picker"
-import { useTheme } from "../context/ThemeContext"
-import { useAuth } from "../context/AuthContext"
-import { COLORS, FONTS, SIZES, SPACING } from "../utils/constants"
-import LoadingSpinner from "../components/LoadingSpinner"
-import api from "../services/api"
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useRef, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
+import LoadingSpinner from '../components/LoadingSpinner';
+import api, {
+  devQuickLoginCredentialsByRole,
+  isDevelopmentEnvironement,
+} from '../services/api';
 
 export default function LoginScreen({ navigation }) {
-  const { isDarkMode, toggleTheme, colors } = useTheme()
-  const [email, setEmail] = useState("")
-  const [role, setRole] = useState("student")
-  const [password, setPassword] = useState("123456")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const { isDarkMode, toggleTheme, colors } = useTheme();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('student');
+  const [password, setPassword] = useState('123456');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const backgroundImages = [
-    require("../assets/images/iiita.jpeg"),
-    require("../assets/images/iiita2.jpeg"),
-  ]
+    require('../assets/images/iiita.jpeg'),
+    require('../assets/images/iiita2.jpeg'),
+  ];
 
-  const [forgotModalVisible, setForgotModalVisible] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState("")
-  const [sendingForgot, setSendingForgot] = useState(false)
-  const forgotInputRef = useRef(null)
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [sendingForgot, setSendingForgot] = useState(false);
+  const forgotInputRef = useRef(null);
 
   // Switch image every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+      setCurrentImageIndex(
+        (prevIndex) => (prevIndex + 1) % backgroundImages.length
+      );
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields")
-      return
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
     }
-    setLoading(true)
-    const result = await login(email, password, role)
-    setLoading(false)
+    setLoading(true);
+    const result = await login(email, password, role);
+    setLoading(false);
 
     if (!result.success) {
-      Alert.alert("Login Failed", result.error)
+      Alert.alert('Login Failed', result.error);
     }
-  }
+  };
+
+  const handleDevQuickLogin = async () => {
+    const credentials = devQuickLoginCredentialsByRole[role];
+
+    if (!credentials) {
+      Alert.alert(
+        'Missing Test Credentials',
+        `No development test account is configured for role: ${role}`
+      );
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(credentials.email, credentials.password, role);
+    setLoading(false);
+
+    if (!result.success) {
+      Alert.alert(
+        'Quick Login Failed',
+        `${result.error}. Run backend dummy seed scripts and try again.`
+      );
+    }
+  };
 
   const openForgotModal = () => {
-    setForgotEmail(email || "")
-    setForgotModalVisible(true)
-  }
+    setForgotEmail(email || '');
+    setForgotModalVisible(true);
+  };
 
   const sendForgotEmail = async () => {
     if (!forgotEmail) {
-      Alert.alert("Error", "Please enter your email")
-      return
+      Alert.alert('Error', 'Please enter your email');
+      return;
     }
     try {
-      setSendingForgot(true)
-      const res = await api.post("/forgot", { email: forgotEmail })
-      setSendingForgot(false)
-      setForgotModalVisible(false)
-      Alert.alert("Success", res.data?.message || "Password reset email sent")
+      setSendingForgot(true);
+      const res = await api.post('/forgot', { email: forgotEmail });
+      setSendingForgot(false);
+      setForgotModalVisible(false);
+      Alert.alert('Success', res.data?.message || 'Password reset email sent');
     } catch (err) {
-      setSendingForgot(false)
-      const msg = err?.response?.data?.message || err.message || "Failed to send reset email"
-      Alert.alert("Error Sending", msg)
+      setSendingForgot(false);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        'Failed to send reset email';
+      Alert.alert('Error Sending', msg);
     }
-  }
+  };
 
-  if (loading) return <LoadingSpinner />
+  if (loading) return <LoadingSpinner />;
 
   return (
-    <SafeAreaView style={[styles.safeContainer, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safeContainer, { backgroundColor: colors.background }]}
+    >
       <ImageBackground
         source={backgroundImages[currentImageIndex]}
         style={styles.backgroundImage}
@@ -101,7 +132,7 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.overlayContainer}>
           <KeyboardAvoidingView
             style={[styles.container]}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
             {/* Floating Theme Toggle */}
             <TouchableOpacity
@@ -114,7 +145,11 @@ export default function LoginScreen({ navigation }) {
                 },
               ]}
             >
-              <Ionicons name={isDarkMode ? "sunny" : "moon"} size={24} color={colors.text} />
+              <Ionicons
+                name={isDarkMode ? 'sunny' : 'moon'}
+                size={24}
+                color={colors.text}
+              />
             </TouchableOpacity>
 
             <ScrollView
@@ -123,14 +158,40 @@ export default function LoginScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
             >
               {/* Header */}
-              <View style={[styles.header, { backgroundColor: colors.cardGlass, borderColor: colors.border, shadowColor: colors.shadow }]}>
-                <Text style={[styles.title, { color: colors.text }]}>Aegis ID</Text>
-                <Text style={[styles.subtitle, { color: colors.subText }]}>Digital Campus Pass</Text>
+              <View
+                style={[
+                  styles.header,
+                  {
+                    backgroundColor: colors.cardGlass,
+                    borderColor: colors.border,
+                    shadowColor: colors.shadow,
+                  },
+                ]}
+              >
+                <Text style={[styles.title, { color: colors.text }]}>
+                  Aegis ID
+                </Text>
+                <Text style={[styles.subtitle, { color: colors.subText }]}>
+                  Digital Campus Pass
+                </Text>
               </View>
 
               {/* Role Picker */}
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                <Ionicons name="person-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={colors.subText}
+                  style={styles.inputIcon}
+                />
                 <Picker
                   selectedValue={role}
                   style={[styles.input, { color: colors.inputText, flex: 1 }]}
@@ -141,14 +202,30 @@ export default function LoginScreen({ navigation }) {
                   <Picker.Item label="Warden" value="warden" />
                   <Picker.Item label="Security" value="security" />
                   <Picker.Item label="SAC Administrator" value="sac_admin" />
-                  <Picker.Item label="Library Administrator" value="library_admin" />
+                  <Picker.Item
+                    label="Library Administrator"
+                    value="library_admin"
+                  />
                 </Picker>
               </View>
 
               {/* Form */}
               <View style={styles.form}>
-                <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                  <Ionicons name="mail-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                <View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color={colors.subText}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={[styles.input, { color: colors.inputText }]}
                     placeholder="Email Address"
@@ -161,8 +238,21 @@ export default function LoginScreen({ navigation }) {
                   />
                 </View>
 
-                <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={colors.subText} style={styles.inputIcon} />
+                <View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={colors.subText}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={[styles.input, { color: colors.inputText }]}
                     placeholder="Password"
@@ -172,24 +262,60 @@ export default function LoginScreen({ navigation }) {
                     secureTextEntry={!showPassword}
                     autoComplete="password"
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                    <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.subText} />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                      size={20}
+                      color={colors.subText}
+                    />
                   </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.loginButton, { backgroundColor: colors.primary }]}
+                  style={[
+                    styles.loginButton,
+                    { backgroundColor: colors.primary },
+                  ]}
                   onPress={handleLogin}
                 >
-                  <Text style={[styles.loginButtonText, { color: colors.onPrimary }]}>Sign In</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.forgotPassword} onPress={openForgotModal}>
                   <Text
                     style={[
-                      styles.forgotPasswordText,
-                      { color: "#E8F4F8" },
+                      styles.loginButtonText,
+                      { color: colors.onPrimary },
                     ]}
+                  >
+                    Sign In
+                  </Text>
+                </TouchableOpacity>
+
+                {isDevelopmentEnvironement ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.devQuickLoginButton,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.cardGlass,
+                      },
+                    ]}
+                    onPress={handleDevQuickLogin}
+                  >
+                    <Text
+                      style={[styles.devQuickLoginText, { color: colors.text }]}
+                    >
+                      Dev Quick Login ({role.replace('_', ' ')})
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                <TouchableOpacity
+                  style={styles.forgotPassword}
+                  onPress={openForgotModal}
+                >
+                  <Text
+                    style={[styles.forgotPasswordText, { color: '#E8F4F8' }]}
                   >
                     Forgot Password?
                   </Text>
@@ -202,20 +328,22 @@ export default function LoginScreen({ navigation }) {
                 animationType="slide"
                 transparent={true}
                 onRequestClose={() => setForgotModalVisible(false)}
-                onShow={() => setTimeout(() => forgotInputRef.current?.focus?.(), 100)}
+                onShow={() =>
+                  setTimeout(() => forgotInputRef.current?.focus?.(), 100)
+                }
               >
                 <KeyboardAvoidingView
-                  behavior={Platform.OS === "ios" ? "padding" : "height"}
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                   style={{
                     flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
+                    justifyContent: 'center',
+                    alignItems: 'center',
                     backgroundColor: colors.overlay,
                   }}
                 >
                   <View
                     style={{
-                      width: "90%",
+                      width: '90%',
                       backgroundColor: colors.modalSurface,
                       borderRadius: 24,
                       padding: 20,
@@ -223,10 +351,19 @@ export default function LoginScreen({ navigation }) {
                       borderColor: colors.border,
                     }}
                   >
-                    <Text style={{ fontSize: 18, fontFamily: FONTS.bold, color: colors.heading, marginBottom: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontFamily: FONTS.bold,
+                        color: colors.heading,
+                        marginBottom: 8,
+                      }}
+                    >
                       Reset Password
                     </Text>
-                    <Text style={{ color: colors.subText, marginBottom: 12 }}>Enter your email to receive a reset link.</Text>
+                    <Text style={{ color: colors.subText, marginBottom: 12 }}>
+                      Enter your email to receive a reset link.
+                    </Text>
 
                     <TextInput
                       ref={forgotInputRef}
@@ -248,15 +385,31 @@ export default function LoginScreen({ navigation }) {
                       autoCapitalize="none"
                     />
 
-                    <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 12 }}>
-                      <TouchableOpacity onPress={() => setForgotModalVisible(false)} style={{ padding: 10, marginRight: 8 }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'flex-end',
+                        marginTop: 12,
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => setForgotModalVisible(false)}
+                        style={{ padding: 10, marginRight: 8 }}
+                      >
                         <Text style={{ color: colors.subText }}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={sendForgotEmail}
-                        style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colors.primary }}
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          backgroundColor: colors.primary,
+                        }}
                       >
-                        <Text style={{ color: colors.onPrimary }}>{sendingForgot ? "Sending..." : "Send"}</Text>
+                        <Text style={{ color: colors.onPrimary }}>
+                          {sendingForgot ? 'Sending...' : 'Send'}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -265,14 +418,13 @@ export default function LoginScreen({ navigation }) {
 
               {/* Footer */}
               <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: "#D0D0D0" }]}>Don't have an account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-                  <Text
-                    style={[
-                      styles.signUpText,
-                      { color: "#E8F4F8" },
-                    ]}
-                  >
+                <Text style={[styles.footerText, { color: '#D0D0D0' }]}>
+                  Don`&apos;`t have an account?{' '}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Register')}
+                >
+                  <Text style={[styles.signUpText, { color: '#E8F4F8' }]}>
                     Sign Up
                   </Text>
                 </TouchableOpacity>
@@ -282,7 +434,7 @@ export default function LoginScreen({ navigation }) {
         </View>
       </ImageBackground>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -291,22 +443,22 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     flex: 1,
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   blurContainer: {
     flex: 1,
   },
   overlayContainer: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    position: "relative",
+    position: 'relative',
   },
   themeButton: {
-    position: "absolute",
+    position: 'absolute',
     top: 38,
     right: 16,
     zIndex: 100,
@@ -316,11 +468,11 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     padding: SPACING.lg,
   },
   header: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: SPACING.xxl,
     paddingVertical: 24,
     paddingHorizontal: 18,
@@ -345,8 +497,8 @@ const styles = StyleSheet.create({
   },
   form: { marginBottom: SPACING.xl },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: SPACING.md,
@@ -368,8 +520,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     height: 50,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: SPACING.md,
   },
   loginButtonText: {
@@ -377,14 +529,27 @@ const styles = StyleSheet.create({
     fontSize: SIZES.lg,
     fontFamily: FONTS.bold,
   },
-  forgotPassword: { alignItems: "center", marginTop: SPACING.md },
+  devQuickLoginButton: {
+    borderRadius: 12,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    borderWidth: 1,
+  },
+  devQuickLoginText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.regular,
+    textTransform: 'capitalize',
+  },
+  forgotPassword: { alignItems: 'center', marginTop: SPACING.md },
   forgotPasswordText: { fontSize: SIZES.sm },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: SPACING.lg,
   },
   footerText: { fontSize: SIZES.md },
   signUpText: { fontSize: SIZES.md },
-})
+});

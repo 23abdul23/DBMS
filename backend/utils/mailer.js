@@ -1,8 +1,8 @@
-const nodemailer = require("nodemailer")
+import nodemailer from "nodemailer"
 
 let transporter
 
-const getMailTransporter = () => {
+export const getMailTransporter = () => {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       service: "gmail",
@@ -16,16 +16,11 @@ const getMailTransporter = () => {
   return transporter
 }
 
-const sendMail = async ({ from, ...mailOptions }) => {
+export const sendMail = async ({ from, ...mailOptions }) => {
   const mailTransporter = getMailTransporter()
 
   return mailTransporter.sendMail({
     from: from || process.env.GMAIL_ID,
     ...mailOptions,
   })
-}
-
-module.exports = {
-  getMailTransporter,
-  sendMail,
 }

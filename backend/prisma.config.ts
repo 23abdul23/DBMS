@@ -7,6 +7,8 @@ loadDotEnv({ path: path.resolve(process.cwd(), ".env") })
 export default defineConfig({
   schema: "./prisma/schema.prisma",
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://postgres:postgres@db:5432/aegis?schema=public",
+    url:
+      process.env.DATABASE_URL ||
+      "postgresql://postgres:postgres@db:5432/aegis?schema=public",
   },
 })

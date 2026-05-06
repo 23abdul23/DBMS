@@ -1,7 +1,3 @@
-const crypto = require("crypto")
+import crypto from "crypto"
 
-const generateId = () => crypto.randomBytes(12).toString("hex")
-
-module.exports = {
-  generateId,
-}
+export const generateId = () => crypto.randomBytes(12).toString("hex")

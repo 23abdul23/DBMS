@@ -1,38 +1,38 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { Ionicons } from "@expo/vector-icons"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useTheme } from "../context/ThemeContext"
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
-import SACAdminScreen from "../screens/SACAdminScreen"
-import SACAdminClubRoomScreen from "../screens/SACAdminClubRoomScreen"
-import SACAdminEquipmentScreen from "../screens/SACAdminEquipmentScreen"
-import ProfileScreen from "../screens/ProfileScreen"
+import SACAdminScreen from '../screens/SACAdminScreen';
+import SACAdminClubRoomScreen from '../screens/SACAdminClubRoomScreen';
+import SACAdminEquipmentScreen from '../screens/SACAdminEquipmentScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator();
 
 export default function SacAdminTabNavigator() {
-  const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const tabBarPaddingBottom = Math.max(insets.bottom, 10)
-  const tabBarHeight = 62 + tabBarPaddingBottom
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = Math.max(insets.bottom, 10);
+  const tabBarHeight = 62 + tabBarPaddingBottom;
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = "ellipse-outline"
+          let iconName = 'ellipse-outline';
 
-          if (route.name === "SAC") {
-            iconName = focused ? "grid" : "grid-outline"
-          } else if (route.name === "Club Rooms") {
-            iconName = focused ? "key" : "key-outline"
-          } else if (route.name === "Equipment") {
-            iconName = focused ? "football" : "football-outline"
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline"
+          if (route.name === 'SAC') {
+            iconName = focused ? 'grid' : 'grid-outline';
+          } else if (route.name === 'Club Rooms') {
+            iconName = focused ? 'key' : 'key-outline';
+          } else if (route.name === 'Equipment') {
+            iconName = focused ? 'football' : 'football-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -45,7 +45,7 @@ export default function SacAdminTabNavigator() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "600",
+          fontWeight: '600',
         },
         headerShown: false,
       })}
@@ -55,5 +55,5 @@ export default function SacAdminTabNavigator() {
       <Tab.Screen name="Equipment" component={SACAdminEquipmentScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
-  )
+  );
 }

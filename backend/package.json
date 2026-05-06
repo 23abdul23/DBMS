@@ -3,16 +3,25 @@
   "version": "1.0.0",
   "private": true,
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
     "test:prisma": "node test.js",
     "sql": "node sql.js",
+    "dbSize": "node sql.js \"SELECT pg_size_pretty(pg_database_size(current_database())) AS database_size\"",
+    "checkTables": "node sql.js \"SELECT tablename FROM pg_tables WHERE schemaname = 'public'\"",
+    "tableSizes": "node sql.js \"SELECT tablename, pg_size_pretty(pg_total_relation_size(tablename::regclass)) AS size FROM pg_tables WHERE schemaname = 'public' ORDER BY pg_total_relation_size(tablename::regclass) DESC\"",
     "prisma:generate": "prisma generate --config ./prisma.config.ts --schema ./prisma/schema.prisma",
     "prisma:push": "prisma db push --config ./prisma.config.ts --schema ./prisma/schema.prisma --accept-data-loss",
     "prisma:migrate": "prisma migrate dev --config ./prisma.config.ts --schema ./prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --config ./prisma.config.ts --schema ./prisma/schema.prisma",
-    "prisma:studio": "prisma studio --config ./prisma.config.ts --schema ./prisma/schema.prisma"
+    "prisma:studio": "prisma studio --config ./prisma.config.ts --schema ./prisma/schema.prisma",
+    "seed:dev-dummy": "node scripts/seed_dev_dummy_data.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -30,7 +39,10 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
     "nodemon": "^3.1.10",
+    "prettier": "^3.8.3",
     "prisma": "^7.7.0"
   }
 }

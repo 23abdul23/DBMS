@@ -1,33 +1,33 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { Ionicons } from "@expo/vector-icons"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useTheme } from "../context/ThemeContext"
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
-import LibraryAdminScreen from "../screens/LibraryAdminScreen"
-import ProfileScreen from "../screens/ProfileScreen"
+import LibraryAdminScreen from '../screens/LibraryAdminScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator();
 
 export default function LibraryAdminTabNavigator() {
-  const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const tabBarPaddingBottom = Math.max(insets.bottom, 10)
-  const tabBarHeight = 62 + tabBarPaddingBottom
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = Math.max(insets.bottom, 10);
+  const tabBarHeight = 62 + tabBarPaddingBottom;
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           const iconName =
-            route.name === "Library"
+            route.name === 'Library'
               ? focused
-                ? "book"
-                : "book-outline"
+                ? 'book'
+                : 'book-outline'
               : focused
-                ? "person"
-                : "person-outline"
+              ? 'person'
+              : 'person-outline';
 
-          return <Ionicons name={iconName} size={size} color={color} />
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -40,7 +40,7 @@ export default function LibraryAdminTabNavigator() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "600",
+          fontWeight: '600',
         },
         headerShown: false,
       })}
@@ -48,5 +48,5 @@ export default function LibraryAdminTabNavigator() {
       <Tab.Screen name="Library" component={LibraryAdminScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
-  )
+  );
 }

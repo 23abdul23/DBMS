@@ -2,8 +2,15 @@ const express = require("express")
 const { getPrismaClient } = require("../config/prisma")
 const { authenticate } = require("../middleware/auth")
 const { generateId } = require("../utils/hashGenerator")
-const { OUTPASS_REQUEST_TYPE, outpassInclude } = require("../utils/outpassLifecycle")
-const { classifyLocation, isExitGate, requiresOutpassForExit } = require("../utils/locationPolicy")
+const {
+  OUTPASS_REQUEST_TYPE,
+  outpassInclude,
+} = require("../utils/outpassLifecycle")
+const {
+  classifyLocation,
+  isExitGate,
+  requiresOutpassForExit,
+} = require("../utils/locationPolicy")
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -36,7 +43,14 @@ const buildOutpassSummary = (outpass) =>
       }
     : null
 
-const LOG_RANGE_PRESETS = new Set(["today", "yesterday", "last_3_days", "last_week", "last_month", "custom_month"])
+const LOG_RANGE_PRESETS = new Set([
+  "today",
+  "yesterday",
+  "last_3_days",
+  "last_week",
+  "last_month",
+  "custom_month",
+])
 
 const createHttpError = (statusCode, message) => {
   const error = new Error(message)
@@ -64,7 +78,9 @@ const buildMovementLogPayload = ({
   guardName: guardName || null,
   success,
   details: {
-    message: success ? "Security log created successfully" : "Security warning created",
+    message: success
+      ? "Security log created successfully"
+      : "Security warning created",
     scannedUserId: scannedUser.id,
     scannedStudentId: scannedUser.studentId || null,
     scannedUserName: scannedUser.name,
@@ -115,7 +131,8 @@ const getWithoutOutpassReason = (outpass, timestamp) => {
   if (outpass.status === "expired" || outpass.expectedReturnDate <= timestamp) {
     return {
       reasonCode: "expired",
-      reason: "Approved outpass is no longer valid because the allowed time window has expired.",
+      reason:
+        "Approved outpass is no longer valid because the allowed time window has expired.",
     }
   }
 
@@ -129,13 +146,15 @@ const getWithoutOutpassReason = (outpass, timestamp) => {
   if (outpass.status === "approved" && outpass.outDate > timestamp) {
     return {
       reasonCode: "not_active_yet",
-      reason: "Approved outpass exists, but its exit window has not started yet.",
+      reason:
+        "Approved outpass exists, but its exit window has not started yet.",
     }
   }
 
   return {
     reasonCode: "not_approved",
-    reason: "This student does not have an approved outpass for this exit attempt.",
+    reason:
+      "This student does not have an approved outpass for this exit attempt.",
   }
 }
 
@@ -155,7 +174,10 @@ const createWithoutOutpassWarning = async ({
     include: outpassInclude,
   })
 
-  const { reasonCode, reason } = getWithoutOutpassReason(latestOutpass, timestamp)
+  const { reasonCode, reason } = getWithoutOutpassReason(
+    latestOutpass,
+    timestamp,
+  )
   const log = await createStandardMovementLog(prisma, {
     scannedUser,
     action: "without_outpass",
@@ -222,7 +244,12 @@ const getRangeWindow = ({ rangePreset, month, year }) => {
       const parsedMonth = Number.parseInt(month, 10)
       const parsedYear = Number.parseInt(year, 10)
 
-      if (!Number.isFinite(parsedMonth) || !Number.isFinite(parsedYear) || parsedMonth < 1 || parsedMonth > 12) {
+      if (
+        !Number.isFinite(parsedMonth) ||
+        !Number.isFinite(parsedYear) ||
+        parsedMonth < 1 ||
+        parsedMonth > 12
+      ) {
         return null
       }
 
@@ -266,7 +293,10 @@ const getResolvedAction = async ({ userId, action, location }) => {
     take: resolvedLocation && isExitGate(resolvedLocation) ? 100 : 1,
   })
 
-  const previousLog = resolvedLocation && isExitGate(resolvedLocation) ? logs.find((log) => isExitGate(log.location)) : logs[0]
+  const previousLog =
+    resolvedLocation && isExitGate(resolvedLocation)
+      ? logs.find((log) => isExitGate(log.location))
+      : logs[0]
 
   return previousLog?.action === "entry" ? "exit" : "entry"
 }
@@ -297,7 +327,14 @@ const findScannedUser = async ({ userId, studentId }) => {
   return null
 }
 
-const createMovementLog = async ({ scannedUser, action, location, guardId, guardName, scannedByUserId }) => {
+const createMovementLog = async ({
+  scannedUser,
+  action,
+  location,
+  guardId,
+  guardName,
+  scannedByUserId,
+}) => {
   const locationInfo = classifyLocation(location)
   const resolvedLocation = locationInfo.name || null
 
@@ -308,10 +345,17 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
     )
   }
 
-  const resolvedAction = await getResolvedAction({ userId: scannedUser.id, action, location: resolvedLocation })
+  const resolvedAction = await getResolvedAction({
+    userId: scannedUser.id,
+    action,
+    location: resolvedLocation,
+  })
   const timestamp = new Date()
 
-  if (scannedUser.role !== "student" || !["entry", "exit"].includes(resolvedAction)) {
+  if (
+    scannedUser.role !== "student" ||
+    !["entry", "exit"].includes(resolvedAction)
+  ) {
     const log = await createStandardMovementLog(prisma, {
       scannedUser,
       action: resolvedAction,
@@ -356,8 +400,14 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
           orderBy: { createdAt: "desc" },
         })
 
-        if (latestMovement?.action === "exit" && latestMovement.createdAt >= candidateOutpass.outDate) {
-          throw createHttpError(400, "This outpass has already been used for exit")
+        if (
+          latestMovement?.action === "exit" &&
+          latestMovement.createdAt >= candidateOutpass.outDate
+        ) {
+          throw createHttpError(
+            400,
+            "This outpass has already been used for exit",
+          )
         }
 
         return prisma.$transaction(async (tx) => {
@@ -423,7 +473,10 @@ const createMovementLog = async ({ scannedUser, action, location, guardId, guard
           })
         }
 
-        throw createHttpError(400, "An approved outpass is required to exit campus after 6:00 PM")
+        throw createHttpError(
+          400,
+          "An approved outpass is required to exit campus after 6:00 PM",
+        )
       }
     }
 
@@ -584,7 +637,9 @@ router.post("/log", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Security log error:", error)
-    res.status(error.statusCode || 500).json({ message: error.message || "Server error creating security log" })
+    res
+      .status(error.statusCode || 500)
+      .json({ message: error.message || "Server error creating security log" })
   }
 })
 
@@ -597,9 +652,11 @@ router.post("/student-log", authenticate, async (req, res) => {
     }
 
     const { action, location, guardId, guardName } = req.body
-    const normalizedLocation = typeof location === "string" ? location.trim() : ""
+    const normalizedLocation =
+      typeof location === "string" ? location.trim() : ""
     const normalizedGuardId = typeof guardId === "string" ? guardId.trim() : ""
-    const normalizedGuardName = typeof guardName === "string" ? guardName.trim() : ""
+    const normalizedGuardName =
+      typeof guardName === "string" ? guardName.trim() : ""
 
     if (!normalizedLocation && !normalizedGuardId && !normalizedGuardName) {
       return res.status(400).json({
@@ -658,31 +715,41 @@ router.post("/student-log", authenticate, async (req, res) => {
     })
   } catch (error) {
     console.error("Student movement log error:", error)
-    res.status(error.statusCode || 500).json({ message: error.message || "Server error creating student movement log" })
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Server error creating student movement log",
+    })
   }
 })
 
 router.get("/logs", authenticate, async (req, res) => {
   try {
     if (req.user.role !== "security") {
-      return res.status(403).json({ message: "Only security staff can view security logs." })
+      return res
+        .status(403)
+        .json({ message: "Only security staff can view security logs." })
     }
 
-    const location = typeof req.query.location === "string" ? req.query.location.trim() : ""
-    const search = typeof req.query.search === "string" ? req.query.search.trim() : ""
+    const location =
+      typeof req.query.location === "string" ? req.query.location.trim() : ""
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : ""
     const rangePreset =
-      typeof req.query.rangePreset === "string" && LOG_RANGE_PRESETS.has(req.query.rangePreset)
+      typeof req.query.rangePreset === "string" &&
+      LOG_RANGE_PRESETS.has(req.query.rangePreset)
         ? req.query.rangePreset
         : "today"
     const page = parsePositiveInteger(req.query.page, 1)
     const limit = Math.min(parsePositiveInteger(req.query.limit, 20), 100)
-    const month = typeof req.query.month === "string" ? req.query.month : undefined
+    const month =
+      typeof req.query.month === "string" ? req.query.month : undefined
     const year = typeof req.query.year === "string" ? req.query.year : undefined
     const skip = (page - 1) * limit
 
     const rangeWindow = getRangeWindow({ rangePreset, month, year })
     if (!rangeWindow) {
-      return res.status(400).json({ message: "Invalid month or year for custom month filter" })
+      return res
+        .status(400)
+        .json({ message: "Invalid month or year for custom month filter" })
     }
 
     const where = {
@@ -759,4 +826,3 @@ router.get("/logs", authenticate, async (req, res) => {
 })
 
 module.exports = router
-

@@ -1,236 +1,136 @@
-# Aegis ID – Your Secure Digital Campus Pass
+# Aegis ID
 
-Aegis ID is a **mobile-first digital identity and access management system** designed to replace traditional college ID cards and manual entry processes. It offers a secure, fast, and modern way for students, wardens, and campus security to interact within the campus ecosystem. Students can simply Scan & Go at all security entry exit oints and library, Students can request OUTPASS from their hostel wardens without going to them physically, Wardens can Approve and DIsapprove the request etc, Late commers gets ping by the system automatcially and other security features like emergency contacts etc.
+Aegis ID is a mobile-first campus management system built as a DBMS-oriented project. It digitizes student identity and movement workflows across hostels, campus gates, emergency reporting, SAC spaces, and the library. The repository contains an Expo-based frontend, a Node.js/Express backend, and a PostgreSQL database managed through Prisma.
 
+## Project Overview
 
+The project is designed around real campus operations instead of a single ID-card screen. Its main goal is to centralize movement, approval, and safety workflows in one system so students, wardens, guards, and admins all work against the same database-backed records.
 
-📥 **Installation Guide:** [Click here to view installation.md](installation.md)
+The current implementation is centered on:
 
----
+- student authentication and profile management
+- hostel outpass request and approval workflows
+- security gate logging and QR-based movement tracking
+- emergency alert creation and response handling
+- SAC room presence and equipment checkout tracking
+- library seat allocation and release flows
+- auditability through relational records, status history, and logs
 
-## Quick Start
+## Tech Stack Used
 
-### 1. Install dependencies
+- Frontend: React Native with Expo
+- Navigation and mobile UI: React Navigation, React Native libraries, Expo modules
+- Backend: Node.js with Express
+- Database: PostgreSQL
+- ORM and schema management: Prisma
+- Authentication and security: JWT, bcrypt, helmet, express-rate-limit
+- Email/OTP support: Nodemailer
+- Containerization: Docker and Docker Compose
+
+## Features And Functionality
+
+### Student
+
+- register, log in, and manage profile data
+- request regular or long-visit outpasses
+- track outpass status and history
+- cancel eligible outpass requests
+- raise emergency alerts with location and optional media
+- use SAC room and equipment workflows
+- claim and release library seats
+
+### Warden
+
+- review hostel-specific outpass requests
+- approve or reject student requests
+- monitor student movement states
+- view dashboard counts and outpass history
+
+### Security
+
+- scan QR-based student movement data
+- record entry and exit activity
+- validate whether students have valid approved outpasses
+- log attempted exits without valid authorization
+
+### Admin And System
+
+- manage emergency workflows and status updates
+- maintain student and operational records
+- keep audit trails and movement logs
+- run scheduled cleanup and lifecycle jobs on the backend
+
+## Data Model Summary
+
+The Prisma schema in [backend/prisma/schema.prisma](backend/prisma/schema.prisma) models the core entities behind the workflows, including:
+
+- `User`, `StudentProfile`, `WardenProfile`, `SecurityProfile`
+- `Outpass`, `OutpassAuditTrail`
+- `Log`
+- `Emergency`, `EmergencyMedia`, `EmergencyContactCall`
+- `SacRoomSession`, `SacRoomPresence`, `SacEquipmentCheckout`
+- `LibrarySeatSession`
+- `Location`
+- `PasswordUpdateOtp`
+
+This schema is what makes Aegis a DBMS project rather than just a frontend app. The workflows are relational, stateful, and traceable.
+
+## Repository Structure
+
+```text
+backend/
+  config/        Database, Prisma, and auth configuration
+  docs/          Backend-specific notes and migration helpers
+  middleware/    Auth and lifecycle middleware
+  prisma/        Prisma schema and migrations
+  routes/        API route modules
+  scripts/       Data ingestion and maintenance scripts
+  utils/         Shared workflow logic
+
+frontend/
+  assets/        App assets and static resources
+  components/    Reusable UI blocks
+  context/       Shared app state providers
+  navigation/    Navigation stacks and tabs
+  screens/       Role-based screens
+  services/      API client wrappers
+  styles/        Screen-level styling
+```
+
+## Steps To Run The Project
+
+For complete setup details, see [installation.md](installation.md). The short version is:
+
+1. Install dependencies in `backend` and `frontend`.
+2. Create `backend/.env` from `backend/.env.example`.
+3. Start PostgreSQL and set `DATABASE_URL`.
+4. Run Prisma setup commands from `backend`.
+5. Start the backend with `npm run dev`.
+6. Start the frontend with `npm start`.
+
+## Development Quick Login And Dummy Data
+
+Set `ENVIRONEMENT=development` in `backend/.env` and restart Expo to enable a small `Dev Quick Login` button on the login screen. The button uses the currently selected role and signs in directly with seeded dummy accounts.
+
+Seed all dummy users plus realistic test scenario data with:
 
 ```bash
 cd backend
-npm install
-cd ..
-cd frontend
-npm install
+npm run seed:dev-dummy
 cd ..
 ```
 
-### 2. Configure the backend
-
-Create `backend/.env` using `backend/.env.example` as the template. The backend now uses PostgreSQL with Prisma, so set these values at minimum:
-
-```env
-DB_MODE=sql
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
-JWT_SECRET=your-secret
-JWT_EXPIRE=7d
-PORT=3000
-FRONTEND_URL=http://localhost:8081
-GMAIL_ID=your-email@example.com
-GMAIL_PASSWORD=your-app-password
-EMERGENCY_MEDICAL_PHONE=9329594882
-EMERGENCY_SECURITY_PHONE=7217492629
-EMERGENCY_FIRE_PHONE=8618275578
-EMERGENCY_OTHER_PHONE=7909069340
-```
-
-### 3. Generate Prisma client and apply migrations
-
-```bash
-cd backend
-npm run prisma:generate
-npm run prisma:migrate -- --name init
-cd ..
-```
-
-If you run the app with Docker, the backend container now syncs the Prisma schema automatically on startup so a fresh Postgres volume gets the `users` table before registration runs.
-
-### 4. Start the backend
-
-```bash
-cd backend
-npm run dev
-```
-
-### 5. Start the mobile app
-
-```bash
-cd frontend
-npm start
-```
-
----
-
-## Docker Workflow
-
-The repo now includes a root `docker-compose.yml` plus separate Dockerfiles for `backend` and `frontend`.
-
-Run the full stack with:
-
-```bash
-docker compose up --build
-```
-
-This starts:
-
-- PostgreSQL on port `5432`
-- Backend on port `3000`
-- Expo web on port `8081`
-
-Expo in Docker is best used for the web target. For native device development, it is usually better to run Expo locally on the host machine and use the backend container separately.
-
----
-
-## 🚀 What Our App Does
-
-### **1. Digital Campus ID (Dynamic Passkey System)**
-Aegis ID generates a **daily encrypted passkey** (QR/NFC) for students.
-
-- Automatically refreshes
-- Bound to the student's device
-- Screenshot-protected (non-shareable)
-- Can be scanned at gates for access validation
-
-This eliminates the need for physical ID cards and reduces misuse or proxy entries.
-
----
-
-## 🎒 Outpass Management
-
-The app fully digitizes the outpass system:
-
-- Students submit outpass requests  
-- Wardens approve or reject with a single tap  
-- Students receive instant notifications  
-- All actions are logged for transparency  
-
-No more queues, registers, or manual paperwork.
-
----
-
-## 🚨 Emergency Support
-
-Aegis ID includes a **one-tap emergency alert system**:
-
-- Instantly call security or ambulance  
-- App auto-shares GPS location  
-- Emergency logged and tracked by campus authorities  
-
-Ensures quick response during critical situations.
-
----
-
-## 🔒 Secure Authentication & User Management
-
-The system is built with strong security practices:
-
-- JWT-based authentication  
-- Bcrypt password hashing  
-- SHA-256 encrypted passkeys  
-- Role-based access: Student / Warden / Security / Admin  
-
-Admins can manage users, logs, and system policies efficiently.
-
----
-
-## 📱 Modern Mobile-First UI
-
-Built using **React Native**, the app provides:
-
-- Dashboard (Passkey | Outpass | Scan | Emergency)
-- Profile management
-- Outpass creation & tracking
-- QR scanning interface
-- Emergency alert screen
-
-Clean UI, smooth navigation, and fast response time.
-
----
-
-## ⚙️ Gate Access (QR / NFC)
-
-Security guards can validate entries through:
-
-- Scanning student's QR code  
-- Reading NFC tags (supported devices)
-
-Backend verifies:
-
-- Token validity  
-- Device ID match  
-- Expiry time  
-- Student role/status  
-
-Result: Instant **Access Granted / Access Denied** response.
-
----
-
-## 🧬 Core Features Summary
-
-- ✔️ Daily dynamic encrypted passkeys  
-- ✔️ QR & NFC access  
-- ✔️ Device-bound, non-shareable tokens  
-- ✔️ Digital outpass workflow  
-- ✔️ Emergency alerts with live location  
-- ✔️ Profile and account management  
-- ✔️ Role-based dashboards  
-- ✔️ Secure backend with audit logs  
-
----
-
-## 🏗️ Tech Stack
-
-### **Frontend**
-- React Native  
-- Figma (UI Design)
-
-### **Backend**
-- Node.js / Express  
-- PostgreSQL  
-- Prisma 7  
-- JWT, Bcrypt, SHA-256  
-- Optional Blockchain-based logging
-
-### **Hardware**
-- NFC Readers  
-- QR Scanners  
-- Mobile Cameras  
-
----
-
-## 👥 User Roles
-
-- **Students** – Generate passkeys, request outpasses, emergency alerts  
-- **Wardens** – Approve/reject outpasses  
-- **Security Staff** – Validate QR/NFC, view emergencies  
-- **Admins** – Manage users and system configuration  
-
----
-
-## 📝 Why Aegis ID?
-
-- Replaces outdated manual systems  
-- Eliminates fake entries or ID misuse  
-- Faster gate verification  
-- Safer campus with emergency tracking  
-- Fully digital, highly scalable, and secure  
-
----
-
-## 📄 License
-
-This project is part of **CS301 – Software Engineering** at **IIIT Allahabad**.
-
----
-
-## 📬 Contact
-
-For development or contribution queries, reach out to the team.
-
-
+Quick-login accounts (password: `123456`):
+
+- Student: `iit2023001@iiita.ac.in`
+- Warden: `warden.bh-1@iiita.ac.in`
+- Security: `guard100@iiita.ac.in`
+- SAC Admin: `sacAdmin@iiita.ac.in`
+- Library Admin: `libAdmin@iiita.ac.in`
+
+## Documentation
+
+- Project setup and local run guide: [installation.md](installation.md)
+- Team work split: [Work_Distribution.md](Work_Distribution.md)
+- Backend SQL bootstrap note: [backend/docs/sql-migration-bootstrap.md](backend/docs/sql-migration-bootstrap.md)
+- Script command reference: [backend/scripts/commands.md](backend/scripts/commands.md)

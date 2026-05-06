@@ -1,68 +1,74 @@
-"use client"
+'use client';
 
-import { Alert, Text, TouchableOpacity, View } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import styles from "../styles/WardenStyles"
-import { COLORS, OUTPASS_REQUEST_TYPE } from "../utils/constants"
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import styles from '../styles/WardenStyles';
+import { COLORS, OUTPASS_REQUEST_TYPE } from '../utils/constants';
 
 const statusColors = {
-  pending: "#f59e0b",
-  approved: "#10b981",
-  rejected: "#ef4444",
-  expired: "#6b7280",
-  cancelled: "#f97316",
-}
-
-const monitoringColors = {
-  pending_review: "#f59e0b",
-  approved: "#10b981",
-  awaiting_exit: "#2563eb",
-  ongoing: "#8b5cf6",
-  yellow_alert: "#f59e0b",
-  danger: "#dc2626",
-  long_visit_away: "#0f766e",
-  overdue: "#dc2626",
-  expired: "#6b7280",
-  returned: "#059669",
-  returned_late: "#c2410c",
-}
+  pending: '#f59e0b',
+  approved: '#10b981',
+  rejected: '#ef4444',
+  expired: '#6b7280',
+  cancelled: '#f97316',
+};
 
 const formatDateTime = (value) => {
   if (!value) {
-    return "-"
+    return '-';
   }
 
-  return new Date(value).toLocaleString()
-}
+  return new Date(value).toLocaleString();
+};
 
 const prettify = (value) => {
-  return String(value || "")
-    .split("_")
-    .join(" ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
+  return String(value || '')
+    .split('_')
+    .join(' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
-export default function WardenOutpassCard({ outpass, colors, onAction, isBusy }) {
+export default function WardenOutpassCard({
+  outpass,
+  colors,
+  onAction,
+  isBusy,
+}) {
   const handleAction = (action, title, message) => {
     Alert.alert(title, message, [
-      { text: "No", style: "cancel" },
+      { text: 'No', style: 'cancel' },
       {
-        text: "Yes",
+        text: 'Yes',
         onPress: () => onAction?.(outpass, action),
       },
-    ])
-  }
+    ]);
+  };
 
-  const canCancel = typeof outpass.canCancel === "boolean" ? outpass.canCancel : outpass.status === "approved"
-  const isLongVisit = (outpass.requestType || outpass.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT
+  const canCancel =
+    typeof outpass.canCancel === 'boolean'
+      ? outpass.canCancel
+      : outpass.status === 'approved';
+  const isLongVisit =
+    (outpass.requestType || outpass.type) === OUTPASS_REQUEST_TYPE.LONG_VISIT;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border || COLORS.gray[200] }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border || COLORS.gray[200],
+        },
+      ]}
+    >
       <View style={styles.cardRow}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{outpass.user?.name || "Student"}</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
+            {outpass.user?.name || 'Student'}
+          </Text>
           <Text style={[styles.metaText, { color: colors.subText }]}>
-            {outpass.user?.studentId || "No student ID"} | Room {outpass.user?.roomNumber || "-"}
+            {outpass.user?.studentId || 'No student ID'} | Room{' '}
+            {outpass.user?.roomNumber || '-'}
           </Text>
         </View>
         <Ionicons name="person-circle-outline" size={32} color={colors.text} />
@@ -70,19 +76,39 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
 
       <View style={styles.badgeRow}>
         {isLongVisit ? (
-          <View style={[styles.badge, { backgroundColor: "#ccfbf1" }]}>
-            <Text style={[styles.badgeText, { color: "#115e59" }]}>Long Visit</Text>
+          <View style={[styles.badge, { backgroundColor: '#ccfbf1' }]}>
+            <Text style={[styles.badgeText, { color: '#115e59' }]}>
+              Long Visit
+            </Text>
           </View>
         ) : null}
-        <View style={[styles.badge, { backgroundColor: `${statusColors[outpass.status] || COLORS.gray[500]}20` }]}>
-          <Text style={[styles.badgeText, { color: statusColors[outpass.status] || COLORS.gray[500] }]}>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: `${
+                statusColors[outpass.status] || COLORS.gray[500]
+              }20`,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.badgeText,
+              { color: statusColors[outpass.status] || COLORS.gray[500] },
+            ]}
+          >
             {prettify(outpass.status)}
           </Text>
         </View>
       </View>
 
-      <Text style={[styles.metaText, { color: colors.text }]}>Reason: {outpass.reason}</Text>
-      <Text style={[styles.metaText, { color: colors.text }]}>Destination: {outpass.destination}</Text>
+      <Text style={[styles.metaText, { color: colors.text }]}>
+        Reason: {outpass.reason}
+      </Text>
+      <Text style={[styles.metaText, { color: colors.text }]}>
+        Destination: {outpass.destination}
+      </Text>
       <Text style={[styles.metaText, { color: colors.subText }]}>
         Departure: {formatDateTime(outpass.outDate)}
       </Text>
@@ -90,50 +116,64 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
         Return By: {formatDateTime(outpass.expectedReturnDate)}
       </Text>
       {isLongVisit ? (
-        <Text style={[styles.metaText, { color: "#b45309" }]}>
+        <Text style={[styles.metaText, { color: '#b45309' }]}>
           Student must visit the warden physically for approval handling.
         </Text>
       ) : null}
 
       {outpass.emergencyContact?.phone ? (
         <Text style={[styles.metaText, { color: colors.subText }]}>
-          Emergency Contact: {outpass.emergencyContact.name || "Contact"} ({outpass.emergencyContact.phone})
+          Emergency Contact: {outpass.emergencyContact.name || 'Contact'} (
+          {outpass.emergencyContact.phone})
         </Text>
       ) : null}
       {outpass.latestMovement ? (
         <Text style={[styles.metaText, { color: colors.subText }]}>
-          Last Scan: {prettify(outpass.latestMovement.location)} at {formatDateTime(outpass.latestMovement.createdAt)}
+          Last Scan: {prettify(outpass.latestMovement.location)} at{' '}
+          {formatDateTime(outpass.latestMovement.createdAt)}
         </Text>
       ) : null}
 
       {outpass.latestStatusRemark ? (
-        <Text style={[styles.metaText, { color: colors.text }]}>Latest Note: {outpass.latestStatusRemark}</Text>
+        <Text style={[styles.metaText, { color: colors.text }]}>
+          Latest Note: {outpass.latestStatusRemark}
+        </Text>
       ) : null}
 
-      {outpass.status === "pending" ? (
+      {outpass.status === 'pending' ? (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: "#dcfce7" }]}
+            style={[styles.actionButton, { backgroundColor: '#dcfce7' }]}
             onPress={() =>
-              handleAction("approve", "Approve Request", "Approve this outpass request for the student?")
+              handleAction(
+                'approve',
+                'Approve Request',
+                'Approve this outpass request for the student?'
+              )
             }
             disabled={isBusy}
           >
-            <Text style={[styles.actionButtonText, { color: "#166534" }]}>
-              {isBusy ? "Updating..." : "Approve"}
+            <Text style={[styles.actionButtonText, { color: '#166534' }]}>
+              {isBusy ? 'Updating...' : 'Approve'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.actionButton,
               styles.secondaryActionButton,
-              { backgroundColor: "#fee2e2", marginRight: 0 },
+              { backgroundColor: '#fee2e2', marginRight: 0 },
             ]}
-            onPress={() => handleAction("reject", "Reject Request", "Reject this outpass request?")}
+            onPress={() =>
+              handleAction(
+                'reject',
+                'Reject Request',
+                'Reject this outpass request?'
+              )
+            }
             disabled={isBusy}
           >
-            <Text style={[styles.actionButtonText, { color: "#991b1b" }]}>
-              {isBusy ? "Updating..." : "Reject"}
+            <Text style={[styles.actionButtonText, { color: '#991b1b' }]}>
+              {isBusy ? 'Updating...' : 'Reject'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -142,16 +182,25 @@ export default function WardenOutpassCard({ outpass, colors, onAction, isBusy })
       {canCancel ? (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: "#fff7ed", marginRight: 0 }]}
-            onPress={() => handleAction("cancel", "Cancel Outpass", "Cancel this approved outpass before use?")}
+            style={[
+              styles.actionButton,
+              { backgroundColor: '#fff7ed', marginRight: 0 },
+            ]}
+            onPress={() =>
+              handleAction(
+                'cancel',
+                'Cancel Outpass',
+                'Cancel this approved outpass before use?'
+              )
+            }
             disabled={isBusy}
           >
-            <Text style={[styles.actionButtonText, { color: "#c2410c" }]}>
-              {isBusy ? "Updating..." : "Cancel Approval"}
+            <Text style={[styles.actionButtonText, { color: '#c2410c' }]}>
+              {isBusy ? 'Updating...' : 'Cancel Approval'}
             </Text>
           </TouchableOpacity>
         </View>
       ) : null}
     </View>
-  )
+  );
 }

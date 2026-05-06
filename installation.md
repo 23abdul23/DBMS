@@ -1,50 +1,32 @@
-# Installation Guide - Aegis ID
+# Installation And Setup
 
-This guide explains how to set up and run the current Aegis ID repository with the PostgreSQL + Prisma backend and the Expo mobile app.
-
----
-
-## Docker Quick Start
-
-If you want the full stack in containers, run this from the repository root:
-
-```bash
-docker compose up --build
-```
-
-This starts PostgreSQL, the backend API, and Expo web.
-
-Expo in Docker is recommended only for the web target. For phone-based Expo Go development, run the frontend locally on your machine and point it at the backend service or your host IP.
-
----
+This guide explains how to run the current Aegis repository locally. Use [README.md](README.md) for the project overview, tech stack, and feature summary, and use this document for environment setup and startup commands.
 
 ## 1. Prerequisites
 
-Install these tools first:
+Install these tools before starting:
 
 - Node.js 18 or newer
 - npm
-- Git
 - PostgreSQL 15 or newer
-- Expo Go on your phone if you want to test the mobile app
+- Git
+- Docker Desktop if you want containerized setup
+- Expo Go if you want to test the mobile app on a physical device
 
-Optional but useful:
-
-- `psql` or another PostgreSQL client
-- Prisma Studio for browsing data after the schema is generated
-
----
-
-## 2. Clone the repository
+## 2. Clone The Repository
 
 ```bash
-git clone https://github.com/<YOUR-USERNAME>/<YOUR-REPO>.git
-cd <YOUR-REPO>
+git clone <your-repository-url>
+cd <your-repository-folder>
 ```
 
----
+## 3. Install Dependencies
 
-## 3. Install dependencies
+Install the root tooling once so the pre-commit hook can be enabled:
+
+```bash
+npm install
+```
 
 Install backend and frontend dependencies separately:
 
@@ -52,48 +34,38 @@ Install backend and frontend dependencies separately:
 cd backend
 npm install
 cd ..
+
 cd frontend
 npm install
 cd ..
 ```
 
----
+## 4. Configure The Backend Environment
 
-## 4. Create the PostgreSQL database
+Create `backend/.env` by copying `backend/.env.example`.
 
-Create a database for the backend, either locally or on a hosted PostgreSQL service.
-
-Example local setup:
-
-```bash
-createdb aegis
-```
-
-If you are using a cloud database, copy the connection string from your provider.
-
-The Prisma schema expects a URL in this format:
-
-```env
-postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
-```
-
----
-
-## 5. Configure environment variables
-
-Create `backend/.env`.
-
-You can use `backend/.env.example` as a template.
+Recommended starting values:
 
 ```env
 DB_MODE=sql
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public
-JWT_SECRET=replace-with-a-long-random-secret
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/aegis?schema=public
+JWT_SECRET=replace-with-a-strong-secret
 JWT_EXPIRE=7d
 PORT=3000
 FRONTEND_URL=http://localhost:8081
+
 GMAIL_ID=your-email@example.com
 GMAIL_PASSWORD=your-app-password
+
+API_BASE_URL=http://localhost:3000/api
+API_BASE_URL_PRIMARY=http://localhost:3000/api
+API_BASE_URL_SECONDARY=
+API_HOST=localhost
+API_PORT=3000
+ENVIRONEMENT=development
+
+LIBRARY_LIMIT=60
+
 EMERGENCY_MEDICAL_PHONE=9329594882
 EMERGENCY_SECURITY_PHONE=7217492629
 EMERGENCY_FIRE_PHONE=8618275578
@@ -102,151 +74,190 @@ EMERGENCY_OTHER_PHONE=7909069340
 
 Notes:
 
-- `DB_MODE` must stay `sql`
-- `DATABASE_URL` is required for Prisma
-- `FRONTEND_URL` is used for CORS when you run the mobile app or Expo web
-- `GMAIL_ID` and `GMAIL_PASSWORD` are required for the password reset flow
-- The backend Docker compose service reads `backend/.env` and overrides the database URL for the container network
+- `DB_MODE` must remain `sql`
+- `DATABASE_URL` is required for Prisma and PostgreSQL connectivity
+- `JWT_SECRET` is required for auth tokens
+- `GMAIL_ID` and `GMAIL_PASSWORD` are used for OTP mail delivery
+- `frontend/app.config.js` reads API-related values from `backend/.env`, so setting them here is usually enough for local development
+- set `ENVIRONEMENT=development` to enable the Login screen quick-login button for test users
 
----
+## 5. Prepare The Database
 
-## 6. Generate Prisma client and database tables
+Create a PostgreSQL database named `aegis`, or use your own database name and update `DATABASE_URL`.
 
-From the `backend` folder, run:
+Then generate Prisma client and apply the committed migrations:
 
 ```bash
 cd backend
 npm run prisma:generate
-npm run prisma:migrate -- --name init
+npm run prisma:deploy
 cd ..
 ```
 
-Useful Prisma commands:
+If you are actively changing the schema during development, use:
 
 ```bash
-npm run prisma:studio
-npm run prisma:deploy
+cd backend
+npm run prisma:migrate -- --name <migration_name>
+cd ..
 ```
 
-If you are starting the backend in Docker, the container now runs `prisma db push` automatically before `npm start`, so a fresh database gets the tables created on first boot.
-
----
-
-## 7. Start the backend server
-
-Run the backend from the repository root:
+If you only want to sync schema quickly in a disposable local database:
 
 ```bash
-npm run backend:dev
+cd backend
+npm run prisma:push
+cd ..
 ```
 
-If you want a one-time start without file watching:
+## 6. Optional Data Setup Scripts
+
+The backend includes helper scripts for populating role data and syncing profile tables.
+
+Examples:
 
 ```bash
-npm run backend:start
+node backend/scripts/ingest_to_db_students.js
+node backend/scripts/ingest_to_db_wardens.js
+node backend/scripts/ingest_to_db_guards.js
+node backend/scripts/backfill_user_profiles.js
 ```
 
-Expected backend output:
+For full end-to-end dummy data for all roles (Student, Warden, Security, SAC Admin, Library Admin), run:
+
+```bash
+cd backend
+npm run seed:dev-dummy
+cd ..
+```
+
+This command also generates realistic scenario data for dashboard testing: outpass states, movement logs, SAC room/equipment activity, and library seat activity.
+
+Quick-login test credentials (password for all is `123456`):
+
+- Student: `iit2023001@iiita.ac.in`
+- Warden: `warden.bh-1@iiita.ac.in`
+- Security: `guard100@iiita.ac.in`
+- SAC Admin: `sacAdmin@iiita.ac.in`
+- Library Admin: `libAdmin@iiita.ac.in`
+
+Dry-run variants are also supported for the ingest scripts.
+
+## 7. Start The Backend
+
+From the `backend` directory:
+
+```bash
+cd backend
+npm run dev
+```
+
+The backend starts on:
 
 ```text
-Aegis ID Backend running on port 3000
-Database mode: sql
-Health check: http://localhost:3000/api/health
+http://localhost:3000
 ```
 
-Test the backend health endpoint:
+Health check:
 
-```bash
-curl http://localhost:3000/api/health
+```text
+http://localhost:3000/api/health
 ```
 
----
+## 8. Start The Frontend
 
-## 8. Start the mobile app
-
-In a second terminal, from the repository root:
+In a second terminal:
 
 ```bash
+cd frontend
 npm start
 ```
 
-This starts Expo and shows a QR code. Open it with Expo Go on your phone, or run one of these variants:
+Useful Expo variants:
 
 ```bash
-npx expo start --android
-npx expo start --ios
+npm run web
+npm run android
+npm run ios
 npx expo start --tunnel
 ```
 
----
+## 9. Docker Setup
 
-## 9. Common setup workflow
-
-A typical local development session looks like this:
-
-1. Create or start PostgreSQL
-2. Set `DATABASE_URL` in `.env`
-3. Run `npm install`
-4. Run `npm run prisma:generate`
-5. Run `npm run prisma:migrate -- --name init`
-6. Run `npm run backend:dev`
-7. Run `npm start` for Expo
-
----
-
-## 10. Troubleshooting
-
-### Backend fails with `DATABASE_URL is required`
-
-- Make sure the `.env` file exists at the repository root
-- Confirm `DATABASE_URL` is spelled correctly
-- Restart the terminal after editing `.env`
-
-### Prisma says the client is not generated
+The root `docker-compose.yml` starts PostgreSQL, the backend, and Expo web.
 
 Run:
 
 ```bash
-npm run prisma:generate
+docker compose up --build
 ```
+
+Services exposed by default:
+
+- PostgreSQL: `localhost:5432`
+- Backend: `localhost:3000`
+- Frontend Expo web: `localhost:8081`
+
+Docker notes:
+
+- The backend container runs `npm run prisma:push` before startup
+- The compose file injects a container-safe `DATABASE_URL`
+- Expo in Docker is best for the web target; native device testing is easier when Expo runs on the host machine
+
+## 10. Quick Run Checklist
+
+1. Start PostgreSQL
+2. Copy `backend/.env.example` to `backend/.env` and fill in the values
+3. Install dependencies in `backend` and `frontend`
+4. Run Prisma generate and deploy commands
+5. Start the backend with `npm run dev`
+6. Start the frontend with `npm start`
+
+The root pre-commit hook runs separate frontend and backend lint and Prettier checks on staged files. You can also run the full checks manually from the repository root with:
+
+```bash
+npm run check:frontend
+npm run check:backend
+npm run check
+```
+
+## 11. Troubleshooting
 
 ### Prisma cannot connect to PostgreSQL
 
-- Check the host, port, username, and password
-- Confirm the database exists
-- Confirm PostgreSQL is running
-- Check firewall or cloud IP allow-list rules
+- Verify PostgreSQL is running
+- Check username, password, host, port, and database name in `DATABASE_URL`
+- Confirm the database exists before running Prisma commands
 
-### Docker starts the backend but registration still fails with `users does not exist`
+### Backend starts but tables are missing
 
-- Rebuild the backend image so the new startup command is picked up
-- Make sure the database volume is not pointing at an old incompatible schema
-- If needed, run `cd backend && npm run prisma:push` once against the target database to create the tables
+Run:
 
-### Expo cannot reach the backend
+```bash
+cd backend
+npm run prisma:generate
+npm run prisma:deploy
+cd ..
+```
 
-- Make sure the backend is running
-- Verify `FRONTEND_URL` and CORS values
-- Use the same Wi-Fi network on phone and laptop
-- If needed, run Expo in tunnel mode
+If you are using a temporary dev database, `npm run prisma:push` is also valid.
 
----
+### Frontend cannot reach backend
 
-## 11. Security notes
+- Check that the backend is running on port `3000`
+- Confirm `API_BASE_URL` or `API_HOST` and `API_PORT` are correct in `backend/.env`
+- Restart the frontend after changing `backend/.env` because Expo config is read at startup
+- If using a physical phone, use a reachable LAN IP instead of `localhost`
 
-- Never commit `.env` to Git
-- Use a strong `JWT_SECRET`
-- Use a PostgreSQL user with only the permissions the app needs
-- Use a real app password or SMTP credential for email sending
+### OTP email is not working
 
----
+- Check `GMAIL_ID` and `GMAIL_PASSWORD`
+- Use an app password, not the normal Gmail account password
+- Restart the backend after changing environment variables
 
-## 12. Current backend stack
+## 12. Useful Paths
 
-- Node.js / Express
-- PostgreSQL
-- Prisma 7
-- JWT authentication
-- bcrypt password hashing
-- SHA-256 passkey generation
-- Expo mobile client
+- Backend schema: `backend/prisma/schema.prisma`
+- Backend routes: `backend/routes/`
+- Frontend screens: `frontend/screens/`
+- Docker stack: `docker-compose.yml`

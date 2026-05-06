@@ -12,6 +12,6 @@ COPY backend ./backend
 WORKDIR /app/backend
 RUN npm run prisma:generate
 
-EXPOSE 3000
+EXPOSE 5500
 
 CMD ["sh", "-c", "npm run prisma:push && npm start"]

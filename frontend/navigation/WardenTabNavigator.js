@@ -1,38 +1,38 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { Ionicons } from "@expo/vector-icons"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useTheme } from "../context/ThemeContext"
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
-import WardenDashboardScreen from "../screens/WardenDashboardScreen"
-import WardenOutpassScreen from "../screens/WardenOutpassScreen"
-import WardenMonitoringScreen from "../screens/WardenMonitoringScreen"
-import ProfileScreen from "../screens/ProfileScreen"
+import WardenDashboardScreen from '../screens/WardenDashboardScreen';
+import WardenOutpassScreen from '../screens/WardenOutpassScreen';
+import WardenMonitoringScreen from '../screens/WardenMonitoringScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator();
 
 export default function WardenTabNavigator() {
-  const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const tabBarPaddingBottom = Math.max(insets.bottom, 10)
-  const tabBarHeight = 62 + tabBarPaddingBottom
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = Math.max(insets.bottom, 10);
+  const tabBarHeight = 62 + tabBarPaddingBottom;
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName = "ellipse-outline"
+          let iconName = 'ellipse-outline';
 
-          if (route.name === "Dashboard") {
-            iconName = focused ? "home" : "home-outline"
-          } else if (route.name === "Requests") {
-            iconName = focused ? "document-text" : "document-text-outline"
-          } else if (route.name === "Monitoring") {
-            iconName = focused ? "pulse" : "pulse-outline"
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline"
+          if (route.name === 'Dashboard') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Requests') {
+            iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Monitoring') {
+            iconName = focused ? 'pulse' : 'pulse-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -45,7 +45,7 @@ export default function WardenTabNavigator() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "600",
+          fontWeight: '600',
         },
         headerShown: false,
       })}
@@ -55,5 +55,5 @@ export default function WardenTabNavigator() {
       <Tab.Screen name="Monitoring" component={WardenMonitoringScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
-  )
+  );
 }
