@@ -49,3 +49,11 @@ Replace `users` with one of:
 Note:
 
 The ingestion scripts now populate the new profile tables as well as the legacy role-specific columns on `users` during the migration period.
+
+Seed complete development dummy data (includes role ingestions + scenario data for outpass, security logs, SAC, and library):
+
+`node backend/scripts/seed_dev_dummy_data.js`
+
+Dry-run preview:
+
+`node backend/scripts/seed_dev_dummy_data.js --dry-run`

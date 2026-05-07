@@ -5,17 +5,53 @@ import Constants from 'expo-constants';
 const ACTIVE_API_BASE_URL_KEY = 'activeApiBaseUrl';
 const normalizeBaseUrl = (url) => String(url || '').replace(/\/+$/, '');
 
-const configuredApiBaseUrl = normalizeBaseUrl(
-  Constants.expoConfig?.extra?.API_BASE_URL
-);
+const expoExtra =
+  Constants.expoConfig?.extra ??
+  Constants.manifest?.extra ??
+  Constants.manifest2?.extra ??
+  {};
+
+const configuredApiBaseUrl = normalizeBaseUrl(expoExtra.API_BASE_URL);
 const configuredPrimaryApiBaseUrl = normalizeBaseUrl(
-  Constants.expoConfig?.extra?.API_BASE_URL_PRIMARY || configuredApiBaseUrl
+  expoExtra.API_BASE_URL_PRIMARY || configuredApiBaseUrl
 );
 const configuredSecondaryApiBaseUrl = normalizeBaseUrl(
-  Constants.expoConfig?.extra?.API_BASE_URL_SECONDARY
+  expoExtra.API_BASE_URL_SECONDARY
 );
-const PORT = Constants.expoConfig?.extra?.PORT || 8080;
-const API_HOST = Constants.expoConfig?.extra?.API_HOST || 'localhost';
+const appEnvironement = String(expoExtra.ENVIRONEMENT || '')
+  .trim()
+  .toLowerCase();
+
+console.log(appEnvironement);
+
+export const isDevelopmentEnvironement = appEnvironement === 'development';
+
+export const devQuickLoginCredentialsByRole = {
+  student: {
+    email: 'iit2023001@iiita.ac.in',
+    password: '123456',
+  },
+  warden: {
+    email: 'warden.bh-1@iiita.ac.in',
+    password: '123456',
+  },
+  security: {
+    email: 'guard100@iiita.ac.in',
+    password: '123456',
+  },
+  sac_admin: {
+    email: 'sacAdmin@iiita.ac.in',
+    password: '123456',
+  },
+  library_admin: {
+    email: 'libAdmin@iiita.ac.in',
+    password: '123456',
+  },
+};
+
+const PORT = expoExtra.PORT;
+const API_HOST = expoExtra.API_HOST;
+
 const fallbackLocalBaseUrl = `http://${API_HOST}:${PORT}/api`;
 const PRIMARY_API_BASE_URL =
   configuredPrimaryApiBaseUrl || fallbackLocalBaseUrl;
@@ -102,6 +138,7 @@ const shouldTriggerFailover = (error) => {
 };
 
 console.log('Primary API URL:', PRIMARY_API_BASE_URL);
+
 if (SECONDARY_API_BASE_URL) {
   console.log('Secondary API URL:', SECONDARY_API_BASE_URL);
 }

@@ -21,7 +21,10 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 import LoadingSpinner from '../components/LoadingSpinner';
-import api from '../services/api';
+import api, {
+  devQuickLoginCredentialsByRole,
+  isDevelopmentEnvironement,
+} from '../services/api';
 
 export default function LoginScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -63,6 +66,29 @@ export default function LoginScreen({ navigation }) {
 
     if (!result.success) {
       Alert.alert('Login Failed', result.error);
+    }
+  };
+
+  const handleDevQuickLogin = async () => {
+    const credentials = devQuickLoginCredentialsByRole[role];
+
+    if (!credentials) {
+      Alert.alert(
+        'Missing Test Credentials',
+        `No development test account is configured for role: ${role}`
+      );
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(credentials.email, credentials.password, role);
+    setLoading(false);
+
+    if (!result.success) {
+      Alert.alert(
+        'Quick Login Failed',
+        `${result.error}. Run backend dummy seed scripts and try again.`
+      );
     }
   };
 
@@ -264,6 +290,25 @@ export default function LoginScreen({ navigation }) {
                     Sign In
                   </Text>
                 </TouchableOpacity>
+
+                {isDevelopmentEnvironement ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.devQuickLoginButton,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.cardGlass,
+                      },
+                    ]}
+                    onPress={handleDevQuickLogin}
+                  >
+                    <Text
+                      style={[styles.devQuickLoginText, { color: colors.text }]}
+                    >
+                      Dev Quick Login ({role.replace('_', ' ')})
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
 
                 <TouchableOpacity
                   style={styles.forgotPassword}
@@ -483,6 +528,19 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: SIZES.lg,
     fontFamily: FONTS.bold,
+  },
+  devQuickLoginButton: {
+    borderRadius: 12,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    borderWidth: 1,
+  },
+  devQuickLoginText: {
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.regular,
+    textTransform: 'capitalize',
   },
   forgotPassword: { alignItems: 'center', marginTop: SPACING.md },
   forgotPasswordText: { fontSize: SIZES.sm },

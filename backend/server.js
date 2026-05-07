@@ -68,6 +68,7 @@ const libraryRoutes = libraryRoutesModule.default
 
 const app = express()
 const PORT = process.env.PORT || 5000
+const API_BASE_URL = process.API_BASE_URL
 const DB_MODE = getDatabaseMode()
 const prisma = getPrismaClient()
 const ENABLE_CAMPUS_SIMULATION =
@@ -86,7 +87,7 @@ app.use(
       }
 
       // Allow browser frontend if needed
-      const allowedOrigins = ["http://localhost:3000"]
+      const allowedOrigins = [API_BASE_URL]
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true)

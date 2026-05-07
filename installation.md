@@ -62,6 +62,7 @@ API_BASE_URL_PRIMARY=http://localhost:3000/api
 API_BASE_URL_SECONDARY=
 API_HOST=localhost
 API_PORT=3000
+ENVIRONEMENT=development
 
 LIBRARY_LIMIT=60
 
@@ -78,6 +79,7 @@ Notes:
 - `JWT_SECRET` is required for auth tokens
 - `GMAIL_ID` and `GMAIL_PASSWORD` are used for OTP mail delivery
 - `frontend/app.config.js` reads API-related values from `backend/.env`, so setting them here is usually enough for local development
+- set `ENVIRONEMENT=development` to enable the Login screen quick-login button for test users
 
 ## 5. Prepare The Database
 
@@ -120,6 +122,24 @@ node backend/scripts/ingest_to_db_wardens.js
 node backend/scripts/ingest_to_db_guards.js
 node backend/scripts/backfill_user_profiles.js
 ```
+
+For full end-to-end dummy data for all roles (Student, Warden, Security, SAC Admin, Library Admin), run:
+
+```bash
+cd backend
+npm run seed:dev-dummy
+cd ..
+```
+
+This command also generates realistic scenario data for dashboard testing: outpass states, movement logs, SAC room/equipment activity, and library seat activity.
+
+Quick-login test credentials (password for all is `123456`):
+
+- Student: `iit2023001@iiita.ac.in`
+- Warden: `warden.bh-1@iiita.ac.in`
+- Security: `guard100@iiita.ac.in`
+- SAC Admin: `sacAdmin@iiita.ac.in`
+- Library Admin: `libAdmin@iiita.ac.in`
 
 Dry-run variants are also supported for the ingest scripts.
 

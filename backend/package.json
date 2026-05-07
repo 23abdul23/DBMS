@@ -17,7 +17,8 @@
     "prisma:push": "prisma db push --config ./prisma.config.ts --schema ./prisma/schema.prisma --accept-data-loss",
     "prisma:migrate": "prisma migrate dev --config ./prisma.config.ts --schema ./prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --config ./prisma.config.ts --schema ./prisma/schema.prisma",
-    "prisma:studio": "prisma studio --config ./prisma.config.ts --schema ./prisma/schema.prisma"
+    "prisma:studio": "prisma studio --config ./prisma.config.ts --schema ./prisma/schema.prisma",
+    "seed:dev-dummy": "node scripts/seed_dev_dummy_data.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
