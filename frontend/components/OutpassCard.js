@@ -1,6 +1,13 @@
 'use client';
 
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Button,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { outpass as outpassAPI } from '../services/api';
 import {

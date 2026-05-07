@@ -96,6 +96,33 @@ export default StyleSheet.create({
     fontFamily: FONTS.regular,
     marginTop: SPACING.xs,
   },
+  contactRow: {
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray[200],
+  },
+  contactName: {
+    marginTop: 0,
+    marginBottom: SPACING.xs,
+  },
+  callChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm,
+  },
+  callChipText: {
+    marginLeft: 6,
+    fontSize: SIZES.sm,
+    fontFamily: FONTS.bold,
+    color: '#065f46',
+  },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -21,6 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 import LoadingSpinner from '../components/LoadingSpinner';
+import wardens from '../constants/Wardens.json';
 import api, {
   devQuickLoginCredentialsByRole,
   isDevelopmentEnvironement,
@@ -226,16 +227,39 @@ export default function LoginScreen({ navigation }) {
                     color={colors.subText}
                     style={styles.inputIcon}
                   />
-                  <TextInput
-                    style={[styles.input, { color: colors.inputText }]}
-                    placeholder="Email Address"
-                    placeholderTextColor={colors.inputText}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                  />
+                  {role === 'warden' ? (
+                    <Picker
+                      selectedValue={email}
+                      style={[
+                        styles.input,
+                        { color: colors.inputText, flex: 1 },
+                      ]}
+                      onValueChange={(itemValue) => setEmail(itemValue)}
+                      dropdownIconColor={colors.subText}
+                    >
+                      <Picker.Item label="Select Hostel" value="" />
+                      {wardens.wardens.map((info, index) => {
+                        return (
+                          <Picker.Item
+                            key={index}
+                            label={info.hostel}
+                            value={info.email}
+                          ></Picker.Item>
+                        );
+                      })}
+                    </Picker>
+                  ) : (
+                    <TextInput
+                      style={[styles.input, { color: colors.inputText }]}
+                      placeholder="Email Address"
+                      placeholderTextColor={colors.inputText}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                    />
+                  )}
                 </View>
 
                 <View

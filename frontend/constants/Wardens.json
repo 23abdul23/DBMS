@@ -1,0 +1,36 @@
+{
+  "wardens": [
+    {
+      "hostel": "BH 1",
+      "email": "warden.bh-1@iiita.ac.in"
+    },
+    {
+      "hostel": "BH 2",
+      "email": "warden.bh-2@iiita.ac.in"
+    },
+    {
+      "hostel": "BH 3",
+      "email": "warden.bh-3@iiita.ac.in"
+    },
+    {
+      "hostel": "BH 4",
+      "email": "warden.bh-4@iiita.ac.in"
+    },
+    {
+      "hostel": "BH 5",
+      "email": "warden.bh-5-1@iiita.ac.in"
+    },
+    {
+      "hostel": "GH 1",
+      "email": "warden.gh-1@iiita.ac.in"
+    },
+    {
+      "hostel": "GH 2",
+      "email": "warden.gh-2@iiita.ac.in"
+    },
+    {
+      "hostel": "GH 3",
+      "email": "warden.gh-3@iiita.ac.in"
+    }
+  ]
+}
