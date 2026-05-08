@@ -308,7 +308,7 @@ model Outpass {
   actualReturnDate      DateTime?    @map("actual_return_date")
   requestType           OutpassRequestType @default(regular) @map("request_type")
   status                OutpassStatus @default(pending)
-  approvedById          String?      @map("approved_by") @db.VarChar(24)
+  approvedById          String?      @map("approved_by") @db.VarChar(25)
   rejectionReason       String?      @map("rejection_reason")
   emergencyContactName  String?      @map("emergency_contact_name") @db.VarChar(255)
   emergencyContactPhone String?      @map("emergency_contact_phone") @db.VarChar(20)
