@@ -40,3 +40,6 @@ frontend/android/
 # typescript
 *.tsbuildinfo
 .env
+
+
+ISSUES.txt

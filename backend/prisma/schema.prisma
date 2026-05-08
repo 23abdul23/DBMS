@@ -94,7 +94,6 @@ enum LogAction {
 
 enum ScanType {
   qr
-  nfc
   manual
 }
 
