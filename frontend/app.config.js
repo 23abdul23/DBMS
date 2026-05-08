@@ -1,9 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const fileURLToPath = require('url');
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 function readEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -21,11 +17,13 @@ function readEnvFile(filePath) {
       }
 
       const separatorIndex = trimmed.indexOf('=');
+
       if (separatorIndex === -1) {
         return env;
       }
 
       const key = trimmed.slice(0, separatorIndex).trim();
+
       let value = trimmed.slice(separatorIndex + 1).trim();
 
       if (
@@ -36,6 +34,7 @@ function readEnvFile(filePath) {
       }
 
       env[key] = value;
+
       return env;
     }, {});
 }
@@ -48,7 +47,8 @@ const apiPrimaryBaseUrl = getConfigValue(
   'API_BASE_URL_PRIMARY',
   getConfigValue(
     'API_BASE_URL',
-    'https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api'
+    'http://localhost:3500/api'
+    // 'https://aegisbackedn-gcfefgdxa8ddcdfp.uaenorth-01.azurewebsites.net/api'
   )
 );
 const apiSecondaryBaseUrl = getConfigValue(
@@ -58,7 +58,7 @@ const apiSecondaryBaseUrl = getConfigValue(
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
 
 const apiPort = Number(
-  getConfigValue('API_PORT', getConfigValue('PORT', 8080))
+  getConfigValue('API_PORT', getConfigValue('PORT', 3500))
 );
 const emergencyMedicalPhone = getConfigValue(
   'EMERGENCY_MEDICAL_PHONE',
@@ -69,6 +69,7 @@ const emergencySecurityPhone = getConfigValue(
   '7217492629'
 );
 const emergencyFirePhone = getConfigValue('EMERGENCY_FIRE_PHONE', '8618275578');
+
 const emergencyOtherPhone = getConfigValue(
   'EMERGENCY_OTHER_PHONE',
   '7909069340'
@@ -79,7 +80,7 @@ module.exports = {
   expo: {
     name: 'Aegis ID',
     slug: 'aegis-id',
-    version: '1.0.0',
+    version: '1.5.1',
     orientation: 'portrait',
     icon: './assets/aegisIdLogo_bg.png',
     userInterfaceStyle: 'light',
@@ -116,7 +117,8 @@ module.exports = {
     extra: {
       API_BASE_URL: apiPrimaryBaseUrl,
       API_BASE_URL_PRIMARY: apiPrimaryBaseUrl,
-      API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
+      API_BASE_URL_SECONDARY: apiPrimaryBaseUrl,
+      // API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
       LIBRARY_LIMIT: libraryLimit,
