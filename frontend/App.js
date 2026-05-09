@@ -14,6 +14,7 @@ import MainTabNavigator from './navigation/MainTabNavigator';
 import WardenTabNavigator from './navigation/WardenTabNavigator';
 import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
 import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
+import SecurityAdminTabNavigator from './navigation/SecurityAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -79,6 +80,13 @@ function RootNavigator() {
           ) : user.role === 'warden' ? (
             <>
               <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
+            </>
+          ) : user.role === 'admin' ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
+              />
             </>
           ) : isSacAdministrator(user) ? (
             <>

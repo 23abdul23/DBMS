@@ -24,6 +24,7 @@ const [
   forgotRoutesModule,
   sacRoutesModule,
   libraryRoutesModule,
+  securityAdminRoutesModule,
 ] = await Promise.all([
   import("express"),
   import("cors"),
@@ -46,6 +47,7 @@ const [
   import("./routes/forgotRoute.js"),
   import("./routes/sacRoutes.js"),
   import("./routes/libraryRoutes.js"),
+  import("./routes/securityAdminRoutes.js"),
 ])
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = databaseModule
@@ -65,6 +67,7 @@ const wardenRoutes = wardenRoutesModule.default
 const forgotRoutes = forgotRoutesModule.default
 const sacRoutes = sacRoutesModule.default
 const libraryRoutes = libraryRoutesModule.default
+const securityAdminRoutes = securityAdminRoutesModule.default
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -119,6 +122,7 @@ app.use("/api/outpass/warden", wardenRoutes)
 app.use("/api/emergency", emergencyRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/security", securityRoutes)
+app.use("/api/security-admin", securityAdminRoutes)
 app.use("/api/student", studentRoutes)
 app.use("/api/warden", wardenRoutes)
 app.use("/api/forgot", forgotRoutes)
