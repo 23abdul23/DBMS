@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import { emitLogout } from '../utils/logoutEventEmitter';
 
 const ACTIVE_API_BASE_URL_KEY = 'activeApiBaseUrl';
 const normalizeBaseUrl = (url) => String(url || '').replace(/\/+$/, '');
@@ -19,7 +20,9 @@ const configuredPrimaryApiBaseUrl = normalizeBaseUrl(
 const configuredSecondaryApiBaseUrl = normalizeBaseUrl(
   expoExtra.API_BASE_URL_SECONDARY
 );
-const appEnvironement = String(expoExtra.ENVIRONEMENT || '')
+const appEnvironement = String(
+  expoExtra.ENVIRONMENT || expoExtra.ENVIRONEMENT || ''
+)
   .trim()
   .toLowerCase();
 
@@ -191,41 +194,113 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const errorCode = error.response?.data?.code;
+    const errorMessage = error.response?.data?.message;
 
-    // TOKEN EXPIRED
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    console.log('[API Error]', {
+      code: errorCode,
+      message: errorMessage,
+      status: error.response?.status,
+      retried: !!originalRequest._retry,
+    });
+
+    // If already retried or not a 401, don't retry
+    if (originalRequest._retry || error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+
+    // SESSION_REVOKED means user logged in elsewhere - force logout immediately
+    if (errorCode === 'SESSION_REVOKED' || errorCode === 'USER_DISABLED') {
+      console.log('[API] Session revoked - forcing logout');
+      await Promise.all([
+        SecureStore.deleteItemAsync('accessToken').catch(() => {}),
+        SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
+        AsyncStorage.removeItem('userData').catch(() => {}),
+      ]);
+
+      // Emit logout event to notify AuthContext
+      await emitLogout(errorCode);
+
+      return Promise.reject(error);
+    }
+
+    // TOKEN_EXPIRED or TOKEN needs refresh
+    if (errorCode === 'TOKEN_EXPIRED' || error.response?.status === 401) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
 
+        if (!refreshToken) {
+          console.log('[API] No refresh token available - logging out');
+          await emitLogout('NO_REFRESH_TOKEN');
+          return Promise.reject(error);
+        }
+
+        console.log('[API] Attempting token refresh...');
         const response = await axios.post(
           `${PRIMARY_API_BASE_URL}/auth/refresh`,
+          { refreshToken },
           {
-            refreshToken,
+            // Important: don't use our api instance here to avoid interceptor loops
+            timeout: 10000,
           }
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const {
+          accessToken,
+          refreshToken: newRefreshToken,
+          code: responseCode,
+        } = response.data;
 
-        // SAVE NEW TOKENS
+        // Check if refresh was successful
+        if (responseCode === 'SESSION_REVOKED' || !accessToken) {
+          console.log('[API] Refresh returned SESSION_REVOKED');
+          await Promise.all([
+            SecureStore.deleteItemAsync('accessToken').catch(() => {}),
+            SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
+            AsyncStorage.removeItem('userData').catch(() => {}),
+          ]);
+          await emitLogout('SESSION_REVOKED');
+          return Promise.reject(error);
+        }
+
+        // Save new tokens
         await SecureStore.setItemAsync('accessToken', accessToken);
+        if (newRefreshToken) {
+          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+        }
 
-        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+        console.log('[API] Token refreshed successfully');
 
+        // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
         return api(originalRequest);
       } catch (refreshError) {
-        // MULTIPLE LOGIN DETECTED
-        // SESSION REVOKED
-        // FORCE LOGOUT
+        console.error(
+          '[API] Token refresh failed:',
+          refreshError.response?.data
+        );
 
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        await AsyncStorage.removeItem('userData');
+        const refreshErrorCode = refreshError.response?.data?.code;
 
-        // optionally navigate login
+        // All refresh errors should trigger logout
+        if (
+          refreshErrorCode === 'SESSION_REVOKED' ||
+          refreshErrorCode === 'TOKEN_EXPIRED' ||
+          refreshErrorCode === 'USER_DISABLED' ||
+          refreshError.response?.status === 401
+        ) {
+          console.log(
+            '[API] Refresh error indicates session revoked - logging out'
+          );
+          await Promise.all([
+            SecureStore.deleteItemAsync('accessToken').catch(() => {}),
+            SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
+            AsyncStorage.removeItem('userData').catch(() => {}),
+          ]);
+          await emitLogout(refreshErrorCode || 'REFRESH_FAILED');
+        }
 
         return Promise.reject(refreshError);
       }
@@ -240,6 +315,7 @@ export const authAPI = {
   login: (email, password, role) =>
     api.post('/auth/login', { email, password, role }),
   register: (userData) => api.post('/auth/register', userData),
+  logout: () => api.post('/auth/logout'),
   refreshToken: () => api.post('/auth/refresh'),
 };
 // Student API endpoints

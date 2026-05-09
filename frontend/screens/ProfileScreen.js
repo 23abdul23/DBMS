@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -229,6 +230,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -327,6 +329,15 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadProfile();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -572,6 +583,14 @@ export default function ProfileScreen() {
           style={[styles.container, { backgroundColor: 'transparent' }]}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           <View style={styles.heroShell}>
             <View

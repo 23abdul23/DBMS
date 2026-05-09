@@ -4,6 +4,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI, commonAPI } from '../services/api';
 import * as SecureStore from 'expo-secure-store';
+import {
+  setLogoutCallback,
+  clearLogoutCallback,
+} from '../utils/logoutEventEmitter';
 
 const normalizeLoginRole = (role) => {
   if (role === 'sac_admin' || role === 'library_admin') {
@@ -30,6 +34,15 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     loadStoredAuth();
+  }, []);
+
+  // Register logout callback for axios interceptor
+  useEffect(() => {
+    setLogoutCallback(logout);
+
+    return () => {
+      clearLogoutCallback();
+    };
   }, []);
 
   const loadStoredAuth = async () => {
@@ -111,22 +124,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (reason = 'USER_REQUESTED') => {
     try {
-      await SecureStore.deleteItemAsync('accessToken');
+      console.log('[AuthContext] Logging out - Reason:', reason);
 
-      await SecureStore.deleteItemAsync('refreshToken');
+      // Try to notify backend if it's a user-requested logout (not forced by session revocation)
+      if (reason === 'USER_REQUESTED') {
+        try {
+          // Ignore errors - user might already be logged out
+          await authAPI.logout?.().catch(() => {});
+        } catch (err) {
+          console.log(
+            '[AuthContext] Logout API call failed (expected if session revoked):',
+            err
+          );
+        }
+      }
 
-      await AsyncStorage.removeItem('userData');
+      // Always clear local storage
+      await Promise.all([
+        SecureStore.deleteItemAsync('accessToken').catch(() => {}),
+        SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
+        AsyncStorage.removeItem('userData').catch(() => {}),
+      ]);
 
       setToken(null);
       setUser(null);
+
+      console.log('[AuthContext] Logout complete');
     } catch (error) {
-      console.log('Error during logout:', error);
+      console.log('[AuthContext] Error during logout:', error);
+      // Still clear state even if there's an error
+      setToken(null);
+      setUser(null);
     }
   };
-
-  React.useEffect(() => {}, [user, token, loading]);
 
   const value = {
     user,

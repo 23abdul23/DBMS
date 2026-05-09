@@ -390,7 +390,7 @@ export default function DashboardScreen({ navigation }) {
             </View>
           </View>
 
-          <View
+          {/* <View
             style={[
               styles.announcementCard,
               {
@@ -511,7 +511,8 @@ export default function DashboardScreen({ navigation }) {
                 </View>
               ))}
             </View>
-          </View>
+
+          </View> */}
         </View>
       </ScrollView>
     </ImageBackground>

@@ -43,21 +43,35 @@ const backendEnv = readEnvFile(path.resolve(__dirname, '../backend/.env'));
 const getConfigValue = (key, fallback) =>
   process.env[key] || backendEnv[key] || fallback;
 
-const environement = getConfigValue('ENVIRONEMENT', 'production');
+const environment = String(
+  getConfigValue('ENVIRONMENT', getConfigValue('ENVIRONEMENT', 'production'))
+)
+  .trim()
+  .toLowerCase();
 
-const apiPrimaryBaseUrl = getConfigValue(
-  'API_BASE_URL_PRIMARY',
-  getConfigValue('API_BASE_URL', 'https://api.aegisid.app/api')
-);
-const apiSecondaryBaseUrl = getConfigValue(
-  'API_BASE_URL_SECONDARY',
-  'https://api.aegisid.app/api'
-);
-const apiHost = getConfigValue('API_HOST', '10.145.159.171');
+const isDevelopment = environment === 'development';
 
 const apiPort = Number(
   getConfigValue('API_PORT', getConfigValue('PORT', 3500))
 );
+
+const localApiBaseUrl = getConfigValue(
+  'API_BASE_URL_LOCAL',
+  `http://localhost:${apiPort}/api`
+);
+
+const deployedApiBaseUrl = getConfigValue(
+  'API_BASE_URL',
+  'https://api.aegisid.app/api'
+);
+
+const apiPrimaryBaseUrl = isDevelopment
+  ? localApiBaseUrl
+  : getConfigValue('API_BASE_URL_PRIMARY', deployedApiBaseUrl);
+const apiSecondaryBaseUrl = isDevelopment
+  ? getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl)
+  : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
+const apiHost = getConfigValue('API_HOST', '10.145.159.171');
 const emergencyMedicalPhone = getConfigValue(
   'EMERGENCY_MEDICAL_PHONE',
   '9329594882'
@@ -113,11 +127,11 @@ module.exports = {
       favicon: './assets/aegisIdLogo_bg.png',
     },
     extra: {
-      ENVIRONEMENT: environement,
+      ENVIRONMENT: environment,
+      ENVIRONEMENT: environment,
       API_BASE_URL: apiPrimaryBaseUrl,
       API_BASE_URL_PRIMARY: apiPrimaryBaseUrl,
-      API_BASE_URL_SECONDARY: apiPrimaryBaseUrl,
-      // API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
+      API_BASE_URL_SECONDARY: apiSecondaryBaseUrl,
       PORT: apiPort,
       API_HOST: apiHost,
       LIBRARY_LIMIT: libraryLimit,

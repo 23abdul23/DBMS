@@ -427,79 +427,133 @@ router.post("/login", async (req, res) => {
 
 // Logout User
 router.post("/logout", authenticate, async (req, res) => {
-  const token = req.headers.authorization.split(" ")[1]
+  try {
+    const sessionId = req.sessionId
 
-  const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    if (!sessionId) {
+      return res.status(400).json({
+        code: "INVALID_SESSION",
+        message: "No active session to logout",
+      })
+    }
 
-  await prisma.userSession.delete({
-    where: {
-      id: decoded.sessionId,
-    },
-  })
+    // Delete the session
+    await prisma.userSession
+      .delete({
+        where: {
+          id: sessionId,
+        },
+      })
+      .catch(() => {})
 
-  return res.json({
-    message: "Logged out",
-  })
+    return res.json({
+      code: "LOGGED_OUT",
+      message: "Logged out successfully",
+    })
+  } catch (error) {
+    console.error("Logout error:", error)
+    return res.status(500).json({
+      code: "LOGOUT_ERROR",
+      message: "Server error during logout",
+    })
+  }
 })
 
 // Refresh Token
 router.post("/refresh", async (req, res) => {
-  const { refreshToken } = req.body
+  try {
+    const { refreshToken } = req.body
 
-  if (!refreshToken) {
-    return res.sendStatus(401)
-  }
+    if (!refreshToken) {
+      return res.status(401).json({
+        code: "REFRESH_TOKEN_MISSING",
+        message: "Refresh token is required",
+      })
+    }
 
-  const refreshTokenHash = hashToken(refreshToken)
+    const refreshTokenHash = hashToken(refreshToken)
 
-  const session = await prisma.userSession.findFirst({
-    where: {
-      refreshTokenHash,
-    },
-    include: {
-      user: true,
-    },
-  })
-
-  if (!session) {
-    return res.status(401).json({
-      message: "Invalid refresh token",
-    })
-  }
-
-  // EXPIRED
-  if (session.expiresAt < new Date()) {
-    await prisma.userSession.delete({
+    const session = await prisma.userSession.findFirst({
       where: {
-        id: session.id,
+        refreshTokenHash,
+      },
+      include: {
+        user: true,
       },
     })
 
-    return res.status(401).json({
-      message: "Refresh token expired",
+    // No session found - could mean user logged in elsewhere or invalid token
+    if (!session) {
+      return res.status(401).json({
+        code: "SESSION_REVOKED",
+        message:
+          "Your session is no longer valid. You have logged in from another device.",
+      })
+    }
+
+    // Verify user still exists and is active
+    if (
+      !session.user ||
+      (typeof session.user.isActive === "boolean" && !session.user.isActive)
+    ) {
+      await prisma.userSession
+        .delete({
+          where: {
+            id: session.id,
+          },
+        })
+        .catch(() => {})
+
+      return res.status(401).json({
+        code: "USER_DISABLED",
+        message: "This account has been disabled.",
+      })
+    }
+
+    // EXPIRED
+    if (session.expiresAt < new Date()) {
+      await prisma.userSession
+        .delete({
+          where: {
+            id: session.id,
+          },
+        })
+        .catch(() => {})
+
+      return res.status(401).json({
+        code: "TOKEN_EXPIRED",
+        message: "Refresh token has expired. Please log in again.",
+      })
+    }
+
+    // ROTATE TOKEN - Generate new refresh token
+    const newRefreshToken = generateRefreshToken()
+    const newRefreshTokenHash = hashToken(newRefreshToken)
+
+    const updatedSession = await prisma.userSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        refreshTokenHash: newRefreshTokenHash,
+      },
+    })
+
+    const newAccessToken = generateAccessToken(session.user, updatedSession.id)
+
+    return res.json({
+      code: "TOKEN_REFRESHED",
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: 900,
+    })
+  } catch (error) {
+    console.error("Token refresh error:", error)
+    return res.status(500).json({
+      code: "REFRESH_ERROR",
+      message: "Server error during token refresh",
     })
   }
-
-  // ROTATE TOKEN
-  const newRefreshToken = generateRefreshToken()
-
-  const newRefreshTokenHash = hashToken(newRefreshToken)
-
-  await prisma.userSession.update({
-    where: {
-      id: session.id,
-    },
-    data: {
-      refreshTokenHash: newRefreshTokenHash,
-    },
-  })
-
-  const newAccessToken = generateAccessToken(session.user, session.id)
-
-  return res.json({
-    accessToken: newAccessToken,
-    refreshToken: newRefreshToken,
-  })
 })
 
 // Get current user profile
