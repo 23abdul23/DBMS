@@ -8,8 +8,18 @@ const generateRefreshToken = () => {
   return crypto.randomBytes(64).toString("hex")
 }
 
-const generateAccessToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRE })
+const generateAccessToken = (user, sessionId) => {
+  return jwt.sign(
+    {
+      userId: user.id,
+      role: user.role,
+      sessionId,
+    },
+    JWT_SECRET,
+    {
+      expiresIn: JWT_EXPIRE,
+    },
+  )
 }
 
 const hashToken = (token) => {
