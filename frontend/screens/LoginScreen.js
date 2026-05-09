@@ -27,6 +27,8 @@ import api, {
   isDevelopmentEnvironement,
 } from '../services/api';
 
+import { COLLEGE_EMAIL_ADDRESS } from '../constants/collegeConstants';
+
 export default function LoginScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [email, setEmail] = useState('');
@@ -62,7 +64,7 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    const result = await login(email, password, role);
+    const result = await login(processRollNo(email), password, role);
     setLoading(false);
 
     if (!result.success) {
@@ -117,6 +119,16 @@ export default function LoginScreen({ navigation }) {
         'Failed to send reset email';
       Alert.alert('Error Sending', msg);
     }
+  };
+
+  const processRollNo = (rollNo) => {
+    const value = String(rollNo).toLocaleLowerCase().trim();
+
+    if (value.includes('@iiita.ac.in')) {
+      return value;
+    }
+
+    return `${value}${COLLEGE_EMAIL_ADDRESS}`;
   };
 
   if (loading) return <LoadingSpinner />;
@@ -251,7 +263,7 @@ export default function LoginScreen({ navigation }) {
                   ) : (
                     <TextInput
                       style={[styles.input, { color: colors.inputText }]}
-                      placeholder="Email Address"
+                      placeholder={role === 'student' ? 'Roll Number' : 'Email'}
                       placeholderTextColor={colors.inputText}
                       value={email}
                       onChangeText={setEmail}

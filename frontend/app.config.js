@@ -71,7 +71,9 @@ const apiPrimaryBaseUrl = isDevelopment
 const apiSecondaryBaseUrl = isDevelopment
   ? getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl)
   : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
+
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
+
 const emergencyMedicalPhone = getConfigValue(
   'EMERGENCY_MEDICAL_PHONE',
   '9329594882'
@@ -81,7 +83,6 @@ const emergencySecurityPhone = getConfigValue(
   '7217492629'
 );
 const emergencyFirePhone = getConfigValue('EMERGENCY_FIRE_PHONE', '8618275578');
-
 const emergencyOtherPhone = getConfigValue(
   'EMERGENCY_OTHER_PHONE',
   '7909069340'
@@ -92,9 +93,9 @@ module.exports = {
   expo: {
     name: 'Aegis ID',
     slug: 'aegis-id',
-    version: '1.5.1',
+    version: '1.5.4',
     orientation: 'portrait',
-    icon: './assets/aegisIdLogo_bg.png',
+    icon: './assets/aegisLogoWhite.png',
     userInterfaceStyle: 'light',
     newArchEnabled: false,
     splash: {
@@ -117,14 +118,14 @@ module.exports = {
     android: {
       package: 'com.abdul.aegis',
       adaptiveIcon: {
-        foregroundImage: './assets/aegisIdLogo_bg.png',
+        foregroundImage: './assets/aegisLogoWhite.png',
         backgroundColor: '#ffffff',
       },
       edgeToEdgeEnabled: true,
       permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
     },
     web: {
-      favicon: './assets/aegisIdLogo_bg.png',
+      favicon: './assets/aegisLogoWhite.png',
     },
     extra: {
       ENVIRONMENT: environment,

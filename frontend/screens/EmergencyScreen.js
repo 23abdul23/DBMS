@@ -46,6 +46,31 @@ export default function EmergencyScreen() {
     };
   };
 
+  const callEmergencyno = async (phoneNo) => {
+    try {
+      const phone = `tel:${String(phoneNo).trim()}`;
+      await Linking.openURL(phone);
+    } catch (err) {
+      console.log('Call Error:', err);
+    }
+  };
+
+  const handleEmergencyContact = (details) => {
+    const value = String(details || '').trim();
+
+    // If already just a phone number
+    if (/^\d+$/.test(value)) {
+      return value;
+    }
+
+    // Extract phone after " - "
+    if (value.includes(' - ')) {
+      return value.split(' - ')[1].trim();
+    }
+
+    return value;
+  };
+
   const emergencyTypes = useMemo(() => {
     const medicalPhone = getEmergencyPhone(
       'EMERGENCY_MEDICAL_PHONE',
@@ -57,8 +82,8 @@ export default function EmergencyScreen() {
     );
     const firePhone = getEmergencyPhone('EMERGENCY_FIRE_PHONE', '86182 75578');
     const otherPhone = getEmergencyPhone(
-      'EMERGENCY_OTHER_PHONE',
-      '79090 69340'
+      'NULL',
+      handleEmergencyContact(user.emergencyContact)
     );
 
     return [
@@ -128,11 +153,55 @@ export default function EmergencyScreen() {
     };
   }, []);
 
+  // Auto-refresh location every 15 minutes
+  useEffect(() => {
+    // Initial fetch on screen mount
+    refreshLocation();
+
+    const locationInterval = setInterval(() => {
+      refreshLocation();
+    }, 15 * 60 * 1000); // 15 minutes
+
+    return () => clearInterval(locationInterval);
+  }, []);
+
+  // Refresh location whenever app comes to foreground
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (nextAppState) => {
+        const wasInBackground =
+          appState.current === 'background' || appState.current === 'inactive';
+
+        appState.current = nextAppState;
+
+        // Existing SMS resume logic
+        if (
+          wasInBackground &&
+          nextAppState === 'active' &&
+          pendingSmsRef.current
+        ) {
+          const pendingSms = pendingSmsRef.current;
+          pendingSmsRef.current = null;
+          openSmsComposer(pendingSms);
+        }
+
+        // NEW: Refresh location when app becomes active
+        if (wasInBackground && nextAppState === 'active') {
+          refreshLocation();
+        }
+      }
+    );
+
+    return () => {
+      appStateSubscription.remove();
+    };
+  }, []);
+
   const buildMapsLink = (currentLocation) => {
     if (!currentLocation) {
       return 'Location unavailable';
     }
-
     return `https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`;
   };
 
@@ -226,7 +295,7 @@ export default function EmergencyScreen() {
 
       for (const callUrl of callUrls) {
         try {
-          await Linking.openURL(callUrl);
+          await callEmergencyno(emergency.phone);
           return true;
         } catch (error) {
           console.log('Call attempt failed:', callUrl, error?.message || error);
@@ -252,10 +321,14 @@ export default function EmergencyScreen() {
   };
 
   const handleEmergencyPress = async (emergency) => {
-    const currentLocation = (await refreshLocation()) || location;
+    // Use cached/pre-fetched location instantly
+    const currentLocation = location;
 
-    await sendEmergencyAlert(emergency, currentLocation);
     await placeCall(emergency, currentLocation);
+    await sendEmergencyAlert(emergency, currentLocation);
+
+    // Refresh silently in background after emergency trigger
+    // refreshLocation();
 
     if (!currentLocation) {
       const permissionMessage =
