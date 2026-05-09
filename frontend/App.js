@@ -36,6 +36,7 @@ import { useTheme } from './context/ThemeContext';
 import {
   isLibraryAdministrator,
   isSacAdministrator,
+  isSecurityAdministrator,
 } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
@@ -81,7 +82,7 @@ function RootNavigator() {
             <>
               <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
             </>
-          ) : user.role === 'admin' ? (
+          ) : isSecurityAdministrator(user) ? (
             <>
               <Stack.Screen
                 name="SecurityAdminMain"
@@ -100,6 +101,13 @@ function RootNavigator() {
               <Stack.Screen
                 name="LibraryAdminMain"
                 component={LibraryAdminTabNavigator}
+              />
+            </>
+          ) : user.role === 'admin' ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
               />
             </>
           ) : (

@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import { captureRef } from 'react-native-view-shot';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { securityAdminAPI } from '../services/api';
@@ -299,8 +300,7 @@ function QRPreviewModal({
                   Coordinates
                 </Text>
                 <Text style={[styles.coordValue, { color: colors.text }]}>
-                  {location.latitude.toFixed(6)},{' '}
-                  {location.longitude.toFixed(6)}
+                  {location.latitude}, {location.longitude}
                 </Text>
               </View>
             )}
@@ -391,9 +391,11 @@ export default function SecurityAdminScreen({ navigation, route }) {
     [locations, searchQuery]
   );
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async (isRefresh = false) => {
     try {

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
-import SecurityAdminScreen from '../screens/SecurityAdminScreen';
+import SecurityAdminStackNavigator from './SecurityAdminStackNavigator';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -46,7 +46,7 @@ export default function SecurityAdminTabNavigator() {
     >
       <Tab.Screen
         name="SecurityAdmin"
-        component={SecurityAdminScreen}
+        component={SecurityAdminStackNavigator}
         options={{
           title: 'Security Admin',
         }}
