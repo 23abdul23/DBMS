@@ -422,4 +422,44 @@ export const libraryAPI = {
     api.post('/library/admin/release-seat', data),
 };
 
+export const securityAdminAPI = {
+  // Location endpoints
+  getLocations: (type, isActive) =>
+    api.get('/security-admin/locations', {
+      params: {
+        ...(type && { type }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    }),
+  getLocation: (id) => api.get(`/security-admin/locations/${id}`),
+  createLocation: (data) => api.post('/security-admin/locations', data),
+  updateLocation: (id, data) =>
+    api.put(`/security-admin/locations/${id}`, data),
+  deleteLocation: (id) => api.delete(`/security-admin/locations/${id}`),
+
+  // QR endpoints
+  generateQR: (locationId, format = 'PNG') =>
+    api.post(`/security-admin/qr/location/${locationId}/generate`, { format }),
+  getLocationQR: (locationId) =>
+    api.get(`/security-admin/qr/location/${locationId}`),
+  recordDownload: (locationId, fileName, fileSize) =>
+    api.post(`/security-admin/qr/location/${locationId}/download`, {
+      fileName,
+      fileSize,
+    }),
+
+  // History endpoints
+  getDownloadHistory: (locationId, limit = 50, offset = 0) =>
+    api.get('/security-admin/qr/download-history', {
+      params: { ...(locationId && { locationId }), limit, offset },
+    }),
+  getGenerationHistory: (locationId, limit = 50, offset = 0) =>
+    api.get('/security-admin/qr/generation-history', {
+      params: { ...(locationId && { locationId }), limit, offset },
+    }),
+
+  // Statistics
+  getQRStatistics: () => api.get('/security-admin/statistics/qr'),
+};
+
 export default api;

@@ -7,6 +7,7 @@ import { generateId } from "../utils/hashGenerator.js"
 import {
   SAC_ADMIN_EMAIL,
   LIBRARY_ADMIN_EMAIL,
+  SECURITY_ADMIN_EMAIL,
   normalizeEmail,
 } from "../utils/adminScopes.js"
 
@@ -35,6 +36,14 @@ const ACTIVITY_ADMINS = [
     role: "admin",
     gender: "other",
     phoneNumber: "8000000002",
+    emergencyContact: "Campus Control Room - 7909069340",
+  },
+  {
+    email: SECURITY_ADMIN_EMAIL,
+    name: "Security Administrator",
+    role: "admin",
+    gender: "other",
+    phoneNumber: "9000000002",
     emergencyContact: "Campus Control Room - 7909069340",
   },
 ]

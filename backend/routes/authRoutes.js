@@ -71,7 +71,11 @@ const normalizeRole = (value, fallback = "student") => {
   if (roleValues.has(normalized)) {
     return normalized
   }
-  if (normalized === "sac_admin" || normalized === "library_admin") {
+  if (
+    normalized === "sac_admin" ||
+    normalized === "library_admin" ||
+    normalized === "security_admin"
+  ) {
     return "admin"
   }
   return fallback
@@ -195,8 +199,9 @@ router.post("/register", async (req, res) => {
       department,
       role,
     } = req.body
+    const normalizedEmail = normalizeText(email)?.toLowerCase()
 
-    if (!name || !email || !password) {
+    if (!name || !normalizedEmail || !password) {
       return res
         .status(400)
         .json({ message: "Name, email, and password are required" })
@@ -246,7 +251,9 @@ router.post("/register", async (req, res) => {
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { email },
+          normalizedEmail
+            ? { email: { equals: normalizedEmail, mode: "insensitive" } }
+            : null,
           normalizedStudentId ? { studentId: normalizedStudentId } : null,
           normalizedGuardId ? { guardId: normalizedGuardId } : null,
           normalizedStudentId
@@ -272,7 +279,7 @@ router.post("/register", async (req, res) => {
       data: {
         id: generateId(),
         name: normalizeText(name),
-        email: normalizeText(email),
+        email: normalizedEmail,
         passwordHash,
         studentId: normalizedStudentId,
         guardId: normalizedGuardId,
@@ -331,8 +338,9 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password, role } = req.body
+    const normalizedEmail = normalizeText(email)?.toLowerCase()
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res
         .status(400)
         .json({ message: "Email and password are required" })
@@ -345,7 +353,7 @@ router.post("/login", async (req, res) => {
 
     const user = await prisma.user.findFirst({
       where: {
-        email,
+        email: { equals: normalizedEmail, mode: "insensitive" },
         ...(normalizedRole ? { role: normalizedRole } : {}),
       },
       select: userSelectWithPassword,

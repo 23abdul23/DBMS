@@ -14,6 +14,7 @@ import MainTabNavigator from './navigation/MainTabNavigator';
 import WardenTabNavigator from './navigation/WardenTabNavigator';
 import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
 import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
+import SecurityAdminTabNavigator from './navigation/SecurityAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -35,6 +36,7 @@ import { useTheme } from './context/ThemeContext';
 import {
   isLibraryAdministrator,
   isSacAdministrator,
+  isSecurityAdministrator,
 } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
@@ -80,6 +82,13 @@ function RootNavigator() {
             <>
               <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
             </>
+          ) : isSecurityAdministrator(user) ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
+              />
+            </>
           ) : isSacAdministrator(user) ? (
             <>
               <Stack.Screen
@@ -92,6 +101,13 @@ function RootNavigator() {
               <Stack.Screen
                 name="LibraryAdminMain"
                 component={LibraryAdminTabNavigator}
+              />
+            </>
+          ) : user.role === 'admin' ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
               />
             </>
           ) : (
