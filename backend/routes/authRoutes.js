@@ -71,7 +71,7 @@ const normalizeRole = (value, fallback = "student") => {
   if (roleValues.has(normalized)) {
     return normalized
   }
-  if (normalized === "sac_admin" || normalized === "library_admin") {
+  if (normalized === "sac_admin" || normalized === "library_admin" || normalized === 'security_admin') {
     return "admin"
   }
   return fallback

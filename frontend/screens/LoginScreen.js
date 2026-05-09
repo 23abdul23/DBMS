@@ -215,10 +215,8 @@ export default function LoginScreen({ navigation }) {
                   <Picker.Item label="Warden" value="warden" />
                   <Picker.Item label="Security" value="security" />
                   <Picker.Item label="SAC Administrator" value="sac_admin" />
-                  <Picker.Item
-                    label="Library Administrator"
-                    value="library_admin"
-                  />
+                  <Picker.Item label="Library Administrator" value="library_admin"/>
+                  <Picker.Item label="Security Administrator" value="security_admin"/>
                 </Picker>
               </View>
 
