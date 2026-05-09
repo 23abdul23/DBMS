@@ -9,11 +9,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
+import { LocationAccessDeniedProvider } from './context/LocationAccessDeniedContext';
 import { ThemeProvider } from './context/ThemeContext'; // Make sure to import ThemeProvider
 import MainTabNavigator from './navigation/MainTabNavigator';
 import WardenTabNavigator from './navigation/WardenTabNavigator';
 import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
 import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
+import SecurityAdminTabNavigator from './navigation/SecurityAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -35,6 +37,7 @@ import { useTheme } from './context/ThemeContext';
 import {
   isLibraryAdministrator,
   isSacAdministrator,
+  isSecurityAdministrator,
 } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
@@ -80,6 +83,13 @@ function RootNavigator() {
             <>
               <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
             </>
+          ) : isSecurityAdministrator(user) ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
+              />
+            </>
           ) : isSacAdministrator(user) ? (
             <>
               <Stack.Screen
@@ -92,6 +102,13 @@ function RootNavigator() {
               <Stack.Screen
                 name="LibraryAdminMain"
                 component={LibraryAdminTabNavigator}
+              />
+            </>
+          ) : user.role === 'admin' ? (
+            <>
+              <Stack.Screen
+                name="SecurityAdminMain"
+                component={SecurityAdminTabNavigator}
               />
             </>
           ) : (
@@ -141,7 +158,9 @@ export default function App() {
   const content = (
     <LocationProvider>
       <AuthProvider>
-        <RootNavigator />
+        <LocationAccessDeniedProvider>
+          <RootNavigator />
+        </LocationAccessDeniedProvider>
       </AuthProvider>
     </LocationProvider>
   );

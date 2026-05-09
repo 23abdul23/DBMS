@@ -30,6 +30,17 @@ console.log(appEnvironement);
 
 export const isDevelopmentEnvironement = appEnvironement === 'development';
 
+// Structured API logger
+const DEBUG_API = __DEV__;
+const apiLog = (obj) => {
+  if (DEBUG_API) {
+    console.log(
+      '[API_LOG]',
+      typeof obj === 'object' ? JSON.stringify(obj) : obj
+    );
+  }
+};
+
 export const devQuickLoginCredentialsByRole = {
   student: {
     email: 'iit2023001@iiita.ac.in',
@@ -176,10 +187,32 @@ const allowOpenClosedStatus = (status) => status === 200 || status === 403;
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const accessToken = await SecureStore.getItemAsync('accessToken');
+    // attach timing + auth
+    try {
+      config._startTime = Date.now();
+      const accessToken = await SecureStore.getItemAsync('accessToken');
+      if (accessToken) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
 
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+      // log request start (avoid logging large bodies)
+      apiLog({
+        event: 'request-start',
+        method: config.method,
+        url: config.url,
+        hasAuth: !!config.headers?.Authorization,
+        paramsPreview: config.params
+          ? JSON.stringify(config.params)
+          : undefined,
+        bodyPreview: config.data
+          ? JSON.stringify(config.data).slice(0, 200)
+          : undefined,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      // non-fatal logging error
+      console.warn('[API] request interceptor error', e?.message || e);
     }
 
     return config;
@@ -191,18 +224,44 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    try {
+      const start = response.config?._startTime;
+      const duration = start ? Date.now() - start : null;
+      apiLog({
+        event: 'response-received',
+        method: response.config?.method,
+        url: response.config?.url,
+        status: response.status,
+        durationMs: duration,
+      });
+    } catch (e) {
+      // ignore logging failures
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     const errorCode = error.response?.data?.code;
     const errorMessage = error.response?.data?.message;
 
-    console.log('[API Error]', {
-      code: errorCode,
-      message: errorMessage,
-      status: error.response?.status,
-      retried: !!originalRequest._retry,
-    });
+    try {
+      const duration = originalRequest?._startTime
+        ? Date.now() - originalRequest._startTime
+        : null;
+      apiLog({
+        event: 'request-error',
+        method: originalRequest?.method,
+        url: originalRequest?.url,
+        status: error.response?.status,
+        code: errorCode,
+        message: errorMessage,
+        durationMs: duration,
+        retried: !!originalRequest?._retry,
+      });
+    } catch (e) {
+      console.warn('[API] error logging failed', e?.message || e);
+    }
 
     // If already retried or not a 401, don't retry
     if (originalRequest._retry || error.response?.status !== 401) {
@@ -211,7 +270,11 @@ api.interceptors.response.use(
 
     // SESSION_REVOKED means user logged in elsewhere - force logout immediately
     if (errorCode === 'SESSION_REVOKED' || errorCode === 'USER_DISABLED') {
-      console.log('[API] Session revoked - forcing logout');
+      apiLog({
+        event: 'session-revoked',
+        code: errorCode,
+        message: errorMessage,
+      });
       await Promise.all([
         SecureStore.deleteItemAsync('accessToken').catch(() => {}),
         SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -232,12 +295,18 @@ api.interceptors.response.use(
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
 
         if (!refreshToken) {
-          console.log('[API] No refresh token available - logging out');
+          apiLog({
+            event: 'no-refresh-token',
+            message: 'No refresh token available - logging out',
+          });
           await emitLogout('NO_REFRESH_TOKEN');
           return Promise.reject(error);
         }
 
-        console.log('[API] Attempting token refresh...');
+        apiLog({
+          event: 'token-refresh-attempt',
+          url: `${PRIMARY_API_BASE_URL}/auth/refresh`,
+        });
         const response = await axios.post(
           `${PRIMARY_API_BASE_URL}/auth/refresh`,
           { refreshToken },
@@ -255,7 +324,7 @@ api.interceptors.response.use(
 
         // Check if refresh was successful
         if (responseCode === 'SESSION_REVOKED' || !accessToken) {
-          console.log('[API] Refresh returned SESSION_REVOKED');
+          apiLog({ event: 'refresh-session-revoked', responseCode });
           await Promise.all([
             SecureStore.deleteItemAsync('accessToken').catch(() => {}),
             SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -271,16 +340,16 @@ api.interceptors.response.use(
           await SecureStore.setItemAsync('refreshToken', newRefreshToken);
         }
 
-        console.log('[API] Token refreshed successfully');
+        apiLog({ event: 'token-refreshed-success' });
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        console.error(
-          '[API] Token refresh failed:',
-          refreshError.response?.data
-        );
+        apiLog({
+          event: 'token-refresh-failed',
+          error: refreshError.response?.data,
+        });
 
         const refreshErrorCode = refreshError.response?.data?.code;
 
@@ -399,12 +468,15 @@ export const sacAPI = {
   getOverview: () => api.get('/sac/overview'),
   getSacStatus: () =>
     api.get('/sac/status', { validateStatus: allowOpenClosedStatus }),
-  selectRoom: (roomName) =>
-    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
+  selectRoom: (roomName, data = {}) =>
+    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`, data),
   leaveRoom: (roomName) =>
     api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
-  selectEquipment: (equipmentName) =>
-    api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
+  selectEquipment: (equipmentName, data = {}) =>
+    api.post(
+      `/sac/equipment/${encodeURIComponent(equipmentName)}/select`,
+      data
+    ),
   returnEquipment: (equipmentName, data = {}) =>
     api.post(
       `/sac/equipment/${encodeURIComponent(equipmentName)}/return`,
@@ -420,6 +492,50 @@ export const libraryAPI = {
   releaseSeat: () => api.post('/library/release-seat'),
   adminReleaseSeat: (data = {}) =>
     api.post('/library/admin/release-seat', data),
+};
+
+export const securityAdminAPI = {
+  // Location endpoints
+  getLocations: (type, isActive) =>
+    api.get('/security-admin/locations', {
+      params: {
+        ...(type && { type }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    }),
+  getLocation: (id) => api.get(`/security-admin/locations/${id}`),
+  createLocation: (data) => api.post('/security-admin/locations', data),
+  updateLocation: (id, data) =>
+    api.put(`/security-admin/locations/${id}`, data),
+  deleteLocation: (id) => api.delete(`/security-admin/locations/${id}`),
+
+  // QR endpoints
+  generateQR: (locationId, format = 'PNG') =>
+    api.post(`/security-admin/qr/location/${locationId}/generate`, { format }),
+  getLocationQR: (locationId) =>
+    api.get(`/security-admin/qr/location/${locationId}`),
+  recordDownload: (locationId, fileName, fileSize) =>
+    api.post(`/security-admin/qr/location/${locationId}/download`, {
+      fileName,
+      fileSize,
+    }),
+
+  // History endpoints
+  getDownloadHistory: (locationId, limit = 50, offset = 0) =>
+    api.get('/security-admin/qr/download-history', {
+      params: { ...(locationId && { locationId }), limit, offset },
+    }),
+  getGenerationHistory: (locationId, limit = 50, offset = 0) =>
+    api.get('/security-admin/qr/generation-history', {
+      params: { ...(locationId && { locationId }), limit, offset },
+    }),
+
+  // Statistics
+  getQRStatistics: () => api.get('/security-admin/statistics/qr'),
+};
+
+export const locationAPI = {
+  getActive: () => api.get('/locations/active'),
 };
 
 export default api;

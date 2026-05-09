@@ -1,19 +1,21 @@
-const path = require("path")
-const { createRequire } = require("module")
+import bcrypt from "bcryptjs"
+import dotenv from "dotenv"
+import path from "path"
+import { fileURLToPath } from "url"
+import { getPrismaClient, disconnectSQL } from "../config/prisma.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
+  SAC_ADMIN_EMAIL,
+  LIBRARY_ADMIN_EMAIL,
+  SECURITY_ADMIN_EMAIL,
+  normalizeEmail,
+} from "../utils/adminScopes.js"
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 const backendRoot = path.resolve(__dirname, "..")
-const backendRequire = createRequire(path.join(backendRoot, "package.json"))
 
-backendRequire("dotenv").config({ path: path.join(backendRoot, ".env") })
-
-const bcrypt = backendRequire("bcryptjs")
-const { getPrismaClient, disconnectSQL } = require(
-  path.join(backendRoot, "config", "prisma"),
-)
-const { generateId } = require(path.join(backendRoot, "utils", "hashGenerator"))
-const { SAC_ADMIN_EMAIL, LIBRARY_ADMIN_EMAIL, normalizeEmail } = require(
-  path.join(backendRoot, "utils", "adminScopes"),
-)
+dotenv.config({ path: path.join(backendRoot, ".env") })
 
 const prisma = getPrismaClient()
 
@@ -34,6 +36,14 @@ const ACTIVITY_ADMINS = [
     role: "admin",
     gender: "other",
     phoneNumber: "8000000002",
+    emergencyContact: "Campus Control Room - 7909069340",
+  },
+  {
+    email: SECURITY_ADMIN_EMAIL,
+    name: "Security Administrator",
+    role: "admin",
+    gender: "other",
+    phoneNumber: "9000000002",
     emergencyContact: "Campus Control Room - 7909069340",
   },
 ]

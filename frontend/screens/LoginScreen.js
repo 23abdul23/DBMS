@@ -28,6 +28,11 @@ import api, {
 } from '../services/api';
 
 import { COLLEGE_EMAIL_ADDRESS } from '../constants/collegeConstants';
+import {
+  isLibraryAdministrator,
+  isSacAdministrator,
+  isSecurityAdministrator,
+} from '../utils/adminScopes';
 
 export default function LoginScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -63,8 +68,10 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
+    const loginRole = resolveLoginRole(email, role);
     setLoading(true);
-    const result = await login(processRollNo(email), password, role);
+    const result = await login(processRollNo(email), password, loginRole);
     setLoading(false);
 
     if (!result.success) {
@@ -84,7 +91,11 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
-    const result = await login(credentials.email, credentials.password, role);
+    const result = await login(
+      credentials.email,
+      credentials.password,
+      resolveLoginRole(credentials.email, role)
+    );
     setLoading(false);
 
     if (!result.success) {
@@ -129,6 +140,26 @@ export default function LoginScreen({ navigation }) {
     }
 
     return `${value}${COLLEGE_EMAIL_ADDRESS}`;
+  };
+
+  const resolveLoginRole = (loginEmail, selectedRole) => {
+    const normalizedEmail = String(loginEmail || '')
+      .trim()
+      .toLowerCase();
+
+    if (isSecurityAdministrator({ email: normalizedEmail })) {
+      return 'security_admin';
+    }
+
+    if (isSacAdministrator({ email: normalizedEmail })) {
+      return 'sac_admin';
+    }
+
+    if (isLibraryAdministrator({ email: normalizedEmail })) {
+      return 'library_admin';
+    }
+
+    return selectedRole;
   };
 
   if (loading) return <LoadingSpinner />;
@@ -218,6 +249,10 @@ export default function LoginScreen({ navigation }) {
                   <Picker.Item
                     label="Library Administrator"
                     value="library_admin"
+                  />
+                  <Picker.Item
+                    label="Security Administrator"
+                    value="security_admin"
                   />
                 </Picker>
               </View>

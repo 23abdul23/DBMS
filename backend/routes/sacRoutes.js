@@ -1,18 +1,19 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate, authorize } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate, authorize } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   SAC_CLUB_ROOMS,
   SAC_EQUIPMENT,
   resolveClubRoom,
   resolveEquipment,
-} = require("../utils/sacCatalog")
-const { isSacOpenAt, SAC_CLOSE_LABEL } = require("../utils/campusActivityRules")
-const {
+} from "../utils/sacCatalog.js"
+import { isSacOpenAt, SAC_CLOSE_LABEL } from "../utils/campusActivityRules.js"
+import {
   canViewFullSacActivity,
   isSacAdministrator,
-} = require("../utils/adminScopes")
+} from "../utils/adminScopes.js"
+import proximityValidator from "../utils/proximityValidator.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -389,6 +390,20 @@ const getOverview = async (viewer) => {
   }
 }
 
+const fetchSacLocation = async () => {
+  try {
+    const loc = await prisma.location.findFirst({
+      where: { name: "SAC", isActive: true },
+      select: { latitude: true, longitude: true },
+    })
+
+    return loc || null
+  } catch (e) {
+    console.error("Error fetching SAC location:", e)
+    return null
+  }
+}
+
 router.get("/status", authenticate, async (req, res) => {
   try {
     if (!isSacOpenAt()) {
@@ -441,6 +456,63 @@ router.post(
         return res
           .status(403)
           .json({ message: getSacClosedMessage(), code: "SAC_CLOSED" })
+      }
+
+      // Proximity validation: require user's coordinates (prod) and validate against SAC location
+      const { latitude, longitude } = req.body || {}
+      const sacLoc = await fetchSacLocation()
+      if (
+        (
+          process.env.ENVIRONEMENT ||
+          process.env.NODE_ENV ||
+          "development"
+        ).toLowerCase() === "production"
+      ) {
+        if (!sacLoc) {
+          return res
+            .status(500)
+            .json({ message: "SAC location not configured" })
+        }
+
+        if (!latitude || !longitude) {
+          return res.status(400).json({
+            message: "Location coordinates required",
+            code: "MISSING_COORDS",
+          })
+        }
+
+        const { isWithin, distance } = proximityValidator.isWithinProximity(
+          { latitude, longitude },
+          sacLoc,
+        )
+
+        if (!isWithin) {
+          try {
+            await prisma.log.create({
+              data: {
+                id: generateId(),
+                userId: req.user.userId,
+                action: "scan_attempt",
+                location: "SAC",
+                success: false,
+                details: {
+                  attemptedAt: new Date(),
+                  latitude,
+                  longitude,
+                  distance,
+                },
+                scanType: "manual",
+              },
+            })
+          } catch (e) {
+            console.error("Failed to log proximity failure:", e)
+          }
+
+          return res.status(403).json({
+            code: "LOCATION_OUT_OF_RANGE",
+            message: "You are trying to access this QR from a remote location",
+          })
+        }
       }
 
       const roomName = resolveClubRoom(req.params.roomName)
@@ -510,6 +582,8 @@ router.post(
             description: `Opened ${roomName} room`,
             details: {
               roomName,
+              latitude: latitude || null,
+              longitude: longitude || null,
             },
           })
         })
@@ -550,6 +624,8 @@ router.post(
               description: `Joined ${roomName} room`,
               details: {
                 roomName,
+                latitude: latitude || null,
+                longitude: longitude || null,
               },
             })
           })
@@ -634,6 +710,8 @@ router.post(
           description: `Left ${roomName} room`,
           details: {
             roomName,
+            latitude: req.body?.latitude || null,
+            longitude: req.body?.longitude || null,
           },
         })
       })
@@ -656,6 +734,63 @@ router.post(
         return res
           .status(403)
           .json({ message: getSacClosedMessage(), code: "SAC_CLOSED" })
+      }
+
+      // Proximity validation for equipment actions
+      const { latitude, longitude } = req.body || {}
+      const sacLoc = await fetchSacLocation()
+      if (
+        (
+          process.env.ENVIRONEMENT ||
+          process.env.NODE_ENV ||
+          "development"
+        ).toLowerCase() === "production"
+      ) {
+        if (!sacLoc) {
+          return res
+            .status(500)
+            .json({ message: "SAC location not configured" })
+        }
+
+        if (!latitude || !longitude) {
+          return res.status(400).json({
+            message: "Location coordinates required",
+            code: "MISSING_COORDS",
+          })
+        }
+
+        const { isWithin, distance } = proximityValidator.isWithinProximity(
+          { latitude, longitude },
+          sacLoc,
+        )
+
+        if (!isWithin) {
+          try {
+            await prisma.log.create({
+              data: {
+                id: generateId(),
+                userId: req.user.userId,
+                action: "scan_attempt",
+                location: "SAC",
+                success: false,
+                details: {
+                  attemptedAt: new Date(),
+                  latitude,
+                  longitude,
+                  distance,
+                },
+                scanType: "manual",
+              },
+            })
+          } catch (e) {
+            console.error("Failed to log proximity failure:", e)
+          }
+
+          return res.status(403).json({
+            code: "LOCATION_OUT_OF_RANGE",
+            message: "You are trying to access this QR from a remote location",
+          })
+        }
       }
 
       const equipmentName = resolveEquipment(req.params.equipmentName)
@@ -704,6 +839,8 @@ router.post(
           description: `Took ${equipmentName}`,
           details: {
             equipmentName,
+            latitude: latitude || null,
+            longitude: longitude || null,
           },
         })
       })
@@ -802,6 +939,8 @@ router.post(
             checkoutId: activeCheckout.id,
             returnedForUserId: activeCheckout.userId,
             studentId: activeCheckout.user?.studentId || null,
+            latitude: req.body?.latitude || null,
+            longitude: req.body?.longitude || null,
           },
         })
       })
@@ -818,4 +957,4 @@ router.post(
   },
 )
 
-module.exports = router
+export default router

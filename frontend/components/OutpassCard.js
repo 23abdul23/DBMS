@@ -268,8 +268,8 @@ export default function OutpassCard({ outpass, onUpdate }) {
           Requested on {formatDate(outpass.createdAt)}
         </Text>
         {outpass.approvedBy ? (
-          <Text style={[styles.approvedBy, { color: colors.success }]}>
-            Approved by {outpass.approvedBy.name}
+          <Text style={[styles.approvedBy, { color: colors.subText }]}>
+            Procceced by {outpass.approvedBy.name}
           </Text>
         ) : null}
       </View>

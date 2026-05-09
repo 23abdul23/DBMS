@@ -9,7 +9,8 @@ import {
   Alert,
   ImageBackground,
 } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -71,6 +72,20 @@ export default function DashboardScreen({ navigation }) {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (__DEV__) {
+        console.log('[DASHBOARD] screen-focus');
+      }
+
+      return () => {
+        if (__DEV__) {
+          console.log('[DASHBOARD] screen-blur');
+        }
+      };
+    }, [])
+  );
 
   useEffect(() => {
     loadDashboardData();
@@ -266,7 +281,7 @@ export default function DashboardScreen({ navigation }) {
                     },
                   ]}
                 >
-                  {user?.studentId || 'Student'}
+                  {String(user?.studentId).toUpperCase() || 'Student'}
                   {user?.hostel ? `  |  ${user.hostel}` : ''}
                 </Text>
               </View>
@@ -288,8 +303,30 @@ export default function DashboardScreen({ navigation }) {
                 >
                   <Ionicons
                     name={isDarkMode ? 'sunny' : 'moon'}
-                    size={24}
+                    size={20}
                     color={isDarkMode ? '#ffffff' : colors.text}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Notifications')}
+                  style={[
+                    styles.roundIconButton,
+                    styles.logoutButton,
+                    {
+                      backgroundColor: isDarkMode
+                        ? 'rgba(59,130,246,0.14)'
+                        : colors.primarySoft,
+                      borderColor: isDarkMode
+                        ? 'rgba(96,165,250,0.22)'
+                        : colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={20}
+                    color={isDarkMode ? '#60a5fa' : colors.primary}
                   />
                 </TouchableOpacity>
 
@@ -310,7 +347,7 @@ export default function DashboardScreen({ navigation }) {
                 >
                   <Ionicons
                     name="log-out-outline"
-                    size={24}
+                    size={20}
                     color={isDarkMode ? '#fda4af' : colors.danger}
                   />
                 </TouchableOpacity>

@@ -1,9 +1,10 @@
 'use client';
 
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import styles from '../styles/WardenStyles';
 import { COLORS, OUTPASS_REQUEST_TYPE } from '../utils/constants';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 
 const statusColors = {
   pending: '#f59e0b',
@@ -11,6 +12,31 @@ const statusColors = {
   rejected: '#ef4444',
   expired: '#6b7280',
   cancelled: '#f97316',
+};
+
+const callStudent = async (phoneNo) => {
+  try {
+    const phone = `tel:${String(phoneNo).trim()}`;
+    await Linking.openURL(phone);
+  } catch (err) {
+    console.log('Call Error:', err);
+  }
+};
+
+const handleContact = (details) => {
+  const value = String(details || '').trim();
+
+  // If already just a phone number
+  if (/^\d+$/.test(value)) {
+    return value;
+  }
+
+  // Extract phone after " - "
+  if (value.includes(' - ')) {
+    return value.split(' - ')[1].trim();
+  }
+
+  return value;
 };
 
 const formatDateTime = (value) => {
@@ -43,6 +69,8 @@ export default function WardenOutpassCard({
       },
     ]);
   };
+
+  const { user, loading } = useAuth();
 
   const canCancel =
     typeof outpass.canCancel === 'boolean'
@@ -109,6 +137,29 @@ export default function WardenOutpassCard({
       <Text style={[styles.metaText, { color: colors.text }]}>
         Destination: {outpass.destination}
       </Text>
+
+      {user ? (
+        <View style={styles.contactRow}>
+          <Text
+            style={[
+              styles.metaText,
+              styles.contactName,
+              { color: colors.subText },
+            ]}
+          >
+            Phone Number:
+          </Text>
+          <TouchableOpacity
+            style={styles.callChip}
+            onPress={() => callStudent(user.phoneNumber)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="call-outline" size={14} color="#065f46" />
+            <Text style={styles.callChipText}>{String(user.phoneNumber)}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <Text style={[styles.metaText, { color: colors.subText }]}>
         Departure: {formatDateTime(outpass.outDate)}
       </Text>
@@ -122,11 +173,32 @@ export default function WardenOutpassCard({
       ) : null}
 
       {outpass.emergencyContact?.phone ? (
-        <Text style={[styles.metaText, { color: colors.subText }]}>
-          Emergency Contact: {outpass.emergencyContact.name || 'Contact'} (
-          {outpass.emergencyContact.phone})
-        </Text>
+        <View style={styles.contactRow}>
+          <Text
+            style={[
+              styles.metaText,
+              styles.contactName,
+              { color: colors.subText },
+            ]}
+          >
+            Emergency:
+          </Text>
+          <TouchableOpacity
+            style={styles.callChip}
+            onPress={() =>
+              callStudent(handleContact(user.emergencyContact || '102'))
+            }
+            activeOpacity={0.8}
+          >
+            <Ionicons name="call-outline" size={14} color="#065f46" />
+            <Text>
+              {' '}
+              {handleContact(user.emergencyContact || '102') || 'Contact'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
+
       {outpass.latestMovement ? (
         <Text style={[styles.metaText, { color: colors.subText }]}>
           Last Scan: {prettify(outpass.latestMovement.location)} at{' '}

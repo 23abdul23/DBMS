@@ -23,7 +23,13 @@ const [
   wardenRoutesModule,
   forgotRoutesModule,
   sacRoutesModule,
+  locationRoutesModule,
   libraryRoutesModule,
+  securityAdminRoutesModule,
+  notificationRoutesModule,
+
+  eventBusModule,
+  notificationQueueModule,
 ] = await Promise.all([
   import("express"),
   import("cors"),
@@ -45,7 +51,13 @@ const [
   import("./routes/wardenRoutes.js"),
   import("./routes/forgotRoute.js"),
   import("./routes/sacRoutes.js"),
+  import("./routes/locationRoutes.js"),
   import("./routes/libraryRoutes.js"),
+  import("./routes/securityAdminRoutes.js"),
+  import("./notifications/routes/notifications.js"),
+
+  import("./notifications/events/eventBus.js"),
+  import("./notifications/queues/notification.queue.js"),
 ])
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = databaseModule
@@ -64,7 +76,12 @@ const studentRoutes = studentRoutesModule.default
 const wardenRoutes = wardenRoutesModule.default
 const forgotRoutes = forgotRoutesModule.default
 const sacRoutes = sacRoutesModule.default
+const locationRoutes = locationRoutesModule.default
 const libraryRoutes = libraryRoutesModule.default
+const securityAdminRoutes = securityAdminRoutesModule.default
+const notificationRoutes = notificationRoutesModule.default
+const { eventBus } = eventBusModule
+const { notificationQueue } = notificationQueueModule
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -112,6 +129,15 @@ app.use(limiter)
 app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true }))
 
+// Events
+eventBus.on("OUTPASS_APPROVED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
+eventBus.on("OUTPASS_REJECTED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/outpass", outpassRoutes)
@@ -119,11 +145,14 @@ app.use("/api/outpass/warden", wardenRoutes)
 app.use("/api/emergency", emergencyRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/security", securityRoutes)
+app.use("/api/security-admin", securityAdminRoutes)
 app.use("/api/student", studentRoutes)
 app.use("/api/warden", wardenRoutes)
 app.use("/api/forgot", forgotRoutes)
 app.use("/api/sac", sacRoutes)
+app.use("/api/locations", locationRoutes)
 app.use("/api/library", libraryRoutes)
+app.use("/api/notifications", notificationRoutes)
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

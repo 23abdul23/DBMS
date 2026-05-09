@@ -1,16 +1,17 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   OUTPASS_REQUEST_TYPE,
   outpassInclude,
-} = require("../utils/outpassLifecycle")
-const {
+} from "../utils/outpassLifecycle.js"
+import {
   classifyLocation,
   isExitGate,
   requiresOutpassForExit,
-} = require("../utils/locationPolicy")
+} from "../utils/locationPolicy.js"
+import proximityValidator from "../utils/proximityValidator.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -57,6 +58,138 @@ const createHttpError = (statusCode, message) => {
   error.statusCode = statusCode
   return error
 }
+
+const getEnvironment = () =>
+  (
+    process.env.ENVIRONEMENT ||
+    process.env.NODE_ENV ||
+    "development"
+  ).toLowerCase()
+
+const isProductionEnvironment = () => getEnvironment() === "production"
+
+const getRequestCoordinates = (body = {}) => {
+  const latitude = Number(body.latitude)
+  const longitude = Number(body.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null
+  }
+
+  return { latitude, longitude }
+}
+
+const fetchLocationCoordinates = async (locationName) => {
+  const normalizedLocation = String(locationName || "").trim()
+
+  if (!normalizedLocation) {
+    return null
+  }
+
+  const location = await prisma.location.findFirst({
+    where: {
+      name: normalizedLocation,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      latitude: true,
+      longitude: true,
+    },
+  })
+
+  if (
+    !location ||
+    location.latitude === null ||
+    location.latitude === undefined ||
+    location.longitude === null ||
+    location.longitude === undefined
+  ) {
+    return null
+  }
+
+  return {
+    id: location.id,
+    name: location.name,
+    latitude: Number(location.latitude),
+    longitude: Number(location.longitude),
+  }
+}
+
+const validateLocationProximity = async ({
+  locationName,
+  body,
+  userId,
+  action,
+}) => {
+  if (!isProductionEnvironment()) {
+    return { isAllowed: true, distance: 0, targetLocation: null }
+  }
+
+  const targetLocation = await fetchLocationCoordinates(locationName)
+
+  if (!targetLocation) {
+    return {
+      isAllowed: false,
+      distance: null,
+      targetLocation: null,
+      error: createHttpError(
+        400,
+        "Invalid QR location. Location coordinates are missing.",
+      ),
+    }
+  }
+
+  const userCoordinates = getRequestCoordinates(body)
+
+  if (!userCoordinates) {
+    return {
+      isAllowed: false,
+      distance: null,
+      targetLocation,
+      error: createHttpError(
+        400,
+        "Current location coordinates are required for QR scanning.",
+      ),
+    }
+  }
+
+  const { isWithin, distance } = proximityValidator.isWithinProximity(
+    userCoordinates,
+    targetLocation,
+  )
+
+  if (!isWithin) {
+    return {
+      isAllowed: false,
+      distance,
+      targetLocation,
+      error: createHttpError(
+        403,
+        "You are trying to access this QR from a remote location",
+      ),
+    }
+  }
+
+  return { isAllowed: true, distance, targetLocation }
+}
+
+const buildScanLocationDetails = ({ body, distance, targetLocation }) => ({
+  qrLocationId: targetLocation?.id || null,
+  qrLocationName: targetLocation?.name || null,
+  scannedLatitude:
+    body?.latitude !== undefined && body?.latitude !== null
+      ? Number(body.latitude)
+      : null,
+  scannedLongitude:
+    body?.longitude !== undefined && body?.longitude !== null
+      ? Number(body.longitude)
+      : null,
+  scannedAt: body?.locationTimestamp || body?.timestamp || null,
+  distanceMeters:
+    typeof distance === "number" ? Number(distance.toFixed(2)) : null,
+})
 
 const buildMovementLogPayload = ({
   scannedUser,
@@ -617,6 +750,22 @@ router.post("/log", authenticate, async (req, res) => {
       })
     }
 
+    const proximityCheck = await validateLocationProximity({
+      locationName: location,
+      body: req.body,
+      userId: req.user.userId,
+      action,
+    })
+
+    if (!proximityCheck.isAllowed) {
+      return res.status(proximityCheck.error.statusCode || 403).json({
+        code: "LOCATION_OUT_OF_RANGE",
+        message:
+          proximityCheck.error.message ||
+          "You are trying to access this QR from a remote location",
+      })
+    }
+
     const { log, outpass } = await createMovementLog({
       scannedUser,
       action,
@@ -625,6 +774,22 @@ router.post("/log", authenticate, async (req, res) => {
       guardName: req.user.name || guardName || null,
       scannedByUserId: req.user.userId,
     })
+
+    if (proximityCheck.targetLocation) {
+      await prisma.log.update({
+        where: { id: log.id },
+        data: {
+          details: {
+            ...log.details,
+            proximity: buildScanLocationDetails({
+              body: req.body,
+              distance: proximityCheck.distance,
+              targetLocation: proximityCheck.targetLocation,
+            }),
+          },
+        },
+      })
+    }
 
     res.status(200).json({
       message:
@@ -661,6 +826,22 @@ router.post("/student-log", authenticate, async (req, res) => {
     if (!normalizedLocation && !normalizedGuardId && !normalizedGuardName) {
       return res.status(400).json({
         message: "Invalid guard QR data. Missing location or guard details.",
+      })
+    }
+
+    const proximityCheck = await validateLocationProximity({
+      locationName: normalizedLocation,
+      body: req.body,
+      userId: req.user.userId,
+      action,
+    })
+
+    if (!proximityCheck.isAllowed) {
+      return res.status(proximityCheck.error.statusCode || 403).json({
+        code: "LOCATION_OUT_OF_RANGE",
+        message:
+          proximityCheck.error.message ||
+          "You are trying to access this QR from a remote location",
       })
     }
 
@@ -703,6 +884,22 @@ router.post("/student-log", authenticate, async (req, res) => {
       guardName: matchedGuard?.name || normalizedGuardName || null,
       scannedByUserId: req.user.userId,
     })
+
+    if (proximityCheck.targetLocation) {
+      await prisma.log.update({
+        where: { id: log.id },
+        data: {
+          details: {
+            ...log.details,
+            proximity: buildScanLocationDetails({
+              body: req.body,
+              distance: proximityCheck.distance,
+              targetLocation: proximityCheck.targetLocation,
+            }),
+          },
+        },
+      })
+    }
 
     res.status(200).json({
       message:
@@ -825,4 +1022,4 @@ router.get("/logs", authenticate, async (req, res) => {
   }
 })
 
-module.exports = router
+export default router
