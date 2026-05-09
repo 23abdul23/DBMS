@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI, commonAPI } from '../services/api';
+import * as SecureStore from 'expo-secure-store';
 
 const normalizeLoginRole = (role) => {
   if (role === 'sac_admin' || role === 'library_admin') {
@@ -33,10 +34,15 @@ export const AuthProvider = ({ children }) => {
 
   const loadStoredAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('authToken');
+      const accessToken = await SecureStore.getItemAsync('accessToken');
+
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+
       const storedUser = await AsyncStorage.getItem('userData');
-      if (storedToken && storedUser) {
-        setToken(storedToken);
+
+      if (accessToken && refreshToken && storedUser) {
+        setToken(accessToken);
+
         setUser(JSON.parse(storedUser));
       } else {
         setToken(null);
@@ -56,12 +62,15 @@ export const AuthProvider = ({ children }) => {
         password,
         normalizeLoginRole(role)
       );
-      const { token: authToken, user: userData } = response.data;
+      const { accessToken, refreshToken, user: userData } = response.data;
 
-      await AsyncStorage.setItem('authToken', authToken);
+      await SecureStore.setItemAsync('accessToken', accessToken);
+
+      await SecureStore.setItemAsync('refreshToken', refreshToken);
+
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
-      setToken(authToken);
+      setToken(accessToken);
       setUser(userData);
 
       return { success: true };
@@ -104,8 +113,12 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('authToken');
+      await SecureStore.deleteItemAsync('accessToken');
+
+      await SecureStore.deleteItemAsync('refreshToken');
+
       await AsyncStorage.removeItem('userData');
+
       setToken(null);
       setUser(null);
     } catch (error) {

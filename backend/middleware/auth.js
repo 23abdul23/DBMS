@@ -16,9 +16,30 @@ const authenticate = async (req, res, next) => {
 
     const decoded = verifyToken(token)
 
+    const session = await prisma.userSession.findUnique({
+      where: {
+        id: decoded.sessionId,
+      },
+    })
+
+    if (!session) {
+      return res.status(401).json({
+        message: "Logged in on another device",
+      })
+    }
+
+    // Check expiry
+    if (session.expiresAt < new Date()) {
+      return res.status(401).json({
+        message: "Session expired",
+      })
+    }
+
+    req.userId = decoded.userId
+
     const user = await prisma.user.findUnique({
       where: {
-        id: decoded.userId,
+        id: session.userId,
       },
       select: userSelect,
     })

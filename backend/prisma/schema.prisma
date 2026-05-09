@@ -133,10 +133,33 @@ model User {
   sacRoomPresences       SacRoomPresence[]      @relation("SacRoomPresenceUser")
   sacEquipmentCheckouts  SacEquipmentCheckout[] @relation("SacEquipmentCheckoutUser")
   librarySeatSessions    LibrarySeatSession[]   @relation("LibrarySeatSessionUser")
+  sessions UserSession[]
 
   @@index([role])
   @@index([hostel])
   @@map("users")
+}
+
+model UserSession {
+  id                String   @id @default(cuid())
+
+  userId            String   @map("user_id") @db.VarChar(24)
+
+  refreshTokenHash  String   @map("refresh_token_hash")
+
+  deviceName        String?  @map("device_name")
+  ipAddress         String?  @map("ip_address")
+
+  expiresAt         DateTime @map("expires_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([expiresAt])
+
+  @@map("user_sessions")
 }
 
 model SacRoomSession {

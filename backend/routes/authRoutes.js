@@ -9,6 +9,11 @@ import {
   userSelectWithPassword,
   serializeUser,
 } from "../utils/userProfiles.js"
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+} from "../config/jwt.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -366,6 +371,32 @@ router.post("/login", async (req, res) => {
         .json({ message: "Invalid credentials: incorrect password" })
     }
 
+    await prisma.userSession.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    })
+
+    const refreshToken = generateRefreshToken()
+
+    const refreshTokenHash = hashToken(refreshToken)
+
+    const session = await prisma.userSession.create({
+      data: {
+        userId: user.id,
+
+        refreshTokenHash,
+
+        deviceName: req.headers["user-agent"],
+
+        ipAddress: req.ip,
+
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    })
+
+    const accessToken = generateAccessToken(user, session.id)
+
     const refreshedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -374,23 +405,101 @@ router.post("/login", async (req, res) => {
       select: userSelect,
     })
 
-    const token = jwt.sign(
-      { userId: refreshedUser.id, role: refreshedUser.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRE,
-      },
-    )
+    // const token = jwt.sign(
+    //   { userId: refreshedUser.id, role: refreshedUser.role },
+    //   process.env.JWT_SECRET,
+    //   {
+    //     expiresIn: process.env.JWT_EXPIRE,
+    //   },
+    // )
 
     res.json({
       message: "Login successful",
-      token,
+      accessToken,
+      refreshToken,
       user: serializeUser(refreshedUser),
     })
   } catch (error) {
     console.error("Login error:", error)
     res.status(500).json({ message: "Server error during login" })
   }
+})
+
+// Logout User
+router.post("/logout", authenticate, async (req, res) => {
+  const token = req.headers.authorization.split(" ")[1]
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+  await prisma.userSession.delete({
+    where: {
+      id: decoded.sessionId,
+    },
+  })
+
+  return res.json({
+    message: "Logged out",
+  })
+})
+
+// Refresh Token
+router.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body
+
+  if (!refreshToken) {
+    return res.sendStatus(401)
+  }
+
+  const refreshTokenHash = hashToken(refreshToken)
+
+  const session = await prisma.userSession.findFirst({
+    where: {
+      refreshTokenHash,
+    },
+    include: {
+      user: true,
+    },
+  })
+
+  if (!session) {
+    return res.status(401).json({
+      message: "Invalid refresh token",
+    })
+  }
+
+  // EXPIRED
+  if (session.expiresAt < new Date()) {
+    await prisma.userSession.delete({
+      where: {
+        id: session.id,
+      },
+    })
+
+    return res.status(401).json({
+      message: "Refresh token expired",
+    })
+  }
+
+  // ROTATE TOKEN
+  const newRefreshToken = generateRefreshToken()
+
+  const newRefreshTokenHash = hashToken(newRefreshToken)
+
+  await prisma.userSession.update({
+    where: {
+      id: session.id,
+    },
+    data: {
+      refreshTokenHash: newRefreshTokenHash,
+    },
+  })
+
+  const newAccessToken = generateAccessToken(session.user, session.id)
+
+  return res.json({
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  })
 })
 
 // Get current user profile

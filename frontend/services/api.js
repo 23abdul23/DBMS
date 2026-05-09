@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
 
 const ACTIVE_API_BASE_URL_KEY = 'activeApiBaseUrl';
 const normalizeBaseUrl = (url) => String(url || '').replace(/\/+$/, '');
@@ -172,10 +173,12 @@ const allowOpenClosedStatus = (status) => status === 200 || status === 403;
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const accessToken = await SecureStore.getItemAsync('accessToken');
+
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
     return config;
   },
   (error) => {
@@ -187,25 +190,51 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (shouldTriggerFailover(error)) {
-      const originalRequest = error.config;
-      await setActiveApiBaseUrl(SECONDARY_API_BASE_URL, 'primary-unreachable');
+    const originalRequest = error.config;
 
-      return api.request({
-        ...originalRequest,
-        baseURL: activeApiBaseUrl,
-        __retriedOnFailover: true,
-      });
+    // TOKEN EXPIRED
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+
+        const response = await axios.post(
+          `${PRIMARY_API_BASE_URL}/auth/refresh`,
+          {
+            refreshToken,
+          }
+        );
+
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+        // SAVE NEW TOKENS
+        await SecureStore.setItemAsync('accessToken', accessToken);
+
+        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        // MULTIPLE LOGIN DETECTED
+        // SESSION REVOKED
+        // FORCE LOGOUT
+
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('refreshToken');
+        await AsyncStorage.removeItem('userData');
+
+        // optionally navigate login
+
+        return Promise.reject(refreshError);
+      }
     }
 
-    if (error.response?.status === 401) {
-      // Token expired, logout user
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userData');
-    }
     return Promise.reject(error);
   }
 );
+
 // Auth API endpoints
 export const authAPI = {
   login: (email, password, role) =>
