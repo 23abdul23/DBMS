@@ -21,10 +21,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, FONTS, SIZES, SPACING } from '../utils/constants';
 import LoadingSpinner from '../components/LoadingSpinner';
+import wardens from '../constants/Wardens.json';
 import api, {
   devQuickLoginCredentialsByRole,
   isDevelopmentEnvironement,
 } from '../services/api';
+
+import { COLLEGE_EMAIL_ADDRESS } from '../constants/collegeConstants';
 
 export default function LoginScreen({ navigation }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -61,7 +64,7 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    const result = await login(email, password, role);
+    const result = await login(processRollNo(email), password, role);
     setLoading(false);
 
     if (!result.success) {
@@ -116,6 +119,16 @@ export default function LoginScreen({ navigation }) {
         'Failed to send reset email';
       Alert.alert('Error Sending', msg);
     }
+  };
+
+  const processRollNo = (rollNo) => {
+    const value = String(rollNo).toLocaleLowerCase().trim();
+
+    if (value.includes('@iiita.ac.in')) {
+      return value;
+    }
+
+    return `${value}${COLLEGE_EMAIL_ADDRESS}`;
   };
 
   if (loading) return <LoadingSpinner />;
@@ -226,16 +239,39 @@ export default function LoginScreen({ navigation }) {
                     color={colors.subText}
                     style={styles.inputIcon}
                   />
-                  <TextInput
-                    style={[styles.input, { color: colors.inputText }]}
-                    placeholder="Email Address"
-                    placeholderTextColor={colors.inputText}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                  />
+                  {role === 'warden' ? (
+                    <Picker
+                      selectedValue={email}
+                      style={[
+                        styles.input,
+                        { color: colors.inputText, flex: 1 },
+                      ]}
+                      onValueChange={(itemValue) => setEmail(itemValue)}
+                      dropdownIconColor={colors.subText}
+                    >
+                      <Picker.Item label="Select Hostel" value="" />
+                      {wardens.wardens.map((info, index) => {
+                        return (
+                          <Picker.Item
+                            key={index}
+                            label={info.hostel}
+                            value={info.email}
+                          ></Picker.Item>
+                        );
+                      })}
+                    </Picker>
+                  ) : (
+                    <TextInput
+                      style={[styles.input, { color: colors.inputText }]}
+                      placeholder={role === 'student' ? 'Roll Number' : 'Email'}
+                      placeholderTextColor={colors.inputText}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                    />
+                  )}
                 </View>
 
                 <View

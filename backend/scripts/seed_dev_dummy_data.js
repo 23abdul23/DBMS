@@ -1,7 +1,6 @@
 import dotenv from "dotenv"
 import path from "path"
 import { fileURLToPath } from "url"
-import { spawn } from "child_process"
 import { getPrismaClient, disconnectSQL } from "../config/prisma.js"
 import { generateId } from "../utils/hashGenerator.js"
 import { SAC_ADMIN_EMAIL, LIBRARY_ADMIN_EMAIL } from "../utils/adminScopes.js"
@@ -23,31 +22,6 @@ const parseCliArgs = (argv) => ({
   dryRun: argv.includes("--dry-run"),
   skipBootstrap: argv.includes("--skip-bootstrap"),
 })
-
-const runNodeScript = (scriptName, options) =>
-  new Promise((resolve, reject) => {
-    const args = [path.join(__dirname, scriptName)]
-
-    if (options.dryRun) {
-      args.push("--dry-run")
-    }
-
-    const child = spawn(process.execPath, args, {
-      cwd: backendRoot,
-      stdio: "inherit",
-      env: process.env,
-    })
-
-    child.on("error", reject)
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(`${scriptName} failed with exit code ${code}`))
-    })
-  })
 
 const subtractMinutes = (date, minutes) =>
   new Date(date.getTime() - minutes * 60 * 1000)
@@ -593,16 +567,6 @@ const run = async () => {
 
   console.log("Dev dummy data seed started")
   console.log(`Mode: ${options.dryRun ? "dry-run" : "write"}`)
-
-  //   if (!options.skipBootstrap) {
-  //     console.log("\nRunning bootstrap ingestion scripts")
-
-  //     await runNodeScript("ingest_to_db_students.js", options)
-  //     await runNodeScript("ingest_to_db_wardens.js", options)
-  //     await runNodeScript("ingest_to_db_guards.js", options)
-  //     await runNodeScript("ingest_to_db_activity_admins.js", options)
-  //     await runNodeScript("backfill_user_profiles.js", options)
-  //   }
 
   const accounts = await resolveAccounts()
 

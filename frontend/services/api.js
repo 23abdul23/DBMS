@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { emitLogout } from '../utils/logoutEventEmitter';
-import { createLogger, sanitizeForLogs, serializeError } from '../utils/logger';
 
 const ACTIVE_API_BASE_URL_KEY = 'activeApiBaseUrl';
 const normalizeBaseUrl = (url) => String(url || '').replace(/\/+$/, '');
@@ -27,23 +26,9 @@ const appEnvironement = String(
   .trim()
   .toLowerCase();
 
+console.log(appEnvironement);
+
 export const isDevelopmentEnvironement = appEnvironement === 'development';
-
-const apiLogger = createLogger('api', 'API');
-
-const sanitizeUrl = (baseUrl, url) => {
-  const fullUrl = `${baseUrl || ''}${url || ''}`;
-  return fullUrl.replace(/([?&](token|refreshToken|password|email)=)[^&]*/gi, '$1[redacted]');
-};
-
-const buildApiLogContext = (config = {}) => ({
-  method: String(config.method || 'get').toUpperCase(),
-  url: sanitizeUrl(config.baseURL || activeApiBaseUrl, config.url),
-  timeout: config.timeout,
-  hasAuth: Boolean(config.headers?.Authorization),
-  params: sanitizeForLogs(config.params),
-  body: sanitizeForLogs(config.data),
-});
 
 export const devQuickLoginCredentialsByRole = {
   student: {
@@ -98,10 +83,13 @@ const setActiveApiBaseUrl = async (baseUrl, reason = 'manual') => {
   try {
     await AsyncStorage.setItem(ACTIVE_API_BASE_URL_KEY, baseUrl);
   } catch (storageError) {
-      apiLogger.warn('failed-to-persist-base-url', serializeError(storageError));
+    console.warn(
+      'Failed to persist API base URL:',
+      storageError?.message || storageError
+    );
   }
 
-  apiLogger.info('api-base-url-switched', { baseUrl, reason });
+  console.log(`API switched to ${baseUrl} (${reason})`);
 };
 
 const restoreActiveApiBaseUrl = async () => {
@@ -117,16 +105,47 @@ const restoreActiveApiBaseUrl = async () => {
       await setActiveApiBaseUrl(persistedBaseUrl, 'restore');
     }
   } catch (storageError) {
-    apiLogger.warn('failed-to-restore-base-url', serializeError(storageError));
+    console.warn(
+      'Failed to restore API base URL:',
+      storageError?.message || storageError
+    );
   }
 };
 
-apiLogger.info('api-config', {
-  environment: appEnvironement || 'unknown',
-  primaryBaseUrl: PRIMARY_API_BASE_URL,
-  secondaryBaseUrl: SECONDARY_API_BASE_URL || null,
-  failoverEnabled: canFailover,
-});
+const shouldTriggerFailover = (error) => {
+  if (!canFailover) {
+    return false;
+  }
+
+  if (
+    normalizeBaseUrl(activeApiBaseUrl) ===
+    normalizeBaseUrl(SECONDARY_API_BASE_URL)
+  ) {
+    return false;
+  }
+
+  const originalRequest = error?.config;
+  if (!originalRequest || originalRequest.__retriedOnFailover) {
+    return false;
+  }
+
+  if (error?.code === 'ECONNABORTED') {
+    return true;
+  }
+
+  if (!error?.response) {
+    return true;
+  }
+
+  const status = error.response.status;
+  return [500, 502, 503, 504].includes(status);
+};
+
+console.log('Primary API URL:', PRIMARY_API_BASE_URL);
+
+if (SECONDARY_API_BASE_URL) {
+  console.log('Secondary API URL:', SECONDARY_API_BASE_URL);
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -157,21 +176,10 @@ const allowOpenClosedStatus = (status) => status === 200 || status === 403;
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    // attach timing + auth
-    try {
-      config._startTime = Date.now();
-      const accessToken = await SecureStore.getItemAsync('accessToken');
-      if (accessToken) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${accessToken}`;
-      }
+    const accessToken = await SecureStore.getItemAsync('accessToken');
 
-      apiLogger.debug('request-start', {
-        ...buildApiLogContext(config),
-        timestamp: new Date().toISOString(),
-      });
-    } catch (e) {
-      apiLogger.warn('request-interceptor-log-failed', serializeError(e));
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
 
     return config;
@@ -183,60 +191,27 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    try {
-      const start = response.config?._startTime;
-      const duration = start ? Date.now() - start : null;
-      apiLogger.debug('response-received', {
-        method: String(response.config?.method || 'get').toUpperCase(),
-        url: sanitizeUrl(
-          response.config?.baseURL || activeApiBaseUrl,
-          response.config?.url
-        ),
-        status: response.status,
-        durationMs: duration,
-      });
-    } catch {
-      // ignore logging failures
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const errorCode = error.response?.data?.code;
     const errorMessage = error.response?.data?.message;
 
-    try {
-      const duration = originalRequest?._startTime
-        ? Date.now() - originalRequest._startTime
-        : null;
-      apiLogger.warn('request-error', {
-        method: String(originalRequest?.method || 'get').toUpperCase(),
-        url: sanitizeUrl(
-          originalRequest?.baseURL || activeApiBaseUrl,
-          originalRequest?.url
-        ),
-        status: error.response?.status,
-        code: errorCode,
-        message: errorMessage,
-        durationMs: duration,
-        retried: !!originalRequest?._retry,
-      });
-    } catch (e) {
-      apiLogger.warn('response-error-log-failed', serializeError(e));
-    }
+    console.log('[API Error]', {
+      code: errorCode,
+      message: errorMessage,
+      status: error.response?.status,
+      retried: !!originalRequest._retry,
+    });
 
     // If already retried or not a 401, don't retry
-    if (originalRequest?._retry || error.response?.status !== 401) {
+    if (originalRequest._retry || error.response?.status !== 401) {
       return Promise.reject(error);
     }
 
     // SESSION_REVOKED means user logged in elsewhere - force logout immediately
     if (errorCode === 'SESSION_REVOKED' || errorCode === 'USER_DISABLED') {
-      apiLogger.warn('session-revoked', {
-        code: errorCode,
-        message: errorMessage,
-      });
+      console.log('[API] Session revoked - forcing logout');
       await Promise.all([
         SecureStore.deleteItemAsync('accessToken').catch(() => {}),
         SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -251,26 +226,18 @@ api.interceptors.response.use(
 
     // TOKEN_EXPIRED or TOKEN needs refresh
     if (errorCode === 'TOKEN_EXPIRED' || error.response?.status === 401) {
-      if (!originalRequest) {
-        return Promise.reject(error);
-      }
-
       originalRequest._retry = true;
 
       try {
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
 
         if (!refreshToken) {
-          apiLogger.warn('no-refresh-token', {
-            message: 'No refresh token available - logging out',
-          });
+          console.log('[API] No refresh token available - logging out');
           await emitLogout('NO_REFRESH_TOKEN');
           return Promise.reject(error);
         }
 
-        apiLogger.debug('token-refresh-attempt', {
-          url: `${PRIMARY_API_BASE_URL}/auth/refresh`,
-        });
+        console.log('[API] Attempting token refresh...');
         const response = await axios.post(
           `${PRIMARY_API_BASE_URL}/auth/refresh`,
           { refreshToken },
@@ -288,7 +255,7 @@ api.interceptors.response.use(
 
         // Check if refresh was successful
         if (responseCode === 'SESSION_REVOKED' || !accessToken) {
-          apiLogger.warn('refresh-session-revoked', { responseCode });
+          console.log('[API] Refresh returned SESSION_REVOKED');
           await Promise.all([
             SecureStore.deleteItemAsync('accessToken').catch(() => {}),
             SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -304,15 +271,16 @@ api.interceptors.response.use(
           await SecureStore.setItemAsync('refreshToken', newRefreshToken);
         }
 
-        apiLogger.info('token-refreshed-success');
+        console.log('[API] Token refreshed successfully');
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        apiLogger.warn('token-refresh-failed', {
-          error: serializeError(refreshError),
-        });
+        console.error(
+          '[API] Token refresh failed:',
+          refreshError.response?.data
+        );
 
         const refreshErrorCode = refreshError.response?.data?.code;
 
@@ -323,9 +291,9 @@ api.interceptors.response.use(
           refreshErrorCode === 'USER_DISABLED' ||
           refreshError.response?.status === 401
         ) {
-          apiLogger.warn('refresh-error-triggered-logout', {
-            refreshErrorCode,
-          });
+          console.log(
+            '[API] Refresh error indicates session revoked - logging out'
+          );
           await Promise.all([
             SecureStore.deleteItemAsync('accessToken').catch(() => {}),
             SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -373,21 +341,6 @@ export const commonAPI = {
 
 export const studentAPI = {
   getLogs: (params = {}) => api.get('/student/logs', { params }),
-};
-
-export const notificationAPI = {
-  saveToken: (data) => api.post('/notifications/token', data),
-  deactivateToken: (data) => api.post('/notifications/token/deactivate', data),
-  list: (params = {}) => api.get('/notifications', { params }),
-  unreadCount: () => api.get('/notifications/unread-count'),
-  markRead: (id) => api.patch(`/notifications/${id}/read`),
-  testHelloNotification: (studentId) =>
-    api.post('/notifications/test-hello', { studentId }),
-  adminOverview: () => api.get('/notifications/admin/overview'),
-  adminTokens: (params = {}) =>
-    api.get('/notifications/admin/tokens', { params }),
-  adminDeliveries: (params = {}) =>
-    api.get('/notifications/admin/deliveries', { params }),
 };
 
 export const outpass = {
@@ -446,15 +399,12 @@ export const sacAPI = {
   getOverview: () => api.get('/sac/overview'),
   getSacStatus: () =>
     api.get('/sac/status', { validateStatus: allowOpenClosedStatus }),
-  selectRoom: (roomName, data = {}) =>
-    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`, data),
+  selectRoom: (roomName) =>
+    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
   leaveRoom: (roomName) =>
     api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
-  selectEquipment: (equipmentName, data = {}) =>
-    api.post(
-      `/sac/equipment/${encodeURIComponent(equipmentName)}/select`,
-      data
-    ),
+  selectEquipment: (equipmentName) =>
+    api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
   returnEquipment: (equipmentName, data = {}) =>
     api.post(
       `/sac/equipment/${encodeURIComponent(equipmentName)}/return`,
@@ -470,55 +420,6 @@ export const libraryAPI = {
   releaseSeat: () => api.post('/library/release-seat'),
   adminReleaseSeat: (data = {}) =>
     api.post('/library/admin/release-seat', data),
-};
-
-export const securityAdminAPI = {
-  // Location endpoints
-  getLocations: (type, isActive) =>
-    api.get('/security-admin/locations', {
-      params: {
-        ...(type && { type }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    }),
-  getLocation: (id) => api.get(`/security-admin/locations/${id}`),
-  createLocation: (data) => api.post('/security-admin/locations', data),
-  updateLocation: (id, data) =>
-    api.put(`/security-admin/locations/${id}`, data),
-  deleteLocation: (id) => api.delete(`/security-admin/locations/${id}`),
-
-  // QR endpoints
-  generateQR: (locationId, format = 'PNG') =>
-    api.post(`/security-admin/qr/location/${locationId}/generate`, { format }),
-  getLocationQR: (locationId) =>
-    api.get(`/security-admin/qr/location/${locationId}`),
-  recordDownload: (locationId, fileName, fileSize) =>
-    api.post(`/security-admin/qr/location/${locationId}/download`, {
-      fileName,
-      fileSize,
-    }),
-
-  // History endpoints
-  getDownloadHistory: (locationId, limit = 50, offset = 0) =>
-    api.get('/security-admin/qr/download-history', {
-      params: { ...(locationId && { locationId }), limit, offset },
-    }),
-  getGenerationHistory: (locationId, limit = 50, offset = 0) =>
-    api.get('/security-admin/qr/generation-history', {
-      params: { ...(locationId && { locationId }), limit, offset },
-    }),
-
-  // Statistics
-  getQRStatistics: () => api.get('/security-admin/statistics/qr'),
-};
-
-export const locationAPI = {
-  getActive: () => api.get('/locations/active'),
-};
-
-export const adminAPI = {
-  getAllUsersByRole: (role) =>
-    api.get('/admin/users-by-role', { params: { role } }),
 };
 
 export default api;

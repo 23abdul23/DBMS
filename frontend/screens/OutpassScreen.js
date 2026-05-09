@@ -148,16 +148,6 @@ export default function OutpassScreen() {
           ? 'Create your first outpass request to get started'
           : `You don't have any ${activeFilter} outpasses`}
       </Text>
-      {activeFilter === 'all' && (
-        <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.primary }]}
-          onPress={handleCreateOutpass}
-        >
-          <Text style={[styles.createButtonText, { color: colors.onPrimary }]}>
-            Create Outpass
-          </Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 

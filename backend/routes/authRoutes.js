@@ -1,14 +1,19 @@
-const express = require("express")
-const bcrypt = require("bcryptjs")
-const jwt = require("jsonwebtoken")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   userSelect,
   userSelectWithPassword,
   serializeUser,
-} = require("../utils/userProfiles")
+} from "../utils/userProfiles.js"
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+} from "../config/jwt.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -366,6 +371,32 @@ router.post("/login", async (req, res) => {
         .json({ message: "Invalid credentials: incorrect password" })
     }
 
+    await prisma.userSession.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    })
+
+    const refreshToken = generateRefreshToken()
+
+    const refreshTokenHash = hashToken(refreshToken)
+
+    const session = await prisma.userSession.create({
+      data: {
+        userId: user.id,
+
+        refreshTokenHash,
+
+        deviceName: req.headers["user-agent"],
+
+        ipAddress: req.ip,
+
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    })
+
+    const accessToken = generateAccessToken(user, session.id)
+
     const refreshedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -374,22 +405,154 @@ router.post("/login", async (req, res) => {
       select: userSelect,
     })
 
-    const token = jwt.sign(
-      { userId: refreshedUser.id, role: refreshedUser.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRE,
-      },
-    )
+    // const token = jwt.sign(
+    //   { userId: refreshedUser.id, role: refreshedUser.role },
+    //   process.env.JWT_SECRET,
+    //   {
+    //     expiresIn: process.env.JWT_EXPIRE,
+    //   },
+    // )
 
     res.json({
       message: "Login successful",
-      token,
+      accessToken,
+      refreshToken,
       user: serializeUser(refreshedUser),
     })
   } catch (error) {
     console.error("Login error:", error)
     res.status(500).json({ message: "Server error during login" })
+  }
+})
+
+// Logout User
+router.post("/logout", authenticate, async (req, res) => {
+  try {
+    const sessionId = req.sessionId
+
+    if (!sessionId) {
+      return res.status(400).json({
+        code: "INVALID_SESSION",
+        message: "No active session to logout",
+      })
+    }
+
+    // Delete the session
+    await prisma.userSession
+      .delete({
+        where: {
+          id: sessionId,
+        },
+      })
+      .catch(() => {})
+
+    return res.json({
+      code: "LOGGED_OUT",
+      message: "Logged out successfully",
+    })
+  } catch (error) {
+    console.error("Logout error:", error)
+    return res.status(500).json({
+      code: "LOGOUT_ERROR",
+      message: "Server error during logout",
+    })
+  }
+})
+
+// Refresh Token
+router.post("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        code: "REFRESH_TOKEN_MISSING",
+        message: "Refresh token is required",
+      })
+    }
+
+    const refreshTokenHash = hashToken(refreshToken)
+
+    const session = await prisma.userSession.findFirst({
+      where: {
+        refreshTokenHash,
+      },
+      include: {
+        user: true,
+      },
+    })
+
+    // No session found - could mean user logged in elsewhere or invalid token
+    if (!session) {
+      return res.status(401).json({
+        code: "SESSION_REVOKED",
+        message:
+          "Your session is no longer valid. You have logged in from another device.",
+      })
+    }
+
+    // Verify user still exists and is active
+    if (
+      !session.user ||
+      (typeof session.user.isActive === "boolean" && !session.user.isActive)
+    ) {
+      await prisma.userSession
+        .delete({
+          where: {
+            id: session.id,
+          },
+        })
+        .catch(() => {})
+
+      return res.status(401).json({
+        code: "USER_DISABLED",
+        message: "This account has been disabled.",
+      })
+    }
+
+    // EXPIRED
+    if (session.expiresAt < new Date()) {
+      await prisma.userSession
+        .delete({
+          where: {
+            id: session.id,
+          },
+        })
+        .catch(() => {})
+
+      return res.status(401).json({
+        code: "TOKEN_EXPIRED",
+        message: "Refresh token has expired. Please log in again.",
+      })
+    }
+
+    // ROTATE TOKEN - Generate new refresh token
+    const newRefreshToken = generateRefreshToken()
+    const newRefreshTokenHash = hashToken(newRefreshToken)
+
+    const updatedSession = await prisma.userSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        refreshTokenHash: newRefreshTokenHash,
+      },
+    })
+
+    const newAccessToken = generateAccessToken(session.user, updatedSession.id)
+
+    return res.json({
+      code: "TOKEN_REFRESHED",
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: 900,
+    })
+  } catch (error) {
+    console.error("Token refresh error:", error)
+    return res.status(500).json({
+      code: "REFRESH_ERROR",
+      message: "Server error during token refresh",
+    })
   }
 })
 
@@ -615,4 +778,4 @@ router.get("/fetchProfile", async (req, res) => {
   }
 })
 
-module.exports = router
+export default router

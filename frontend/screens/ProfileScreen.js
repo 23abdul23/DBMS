@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -229,6 +230,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -327,6 +329,15 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadProfile();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -532,6 +543,7 @@ export default function ProfileScreen() {
     isStudent ? profile?.year : profile?.role,
     profile?.hostel,
     profile?.roomNumber,
+    profile?.emergencyContact,
   ];
   const completedFields = profileFields.filter(
     (field) => field !== null && field !== undefined && field !== ''
@@ -539,6 +551,8 @@ export default function ProfileScreen() {
   const profileCompletion = Math.round(
     (completedFields / profileFields.length) * 100
   );
+
+  // console.log(profile)
 
   return (
     <ImageBackground
@@ -572,6 +586,14 @@ export default function ProfileScreen() {
           style={[styles.container, { backgroundColor: 'transparent' }]}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           <View style={styles.heroShell}>
             <View
@@ -785,33 +807,29 @@ export default function ProfileScreen() {
                       : 'Core identity and contact records.'}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[
-                    styles.primaryAction,
-                    {
-                      backgroundColor: editing
-                        ? colors.successSoft
-                        : colors.primarySoft,
-                      borderColor: editing ? colors.success : colors.primary,
-                    },
-                  ]}
-                  onPress={() => (editing ? handleSave() : setEditing(true))}
-                  disabled={saving}
-                >
-                  <Ionicons
-                    name={editing ? 'checkmark' : 'pencil'}
-                    size={18}
-                    color={editing ? colors.success : colors.primary}
-                  />
-                  <Text
+                {!editing && (
+                  <TouchableOpacity
                     style={[
-                      styles.primaryActionText,
-                      { color: editing ? colors.success : colors.primary },
+                      styles.primaryAction,
+                      {
+                        backgroundColor: colors.primarySoft,
+                        borderColor: colors.primary,
+                      },
                     ]}
+                    onPress={() => setEditing(true)}
                   >
-                    {editing ? (saving ? 'Saving' : 'Save') : 'Edit'}
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons name="pencil" size={18} color={colors.primary} />
+
+                    <Text
+                      style={[
+                        styles.primaryActionText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      Edit
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {editing ? (
@@ -1000,6 +1018,44 @@ export default function ProfileScreen() {
                       colors={colors}
                     />
                   ) : null}
+
+                  <EditableTextField
+                    label="Emergency Contact"
+                    value={profile?.emergencyContact}
+                    onChangeText={(value) =>
+                      updateProfile('emergencyContact', value)
+                    }
+                    colors={colors}
+                  />
+
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryAction,
+                      {
+                        backgroundColor: colors.successSoft,
+                        borderColor: colors.success,
+                        marginTop: 20,
+                        alignSelf: 'center',
+                      },
+                    ]}
+                    onPress={handleSave}
+                    disabled={saving}
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color={colors.success}
+                    />
+
+                    <Text
+                      style={[
+                        styles.primaryActionText,
+                        { color: colors.success },
+                      ]}
+                    >
+                      {saving ? 'Saving' : 'Save'}
+                    </Text>
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -1073,6 +1129,16 @@ export default function ProfileScreen() {
                       colors={colors}
                     />
                   )}
+
+                  <InfoRow
+                    icon="person-circle-outline"
+                    label="Emergency Contact"
+                    value={
+                      GenderMap[profile?.emergencyContact] ||
+                      profile?.emergencyContact
+                    }
+                    colors={colors}
+                  />
                 </>
               )}
             </View>
