@@ -23,6 +23,7 @@ const [
   wardenRoutesModule,
   forgotRoutesModule,
   sacRoutesModule,
+  locationRoutesModule,
   libraryRoutesModule,
   securityAdminRoutesModule,
 ] = await Promise.all([
@@ -46,6 +47,7 @@ const [
   import("./routes/wardenRoutes.js"),
   import("./routes/forgotRoute.js"),
   import("./routes/sacRoutes.js"),
+  import("./routes/locationRoutes.js"),
   import("./routes/libraryRoutes.js"),
   import("./routes/securityAdminRoutes.js"),
 ])
@@ -66,6 +68,7 @@ const studentRoutes = studentRoutesModule.default
 const wardenRoutes = wardenRoutesModule.default
 const forgotRoutes = forgotRoutesModule.default
 const sacRoutes = sacRoutesModule.default
+const locationRoutes = locationRoutesModule.default
 const libraryRoutes = libraryRoutesModule.default
 const securityAdminRoutes = securityAdminRoutesModule.default
 
@@ -127,6 +130,7 @@ app.use("/api/student", studentRoutes)
 app.use("/api/warden", wardenRoutes)
 app.use("/api/forgot", forgotRoutes)
 app.use("/api/sac", sacRoutes)
+app.use("/api/locations", locationRoutes)
 app.use("/api/library", libraryRoutes)
 
 // Health check endpoint

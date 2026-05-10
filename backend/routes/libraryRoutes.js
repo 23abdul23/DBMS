@@ -14,6 +14,7 @@ import {
   releaseLibrarySeat,
 } from "../utils/libraryActivity.js"
 import { isLibraryAdministrator } from "../utils/adminScopes.js"
+import proximityValidator from "../utils/proximityValidator.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -31,6 +32,56 @@ const createHttpError = (statusCode, message, code) => {
 const parseSeatNumber = (value) => {
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : NaN
+}
+
+const isProductionEnvironment = () =>
+  (
+    process.env.ENVIRONEMENT ||
+    process.env.NODE_ENV ||
+    "development"
+  ).toLowerCase() === "production"
+
+const getRequestCoordinates = (body = {}) => {
+  const latitude = Number(body.latitude)
+  const longitude = Number(body.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null
+  }
+
+  return { latitude, longitude }
+}
+
+const fetchFixedLocation = async (name) => {
+  const location = await prisma.location.findFirst({
+    where: {
+      name,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      latitude: true,
+      longitude: true,
+    },
+  })
+
+  if (
+    !location ||
+    location.latitude === null ||
+    location.latitude === undefined ||
+    location.longitude === null ||
+    location.longitude === undefined
+  ) {
+    return null
+  }
+
+  return {
+    id: location.id,
+    name: location.name,
+    latitude: Number(location.latitude),
+    longitude: Number(location.longitude),
+  }
 }
 
 router.get("/status", authenticate, async (req, res) => {
@@ -114,6 +165,40 @@ router.post(
         })
       }
 
+      if (isProductionEnvironment()) {
+        const libraryLocation = await fetchFixedLocation("Library")
+        const userCoordinates = getRequestCoordinates(req.body)
+
+        if (!libraryLocation) {
+          return res.status(500).json({
+            code: "LIBRARY_LOCATION_MISSING",
+            message: "Library location is not configured.",
+          })
+        }
+
+        if (!userCoordinates) {
+          return res.status(400).json({
+            code: "MISSING_COORDS",
+            message:
+              "Current location coordinates are required for library access.",
+          })
+        }
+
+        const { isWithin, distance } = proximityValidator.isWithinProximity(
+          userCoordinates,
+          libraryLocation,
+        )
+
+        if (!isWithin) {
+          return res.status(403).json({
+            code: "LOCATION_OUT_OF_RANGE",
+            message: "You are trying to access this QR from a remote location",
+            distance:
+              typeof distance === "number" ? Number(distance.toFixed(2)) : null,
+          })
+        }
+      }
+
       const seatSession = await getSeatSessionByNumber(prisma, seatNumber)
       if (seatSession) {
         return res.status(409).json({
@@ -139,6 +224,16 @@ router.post(
           details: {
             source: "library_claim",
             claimedByUserId: req.user.userId,
+            latitude:
+              req.body?.latitude !== undefined && req.body?.latitude !== null
+                ? Number(req.body.latitude)
+                : null,
+            longitude:
+              req.body?.longitude !== undefined && req.body?.longitude !== null
+                ? Number(req.body.longitude)
+                : null,
+            locationTimestamp:
+              req.body?.locationTimestamp || req.body?.timestamp || null,
           },
         })
       })
