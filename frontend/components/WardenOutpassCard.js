@@ -23,6 +23,22 @@ const callStudent = async (phoneNo) => {
   }
 };
 
+const handleContact = (details) => {
+  const value = String(details || '').trim();
+
+  // If already just a phone number
+  if (/^\d+$/.test(value)) {
+    return value;
+  }
+
+  // Extract phone after " - "
+  if (value.includes(' - ')) {
+    return value.split(' - ')[1].trim();
+  }
+
+  return value;
+};
+
 const formatDateTime = (value) => {
   if (!value) {
     return '-';
@@ -165,16 +181,19 @@ export default function WardenOutpassCard({
               { color: colors.subText },
             ]}
           >
-            Emergency: {outpass.emergencyContact.name || 'Contact'}
+            Emergency:
           </Text>
           <TouchableOpacity
             style={styles.callChip}
-            onPress={() => callStudent(outpass.emergencyContact.phone)}
+            onPress={() =>
+              callStudent(handleContact(user.emergencyContact || '102'))
+            }
             activeOpacity={0.8}
           >
             <Ionicons name="call-outline" size={14} color="#065f46" />
-            <Text style={styles.callChipText}>
-              {String(outpass.emergencyContact.phone)}
+            <Text>
+              {' '}
+              {handleContact(user.emergencyContact || '102') || 'Contact'}
             </Text>
           </TouchableOpacity>
         </View>
