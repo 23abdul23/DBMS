@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { sacAPI } from '../services/api';
+import { useAppLocation } from '../context/LocationContext';
 import { SAC_CLUB_ROOMS } from '../constants/sacCatalog';
 import { FONTS } from '../utils/constants';
 import {
@@ -124,6 +125,8 @@ export default function ClubRoomScreen({ navigation, route }) {
       setSubmittingKey(null);
     }
   };
+
+  const { location: currentLocation } = useAppLocation();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -493,7 +496,13 @@ export default function ClubRoomScreen({ navigation, route }) {
                             )
                           : runAction(
                               `room-select-${room.name}`,
-                              () => sacAPI.selectRoom(room.name),
+                              () =>
+                                sacAPI.selectRoom(room.name, {
+                                  latitude: currentLocation?.latitude || null,
+                                  longitude: currentLocation?.longitude || null,
+                                  locationTimestamp:
+                                    currentLocation?.timestamp || null,
+                                }),
                               `Unable to update ${room.name}.`
                             )
                       }

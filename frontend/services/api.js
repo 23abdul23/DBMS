@@ -399,12 +399,15 @@ export const sacAPI = {
   getOverview: () => api.get('/sac/overview'),
   getSacStatus: () =>
     api.get('/sac/status', { validateStatus: allowOpenClosedStatus }),
-  selectRoom: (roomName) =>
-    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`),
+  selectRoom: (roomName, data = {}) =>
+    api.post(`/sac/rooms/${encodeURIComponent(roomName)}/select`, data),
   leaveRoom: (roomName) =>
     api.post(`/sac/rooms/${encodeURIComponent(roomName)}/leave`),
-  selectEquipment: (equipmentName) =>
-    api.post(`/sac/equipment/${encodeURIComponent(equipmentName)}/select`),
+  selectEquipment: (equipmentName, data = {}) =>
+    api.post(
+      `/sac/equipment/${encodeURIComponent(equipmentName)}/select`,
+      data
+    ),
   returnEquipment: (equipmentName, data = {}) =>
     api.post(
       `/sac/equipment/${encodeURIComponent(equipmentName)}/return`,
@@ -460,6 +463,10 @@ export const securityAdminAPI = {
 
   // Statistics
   getQRStatistics: () => api.get('/security-admin/statistics/qr'),
+};
+
+export const locationAPI = {
+  getActive: () => api.get('/locations/active'),
 };
 
 export default api;

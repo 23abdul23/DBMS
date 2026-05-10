@@ -22,12 +22,14 @@ import { libraryAPI, securityAPI } from '../services/api';
 import ScanResultCard from '../components/ScanResultCard';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
+import { useAppLocation } from '../context/LocationContext';
 
 const LIBRARY_LIMIT = Number(Constants.expoConfig?.extra?.LIBRARY_LIMIT || 60);
 
 export default function Scanner({ navigation, route }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const { user } = useAuth();
+  const { location: currentLocation, refreshLocation } = useAppLocation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -195,27 +197,51 @@ export default function Scanner({ navigation, route }) {
         return;
       }
 
+      // Ensure we have a recent location; if missing, quickly refresh once
+      if (!currentLocation) {
+        await refreshLocation();
+      }
+
+      const coordsPayload = {
+        latitude: currentLocation?.latitude || null,
+        longitude: currentLocation?.longitude || null,
+        locationTimestamp: currentLocation?.timestamp || null,
+      };
+
       const response =
         user?.role === 'student' && isGuardLocationQr
           ? await securityAPI.logStudentScan({
               location,
               guardId: parsed?.guardId,
               guardName: parsed?.guardName,
+              ...coordsPayload,
             })
           : await securityAPI.logEntry({
               location,
               studentId: parsed?.studentId,
               userId: parsed?.userId,
+              ...coordsPayload,
             });
 
       setScanResult(response?.data || null);
       setAction(response?.data?.log?.action || '');
     } catch (error) {
       console.log('QR scan error:', error?.response?.data || error);
-      Alert.alert(
-        'Invalid QR',
-        error?.response?.data?.message || 'Unable to scan this QR code'
-      );
+      const code = error?.response?.data?.code;
+
+      if (code === 'LOCATION_OUT_OF_RANGE') {
+        Alert.alert(
+          'Remote Location',
+          error?.response?.data?.message ||
+            'You are trying to access this QR from a remote location.'
+        );
+      } else {
+        Alert.alert(
+          'Invalid QR',
+          error?.response?.data?.message || 'Unable to scan this QR code'
+        );
+      }
+
       setScanned(false);
     }
   };

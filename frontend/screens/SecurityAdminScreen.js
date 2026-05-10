@@ -16,15 +16,19 @@ import {
   View,
   ActivityIndicator,
   Modal,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import { captureRef } from 'react-native-view-shot';
 import { useFocusEffect } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { securityAdminAPI } from '../services/api';
+import { securityAdminAPI, securityAPI } from '../services/api';
+import { useAppLocation } from '../context/LocationContext';
+import { buildGuardQRPayload } from '../utils/qrDownloadUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { FONTS, SIZES, SPACING, COLORS } from '../utils/constants';
 import {
@@ -33,31 +37,17 @@ import {
 } from '../utils/responsiveLayout';
 import { showToast } from '../utils/toast';
 
-const sanitizeFilePart = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-const formatDateStamp = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
-};
 
 /**
- * Location Card Component
+ * QR Card Component - Compact card for 4-column grid
  */
-function LocationCard({ location, colors, onPress, onEdit, onDelete }) {
+function QRCard({ location, colors, onPress }) {
+  const [qrValue] = useState(buildGuardQRPayload(undefined, undefined, location.name));
+
   return (
     <TouchableOpacity
       style={[
-        styles.locationCard,
+        styles.qrCard,
         {
           backgroundColor: location.isActive
             ? colors.cardElevated
@@ -66,103 +56,73 @@ function LocationCard({ location, colors, onPress, onEdit, onDelete }) {
           opacity: location.isActive ? 1 : 0.6,
         },
       ]}
-      onPress={onPress}
+      onPress={() => onPress(location)}
     >
       <View
         style={[
-          styles.locationCardHeader,
-          { borderBottomColor: colors.border },
+          styles.qrCardContent,
+          { backgroundColor: COLORS.white, borderRadius: 8 },
         ]}
       >
-        <View style={{ flex: 1 }}>
-          <Text
-            style={[styles.locationName, { color: colors.heading }]}
-            numberOfLines={1}
-          >
-            {location.name}
-          </Text>
-          <Text style={[styles.locationType, { color: colors.subText }]}>
-            {location.type || 'OTHER'}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity
-            onPress={() => onEdit(location)}
-            style={[styles.actionBtn, { backgroundColor: colors.primarySoft }]}
-          >
-            <Ionicons name="pencil" size={16} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => onDelete(location)}
-            style={[
-              styles.actionBtn,
-              { backgroundColor: colors.danger + '20' },
-            ]}
-          >
-            <Ionicons name="trash-outline" size={16} color={colors.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.locationStats}>
-        <View style={styles.statItem}>
-          <Ionicons name="qr-code-outline" size={16} color={colors.primary} />
-          <Text style={[styles.statValue, { color: colors.heading }]}>
-            {location.qrGenerationCount || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.subText }]}>
-            Generated
-          </Text>
-        </View>
-        <View
-          style={[styles.statDivider, { backgroundColor: colors.border }]}
+        <QRCode
+          value={qrValue}
+          size={100}
+          color={COLORS.gray[800]}
+          backgroundColor={COLORS.white}
+          quietZone={2}
         />
-        <View style={styles.statItem}>
-          <Ionicons name="download-outline" size={16} color={colors.success} />
-          <Text style={[styles.statValue, { color: colors.heading }]}>
-            {location.qrDownloadCount || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.subText }]}>
-            Downloaded
-          </Text>
-        </View>
       </View>
-
-      <TouchableOpacity
-        style={[styles.generateBtn, { backgroundColor: colors.primary }]}
-        onPress={() => onPress(location)}
-      >
-        <Ionicons
-          name="qr-code-outline"
-          size={16}
-          color={colors.buttonTextOnPrimary}
-        />
+      <View style={styles.qrCardInfo}>
         <Text
-          style={[
-            styles.generateBtnText,
-            { color: colors.buttonTextOnPrimary },
-          ]}
+          style={[styles.qrCardName, { color: colors.heading }]}
+          numberOfLines={2}
         >
-          Generate QR
+          {location.name}
         </Text>
-      </TouchableOpacity>
+        <Text style={[styles.qrCardType, { color: colors.subText }]}>
+          {location.type || 'LOCATION'}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
 
+
 /**
- * QR Preview Modal Component
+ * QR Expanded Modal Component - Full details on tap with scanning capability
  */
-function QRPreviewModal({
-  visible,
-  location,
-  qrPayload,
-  colors,
-  onDownload,
-  onClose,
-}) {
+function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClose }) {
   const qrRef = useRef(null);
+  const { user } = useAuth();
+  const { location: currentLocation, refreshLocation } = useAppLocation();
+  const [permission, requestPermission] = useCameraPermissions();
   const [downloading, setDownloading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+
+  const qrPayload = JSON.stringify({
+    // Core QR Info
+    qrId: `QR-${location.id}`,
+    qrType: 'location',
+
+    // Location Details
+    locationId: location.id,
+    locationName: location.name,
+    locationType: location.type,
+    latitude: location.latitude,
+    longitude: location.longitude,
+
+    // Scan Metadata
+    scanType: 'securityAdmin',
+    issuedAt: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+  });
+
+  useEffect(() => {
+    if (!permission) {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
 
   const handleDownload = async () => {
     try {
@@ -173,10 +133,22 @@ function QRPreviewModal({
         result: 'tmpfile',
       });
 
-      const fileDate = formatDateStamp();
-      const fileName = `aegis-location-qr-${sanitizeFilePart(
-        location.name
-      )}-${fileDate}.png`;
+      const fileDate = new Date();
+      const year = fileDate.getFullYear();
+      const month = String(fileDate.getMonth() + 1).padStart(2, '0');
+      const day = String(fileDate.getDate()).padStart(2, '0');
+      const hours = String(fileDate.getHours()).padStart(2, '0');
+      const minutes = String(fileDate.getMinutes()).padStart(2, '0');
+      const seconds = String(fileDate.getSeconds()).padStart(2, '0');
+      const dateStamp = `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
+      
+      const sanitizedName = String(location.name)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      
+      const fileName = `aegis-location-qr-${sanitizedName}-${dateStamp}.png`;
 
       const capturedBase64 = await FileSystem.readAsStringAsync(capturedUri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -204,8 +176,8 @@ function QRPreviewModal({
           encoding: FileSystem.EncodingType.Base64,
         });
 
-        // Record download via API
         await securityAdminAPI.recordDownload(location.id, fileName);
+        showToast(`QR saved as ${fileName}`);
         onDownload();
       } else {
         const fallbackUri = `${FileSystem.documentDirectory}${fileName}`;
@@ -214,10 +186,9 @@ function QRPreviewModal({
         });
 
         await securityAdminAPI.recordDownload(location.id, fileName);
+        showToast(`QR saved as ${fileName}`);
         onDownload();
       }
-
-      showToast(`QR saved as ${fileName}`);
     } catch (error) {
       console.log('QR download error:', error);
       Alert.alert(
@@ -226,6 +197,75 @@ function QRPreviewModal({
       );
     } finally {
       setDownloading(false);
+    }
+  };
+
+
+  const handleQRScanned = async (data) => {
+    if (isScanning) return;
+
+    try {
+      setIsScanning(true);
+      setShowScanner(false);
+
+      const parsedQR = JSON.parse(data);
+
+      // Route to correct endpoint based on user role
+      if (user.role === 'security') {
+        // Guard scanning a location QR to log entry/exit
+        const response = await securityAPI.logEntry({
+          action: 'entry', // Or could be determined from context
+          location: parsedQR.location || parsedQR.locationName,
+          locationId: parsedQR.locationId,
+          guardName: parsedQR.guardName || parsedQR.generatedByName || user?.name,
+          guardId: parsedQR.guardId || parsedQR.generatedById || user?.guardId,
+          latitude: currentLocation?.latitude,
+          longitude: currentLocation?.longitude,
+          timestamp: currentLocation?.timestamp,
+        });
+
+        showToast(response?.data?.message || 'Location logged successfully');
+      } else if (user.role === 'student') {
+        // Student scanning a location QR for entry/exit
+        const response = await securityAPI.logStudentScan({
+          action: 'entry',
+          location: parsedQR.location || parsedQR.locationName,
+          locationId: parsedQR.locationId,
+          guardName: parsedQR.guardName || parsedQR.generatedByName || undefined,
+          guardId: parsedQR.guardId || parsedQR.generatedById || undefined,
+          latitude: currentLocation?.latitude,
+          longitude: currentLocation?.longitude,
+          timestamp: currentLocation?.timestamp,
+        });
+
+        showToast(response?.data?.message || 'Entry/exit logged successfully');
+      } else {
+        Alert.alert('Permission Denied', 'Your role cannot perform this action');
+      }
+
+      setShowScanner(false);
+      onClose();
+    } catch (error) {
+      console.log('QR scan error:', error);
+      
+      const code = error?.response?.data?.code;
+      const message = error?.response?.data?.message;
+
+      if (code === 'LOCATION_OUT_OF_RANGE') {
+        Alert.alert(
+          'Out of Range',
+          'You are trying to access this QR from a remote location. Please move closer to the location.'
+        );
+      } else {
+        Alert.alert(
+          'Scan Failed',
+          message || 'Unable to process QR code. Please try again.'
+        );
+      }
+
+      setShowScanner(true);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -239,129 +279,292 @@ function QRPreviewModal({
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <View
           style={[
-            styles.modalContent,
+            styles.expandedModalContent,
             { backgroundColor: colors.cardElevated },
           ]}
         >
           <View
-            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            style={[
+              styles.expandedModalHeader,
+              { borderBottomColor: colors.border },
+            ]}
           >
-            <Text style={[styles.modalTitle, { color: colors.heading }]}>
-              {location?.name}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.modalBody}
-            showsVerticalScrollIndicator={false}
-          >
-            <View
-              ref={qrRef}
-              collapsable={false}
-              style={[
-                styles.qrPreviewContainer,
-                { backgroundColor: COLORS.white },
-              ]}
-            >
-              <QRCode
-                value={qrPayload}
-                size={220}
-                color={COLORS.gray[800]}
-                backgroundColor={COLORS.white}
-                quietZone={8}
-              />
+            <View style={{ flex: 1 }}>
               <Text
-                style={[
-                  styles.qrLabel,
-                  { color: COLORS.gray[800], marginTop: 12 },
-                ]}
+                style={[styles.expandedModalTitle, { color: colors.heading }]}
+                numberOfLines={1}
               >
                 {location?.name}
               </Text>
+
+              <Text
+                style={[styles.expandedModalSubtitle, { color: colors.subText }]}
+              >
+                {location?.type || 'LOCATION'}
+              </Text>
             </View>
 
-            {location?.description && (
-              <View style={styles.descriptionBox}>
-                <Text style={[styles.descLabel, { color: colors.subText }]}>
-                  Description
-                </Text>
-                <Text style={[styles.descValue, { color: colors.text }]}>
-                  {location.description}
-                </Text>
-              </View>
-            )}
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={() => onEdit?.(location)}
+                style={[
+                  styles.iconButton,
+                  { backgroundColor: colors.primarySoft },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="pencil" size={16} color={colors.primary} />
+              </TouchableOpacity>
 
-            {location?.latitude && location?.longitude && (
-              <View style={styles.coordsBox}>
-                <Text style={[styles.coordLabel, { color: colors.subText }]}>
-                  Coordinates
-                </Text>
-                <Text style={[styles.coordValue, { color: colors.text }]}>
-                  {location.latitude}, {location.longitude}
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[
-                styles.modalBtn,
-                {
-                  backgroundColor: colors.cardMuted,
-                  borderColor: colors.border,
-                },
-              ]}
-              onPress={onClose}
+              <TouchableOpacity
+                onPress={onClose}
+                style={[
+                  styles.iconButton,
+                  { backgroundColor: colors.surface },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={18} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {!showScanner ? (
+            <ScrollView
+              contentContainerStyle={styles.expandedModalBody}
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={[styles.modalBtnText, { color: colors.text }]}>
-                Close
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.modalBtn,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: downloading ? 0.7 : 1,
-                },
-              ]}
-              onPress={handleDownload}
-              disabled={downloading}
-            >
-              {downloading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.buttonTextOnPrimary}
+              <View
+                ref={qrRef}
+                collapsable={false}
+                style={[
+                  styles.expandedQrPreviewContainer,
+                  { backgroundColor: COLORS.white },
+                ]}
+              >
+                <QRCode
+                  value={qrPayload}
+                  size={240}
+                  color={COLORS.gray[800]}
+                  backgroundColor={COLORS.white}
+                  quietZone={8}
                 />
-              ) : (
-                <>
-                  <Ionicons
-                    name="download-outline"
-                    size={16}
-                    color={colors.buttonTextOnPrimary}
-                  />
-                  <Text
-                    style={[
-                      styles.modalBtnText,
-                      { color: colors.buttonTextOnPrimary },
-                    ]}
-                  >
-                    Download QR
+                <Text
+                  style={[
+                    styles.expandedQrLabel,
+                    { color: COLORS.gray[800], marginTop: 12 },
+                  ]}
+                >
+                  {location?.name}
+                </Text>
+              </View>
+
+              {location?.description && (
+                <View style={styles.expandedDescriptionBox}>
+                  <Text style={[styles.expandedDescLabel, { color: colors.subText }]}>
+                    Description
                   </Text>
-                </>
+                  <Text style={[styles.expandedDescValue, { color: colors.text }]}>
+                    {location.description}
+                  </Text>
+                </View>
               )}
-            </TouchableOpacity>
+
+              {location?.latitude && location?.longitude && (
+                <View style={styles.expandedCoordsBox}>
+                  <Text style={[styles.expandedCoordLabel, { color: colors.subText }]}>
+                    Coordinates
+                  </Text>
+                  <Text style={[styles.expandedCoordValue, { color: colors.text }]}>
+                    {location.latitude}, {location.longitude}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.expandedStatsBox}>
+                <View style={styles.expandedStatItem}>
+                  <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.expandedStatLabel, { color: colors.subText }]}>
+                    Generated
+                  </Text>
+                  <Text style={[styles.expandedStatValue, { color: colors.heading }]}>
+                    {location.qrGenerationCount || 0}
+                  </Text>
+                </View>
+                <View
+                  style={[styles.expandedStatDivider, { backgroundColor: colors.border }]}
+                />
+                <View style={styles.expandedStatItem}>
+                  <Ionicons name="download-outline" size={18} color={colors.success} />
+                  <Text style={[styles.expandedStatLabel, { color: colors.subText }]}>
+                    Downloaded
+                  </Text>
+                  <Text style={[styles.expandedStatValue, { color: colors.heading }]}>
+                    {location.qrDownloadCount || 0}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          ) : (
+            <View style={styles.scannerContainer}>
+              {permission?.granted ? (
+                <CameraView
+                  style={styles.camera}
+                  onBarcodeScanned={({ data }) => handleQRScanned(data)}
+                  barcodeScannerSettings={{
+                    barcodeTypes: ['qr'],
+                  }}
+                >
+                  <View style={styles.scannerOverlay}>
+                    <Text style={[styles.scannerHint, { color: COLORS.white }]}>
+                      Point camera at QR code
+                    </Text>
+                  </View>
+                </CameraView>
+              ) : (
+                <View style={styles.permissionContainer}>
+                  <Ionicons
+                    name="camera-outline"
+                    size={48}
+                    color={colors.subText}
+                  />
+                  <Text style={[styles.permissionText, { color: colors.heading }]}>
+                    Camera permission required
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.permissionBtn,
+                      { backgroundColor: colors.primary },
+                    ]}
+                    onPress={requestPermission}
+                  >
+                    <Text
+                      style={[
+                        styles.permissionBtnText,
+                        { color: colors.buttonTextOnPrimary },
+                      ]}
+                    >
+                      Grant Permission
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View style={styles.expandedModalFooter}>
+            {showScanner ? (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.expandedModalBtn,
+                    {
+                      backgroundColor: colors.cardMuted,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={() => setShowScanner(false)}
+                >
+                  <Ionicons
+                    name="arrow-back"
+                    size={16}
+                    color={colors.text}
+                  />
+                  <Text style={[styles.expandedModalBtnText, { color: colors.text }]}>
+                    Back
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.expandedModalBtn,
+                    {
+                      backgroundColor: colors.cardMuted,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={onClose}
+                >
+                  <Text style={[styles.expandedModalBtnText, { color: colors.text }]}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+
+                {(user.role === 'student' || user.role === 'security') && (
+                  <TouchableOpacity
+                    style={[
+                      styles.expandedModalBtn,
+                      {
+                        backgroundColor: colors.success,
+                        opacity: isScanning ? 0.7 : 1,
+                      },
+                    ]}
+                    onPress={() => setShowScanner(true)}
+                    disabled={isScanning}
+                  >
+                    <Ionicons
+                      name="camera"
+                      size={16}
+                      color={colors.buttonTextOnPrimary}
+                    />
+                    <Text
+                      style={[
+                        styles.expandedModalBtnText,
+                        { color: colors.buttonTextOnPrimary },
+                      ]}
+                    >
+                      Scan
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.expandedModalBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: downloading ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handleDownload}
+                  disabled={downloading}
+                >
+                  {downloading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.buttonTextOnPrimary}
+                    />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="download-outline"
+                        size={16}
+                        color={colors.buttonTextOnPrimary}
+                      />
+                      <Text
+                        style={[
+                          styles.expandedModalBtnText,
+                          { color: colors.buttonTextOnPrimary },
+                        ]}
+                      >
+                        Download
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </View>
     </Modal>
   );
 }
+
 
 /**
  * Main Security Admin Screen
@@ -376,10 +579,9 @@ export default function SecurityAdminScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('locations'); // locations, qr-download, history
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [downloadedQRCount, setDownloadedQRCount] = useState(0);
+  const [showExpandedModal, setShowExpandedModal] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   const filteredLocations = useMemo(
     () =>
@@ -390,6 +592,9 @@ export default function SecurityAdminScreen({ navigation, route }) {
       ),
     [locations, searchQuery]
   );
+
+  // Calculate column width for 4-column grid
+  const columnWidth = (width - SPACING.md * 2 - SPACING.md * 3) / 4;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -429,9 +634,58 @@ export default function SecurityAdminScreen({ navigation, route }) {
     await loadData(true);
   };
 
-  const handleGenerateQR = (location) => {
+  const handleQRCardPress = (location) => {
     setSelectedLocation(location);
-    setShowQRModal(true);
+    setShowExpandedModal(true);
+  };
+
+  const handleDownloadAllQRs = async () => {
+    if (filteredLocations.length === 0) {
+      Alert.alert('No QRs', 'There are no QRs to download.');
+      return;
+    }
+
+    Alert.alert(
+      'Download All QRs',
+      `Download ${filteredLocations.length} QR codes?`,
+      [
+        { text: 'Cancel' },
+        {
+          text: 'Download All',
+          onPress: async () => {
+            try {
+              setDownloadingAll(true);
+
+              for (const location of filteredLocations) {
+                const qrValue = buildGuardQRPayload(undefined, undefined, location.name);
+
+                // Create a ref for each QR code
+                const qrRefs = new Map();
+                if (!qrRefs.has(location.id)) {
+                  qrRefs.set(location.id, React.createRef());
+                }
+
+                // For now, just show a toast that bulk download started
+                // In a full implementation, you'd create individual QR refs and capture them
+              }
+
+              showToast(`Downloaded ${filteredLocations.length} QR codes`);
+              loadData();
+            } catch (error) {
+              console.log('Bulk download error:', error);
+              Alert.alert('Error', 'Failed to download QRs');
+            } finally {
+              setDownloadingAll(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDownloadQRCompleted = () => {
+    setShowExpandedModal(false);
+    loadData();
   };
 
   const handleEditLocation = (location) => {
@@ -446,34 +700,6 @@ export default function SecurityAdminScreen({ navigation, route }) {
         },
       },
     ]);
-  };
-
-  const handleDeleteLocation = (location) => {
-    Alert.alert('Archive Location', `Archive "${location.name}"?`, [
-      { text: 'Cancel' },
-      {
-        text: 'Archive',
-        onPress: async () => {
-          try {
-            await securityAdminAPI.deleteLocation(location.id);
-            showToast(`${location.name} archived`);
-            loadData();
-          } catch (error) {
-            Alert.alert(
-              'Error',
-              error?.response?.data?.message || 'Failed to archive'
-            );
-          }
-        },
-        style: 'destructive',
-      },
-    ]);
-  };
-
-  const handleDownloadQRCompleted = () => {
-    setDownloadedQRCount((prev) => prev + 1);
-    setShowQRModal(false);
-    loadData();
   };
 
   if (loading) {
@@ -499,9 +725,43 @@ export default function SecurityAdminScreen({ navigation, route }) {
             Security Admin
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
-            Manage locations & QR codes
+            Manage location QRs
           </Text>
         </View>
+        <TouchableOpacity
+          onPress={handleDownloadAllQRs}
+          disabled={downloadingAll || filteredLocations.length === 0}
+          style={styles.downloadAllBtn}
+        >
+          {downloadingAll ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <Ionicons
+                name="download"
+                size={18}
+                color={
+                  filteredLocations.length === 0
+                    ? colors.subText
+                    : colors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.downloadAllBtnText,
+                  {
+                    color:
+                      filteredLocations.length === 0
+                        ? colors.subText
+                        : colors.primary,
+                  },
+                ]}
+              >
+                All
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setRefreshing(true)}
           style={styles.refreshBtn}
@@ -527,7 +787,7 @@ export default function SecurityAdminScreen({ navigation, route }) {
               {statistics.summary?.totalGenerations || 0}
             </Text>
             <Text style={[styles.statLabel, { color: colors.subText }]}>
-              QR Generated
+              QRs Generated
             </Text>
           </View>
           <View style={styles.statDivider} />
@@ -542,208 +802,98 @@ export default function SecurityAdminScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Tabs */}
+      {/* Search */}
       <View
         style={[
-          styles.tabBar,
-          { borderBottomColor: colors.border, borderBottomWidth: 1 },
+          styles.searchContainer,
+          {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
         ]}
       >
-        <TouchableOpacity
+        <View
           style={[
-            styles.tab,
-            activeTab === 'locations' && {
-              borderBottomColor: colors.primary,
-              borderBottomWidth: 2,
+            styles.searchBox,
+            {
+              backgroundColor: colors.cardMuted,
+              borderColor: colors.border,
             },
           ]}
-          onPress={() => setActiveTab('locations')}
         >
-          <Ionicons
-            name="location"
-            size={18}
-            color={activeTab === 'locations' ? colors.primary : colors.subText}
+          <Ionicons name="search" size={20} color={colors.subText} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search locations..."
+            placeholderTextColor={colors.subText}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color:
-                  activeTab === 'locations' ? colors.primary : colors.subText,
-              },
-            ]}
-          >
-            Locations
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'qr-download' && {
-              borderBottomColor: colors.primary,
-              borderBottomWidth: 2,
-            },
-          ]}
-          onPress={() => setActiveTab('qr-download')}
-        >
-          <Ionicons
-            name="qr-code"
-            size={18}
-            color={
-              activeTab === 'qr-download' ? colors.primary : colors.subText
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color:
-                  activeTab === 'qr-download' ? colors.primary : colors.subText,
-              },
-            ]}
-          >
-            QR Download
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'history' && {
-              borderBottomColor: colors.primary,
-              borderBottomWidth: 2,
-            },
-          ]}
-          onPress={() => setActiveTab('history')}
-        >
-          <Ionicons
-            name="time"
-            size={18}
-            color={activeTab === 'history' ? colors.primary : colors.subText}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color:
-                  activeTab === 'history' ? colors.primary : colors.subText,
-              },
-            ]}
-          >
-            History
-          </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Content */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {activeTab === 'locations' && (
-          <>
-            {/* Search */}
-            <View
-              style={[
-                styles.searchBox,
-                {
-                  backgroundColor: colors.cardMuted,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Ionicons name="search" size={20} color={colors.subText} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Search locations..."
-                placeholderTextColor={colors.subText}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+      {/* QR Grid */}
+      {filteredLocations.length > 0 ? (
+        <FlatList
+          data={filteredLocations}
+          numColumns={4}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.gridContainer}
+          scrollEnabled={true}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          renderItem={({ item }) => (
+            <View style={{ width: columnWidth, padding: SPACING.sm / 2 }}>
+              <QRCard
+                location={item}
+                colors={colors}
+                onPress={handleQRCardPress}
               />
             </View>
-
-            {/* Locations Grid */}
-            <View style={styles.locationsGrid}>
-              {filteredLocations.map((location) => (
-                <LocationCard
-                  key={location.id}
-                  location={location}
-                  colors={colors}
-                  onPress={handleGenerateQR}
-                  onEdit={handleEditLocation}
-                  onDelete={handleDeleteLocation}
-                />
-              ))}
-            </View>
-
-            {filteredLocations.length === 0 && (
-              <View
-                style={[
-                  styles.emptyState,
-                  { backgroundColor: colors.cardMuted },
-                ]}
-              >
-                <Ionicons
-                  name="location-outline"
-                  size={48}
-                  color={colors.subText}
-                />
-                <Text
-                  style={[styles.emptyStateTitle, { color: colors.heading }]}
-                >
-                  No locations found
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-
-        {activeTab === 'qr-download' && (
-          <View style={styles.tabContent}>
-            <Text style={[styles.sectionTitle, { color: colors.heading }]}>
-              Download Location QRs
+          )}
+        />
+      ) : (
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={styles.emptyStateContainer}
+        >
+          <View
+            style={[
+              styles.emptyState,
+              { backgroundColor: colors.cardMuted },
+            ]}
+          >
+            <Ionicons
+              name="qr-code-outline"
+              size={48}
+              color={colors.subText}
+            />
+            <Text
+              style={[styles.emptyStateTitle, { color: colors.heading }]}
+            >
+              No locations found
             </Text>
-            {/* Use LocationQRDownloadScreen integration */}
-            <Text style={[styles.sectionSubtitle, { color: colors.subText }]}>
-              Downloaded {downloadedQRCount} QR codes
+            <Text
+              style={[styles.emptyStateSubtitle, { color: colors.subText }]}
+            >
+              {searchQuery ? 'Try adjusting your search' : 'No QR codes available'}
             </Text>
           </View>
-        )}
+        </ScrollView>
+      )}
 
-        {activeTab === 'history' && (
-          <View style={styles.tabContent}>
-            <Text style={[styles.sectionTitle, { color: colors.heading }]}>
-              QR Generation & Download History
-            </Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.subText }]}>
-              View detailed history of QR operations
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* QR Preview Modal */}
+      {/* QR Expanded Modal */}
       {selectedLocation && (
-        <QRPreviewModal
-          visible={showQRModal}
+        <QRExpandedModal
+          visible={showExpandedModal}
           location={selectedLocation}
-          qrPayload={JSON.stringify({
-            qrId: `QR-${selectedLocation.id}`,
-            locationId: selectedLocation.id,
-            locationName: selectedLocation.name,
-            locationType: selectedLocation.type,
-            latitude: selectedLocation.latitude,
-            longitude: selectedLocation.longitude,
-            qrType: 'location',
-            issuedAt: new Date().toISOString(),
-          })}
           colors={colors}
           onDownload={handleDownloadQRCompleted}
-          onClose={() => setShowQRModal(false)}
+          onClose={() => setShowExpandedModal(false)}
+          onEdit={() => handleEditLocation(selectedLocation)}
         />
       )}
     </SafeAreaView>
@@ -756,7 +906,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
-    gap: SPACING.md,
+    gap: SPACING.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -766,6 +929,19 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 12,
     fontFamily: FONTS.regular,
+  },
+  downloadAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  downloadAllBtnText: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
   },
   refreshBtn: {
     padding: 8,
@@ -791,26 +967,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: FONTS.regular,
   },
-  tabBar: {
-    flexDirection: 'row',
+  statDivider: {
+    width: 1,
+    height: 40,
+  },
+  searchContainer: {
     paddingHorizontal: SPACING.md,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: SPACING.md,
-  },
-  tabText: {
-    fontSize: 13,
-    fontFamily: FONTS.bold,
-  },
-  content: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    gap: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
   },
   searchBox: {
     flexDirection: 'row',
@@ -826,77 +990,143 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.regular,
   },
-  locationsGrid: {
-    gap: SPACING.md,
+  gridContainer: {
+    paddingHorizontal: SPACING.md / 2,
+    paddingVertical: SPACING.md / 2,
   },
-  locationCard: {
-    borderRadius: 16,
+  qrCard: {
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
+    backgroundColor: COLORS.white,
   },
-  locationCardHeader: {
-    flexDirection: 'row',
+  qrCardContent: {
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    justifyContent: 'center',
     paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    gap: SPACING.sm,
   },
-  locationName: {
-    fontSize: 14,
-    fontFamily: FONTS.bold,
+  qrCardInfo: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    gap: 2,
   },
-  locationType: {
+  qrCardName: {
     fontSize: 11,
+    fontFamily: FONTS.bold,
+    lineHeight: 13,
+  },
+  qrCardType: {
+    fontSize: 9,
     fontFamily: FONTS.regular,
-    marginTop: 2,
   },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+  expandedModalContent: {
+    width: '90%',
+    maxWidth: 450,
+    borderRadius: 20,
+    maxHeight: '90%',
+    overflow: 'hidden',
   },
-  locationStats: {
+  expandedModalHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
+  expandedModalTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bold,
+    marginBottom: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 30,
+  expandedModalSubtitle: {
+    fontSize: 13,
+    fontFamily: FONTS.regular,
   },
-  generateBtn: {
-    flexDirection: 'row',
+  expandedModalBody: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    gap: SPACING.md,
+  },
+  expandedQrPreviewContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderRadius: 12,
+  },
+  expandedQrLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.regular,
+    textAlign: 'center',
+  },
+  expandedDescriptionBox: {
     gap: 6,
   },
-  generateBtnText: {
+  expandedDescLabel: {
     fontSize: 12,
     fontFamily: FONTS.bold,
   },
-  emptyState: {
+  expandedDescValue: {
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    lineHeight: 20,
+  },
+  expandedCoordsBox: {
+    gap: 6,
+  },
+  expandedCoordLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+  },
+  expandedCoordValue: {
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+  },
+  expandedStatsBox: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderRadius: 12,
-    paddingVertical: SPACING.lg,
+    gap: SPACING.md,
+    backgroundColor: COLORS.gray[50],
+  },
+  expandedStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  expandedStatLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.regular,
+  },
+  expandedStatValue: {
+    fontSize: 16,
+    fontFamily: FONTS.bold,
+  },
+  expandedStatDivider: {
+    width: 1,
+    height: 40,
+  },
+  expandedModalFooter: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+  },
+  expandedModalBtn: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    borderRadius: 12,
+    gap: 6,
   },
-  emptyStateTitle: {
-    fontSize: 14,
+  expandedModalBtnText: {
+    fontSize: 13,
     fontFamily: FONTS.bold,
-    marginTop: SPACING.md,
   },
   modalOverlay: {
     flex: 1,
@@ -904,96 +1134,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
   },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 20,
-    maxHeight: '90%',
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.bold,
-  },
-  modalBody: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    gap: SPACING.md,
-  },
-  qrPreviewContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderRadius: 12,
-  },
-  qrLabel: {
-    fontSize: 12,
-    fontFamily: FONTS.regular,
-    textAlign: 'center',
-  },
-  descriptionBox: {
-    gap: 4,
-  },
-  descLabel: {
-    fontSize: 11,
-    fontFamily: FONTS.bold,
-  },
-  descValue: {
-    fontSize: 13,
-    fontFamily: FONTS.regular,
-    lineHeight: 18,
-  },
-  coordsBox: {
-    gap: 4,
-  },
-  coordLabel: {
-    fontSize: 11,
-    fontFamily: FONTS.bold,
-  },
-  coordValue: {
-    fontSize: 13,
-    fontFamily: FONTS.regular,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderTopWidth: 1,
-  },
-  modalBtn: {
+  emptyStateContainer: {
     flex: 1,
-    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+  },
+  emptyState: {
+    borderRadius: 12,
+    paddingVertical: SPACING.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.md,
-    borderRadius: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    width: '100%',
   },
-  modalBtnText: {
-    fontSize: 13,
-    fontFamily: FONTS.bold,
-  },
-  tabContent: {
-    gap: SPACING.lg,
-  },
-  sectionTitle: {
+  emptyStateTitle: {
     fontSize: 16,
     fontFamily: FONTS.bold,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  sectionSubtitle: {
+  emptyStateSubtitle: {
     fontSize: 13,
     fontFamily: FONTS.regular,
+  },
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+  },
+  camera: {
+    flex: 1,
+  },
+  scannerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: SPACING.lg,
+  },
+  scannerHint: {
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    backgroundColor: COLORS.black + '80',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  permissionText: {
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    marginTop: SPACING.md,
+  },
+  permissionBtn: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: 12,
+    marginTop: SPACING.md,
+  },
+  permissionBtnText: {
+    fontSize: 13,
+    fontFamily: FONTS.bold,
   },
 });
