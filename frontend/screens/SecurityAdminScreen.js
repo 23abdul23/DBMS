@@ -37,12 +37,13 @@ import {
 } from '../utils/responsiveLayout';
 import { showToast } from '../utils/toast';
 
-
 /**
  * QR Card Component - Compact card for 4-column grid
  */
 function QRCard({ location, colors, onPress }) {
-  const [qrValue] = useState(buildGuardQRPayload(undefined, undefined, location.name));
+  const [qrValue] = useState(
+    buildGuardQRPayload(undefined, undefined, location.name)
+  );
 
   return (
     <TouchableOpacity
@@ -87,11 +88,17 @@ function QRCard({ location, colors, onPress }) {
   );
 }
 
-
 /**
  * QR Expanded Modal Component - Full details on tap with scanning capability
  */
-function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClose }) {
+function QRExpandedModal({
+  visible,
+  location,
+  colors,
+  onDownload,
+  onEdit,
+  onClose,
+}) {
   const qrRef = useRef(null);
   const { user } = useAuth();
   const { location: currentLocation, refreshLocation } = useAppLocation();
@@ -141,13 +148,13 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
       const minutes = String(fileDate.getMinutes()).padStart(2, '0');
       const seconds = String(fileDate.getSeconds()).padStart(2, '0');
       const dateStamp = `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
-      
+
       const sanitizedName = String(location.name)
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-      
+
       const fileName = `aegis-location-qr-${sanitizedName}-${dateStamp}.png`;
 
       const capturedBase64 = await FileSystem.readAsStringAsync(capturedUri, {
@@ -200,7 +207,6 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
     }
   };
 
-
   const handleQRScanned = async (data) => {
     if (isScanning) return;
 
@@ -217,7 +223,8 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
           action: 'entry', // Or could be determined from context
           location: parsedQR.location || parsedQR.locationName,
           locationId: parsedQR.locationId,
-          guardName: parsedQR.guardName || parsedQR.generatedByName || user?.name,
+          guardName:
+            parsedQR.guardName || parsedQR.generatedByName || user?.name,
           guardId: parsedQR.guardId || parsedQR.generatedById || user?.guardId,
           latitude: currentLocation?.latitude,
           longitude: currentLocation?.longitude,
@@ -231,7 +238,8 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
           action: 'entry',
           location: parsedQR.location || parsedQR.locationName,
           locationId: parsedQR.locationId,
-          guardName: parsedQR.guardName || parsedQR.generatedByName || undefined,
+          guardName:
+            parsedQR.guardName || parsedQR.generatedByName || undefined,
           guardId: parsedQR.guardId || parsedQR.generatedById || undefined,
           latitude: currentLocation?.latitude,
           longitude: currentLocation?.longitude,
@@ -240,14 +248,17 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
 
         showToast(response?.data?.message || 'Entry/exit logged successfully');
       } else {
-        Alert.alert('Permission Denied', 'Your role cannot perform this action');
+        Alert.alert(
+          'Permission Denied',
+          'Your role cannot perform this action'
+        );
       }
 
       setShowScanner(false);
       onClose();
     } catch (error) {
       console.log('QR scan error:', error);
-      
+
       const code = error?.response?.data?.code;
       const message = error?.response?.data?.message;
 
@@ -298,7 +309,10 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
               </Text>
 
               <Text
-                style={[styles.expandedModalSubtitle, { color: colors.subText }]}
+                style={[
+                  styles.expandedModalSubtitle,
+                  { color: colors.subText },
+                ]}
               >
                 {location?.type || 'LOCATION'}
               </Text>
@@ -318,17 +332,14 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
 
               <TouchableOpacity
                 onPress={onClose}
-                style={[
-                  styles.iconButton,
-                  { backgroundColor: colors.surface },
-                ]}
+                style={[styles.iconButton, { backgroundColor: colors.surface }]}
                 activeOpacity={0.8}
               >
                 <Ionicons name="close" size={18} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {!showScanner ? (
             <ScrollView
               contentContainerStyle={styles.expandedModalBody}
@@ -361,10 +372,17 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
 
               {location?.description && (
                 <View style={styles.expandedDescriptionBox}>
-                  <Text style={[styles.expandedDescLabel, { color: colors.subText }]}>
+                  <Text
+                    style={[
+                      styles.expandedDescLabel,
+                      { color: colors.subText },
+                    ]}
+                  >
                     Description
                   </Text>
-                  <Text style={[styles.expandedDescValue, { color: colors.text }]}>
+                  <Text
+                    style={[styles.expandedDescValue, { color: colors.text }]}
+                  >
                     {location.description}
                   </Text>
                 </View>
@@ -372,10 +390,17 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
 
               {location?.latitude && location?.longitude && (
                 <View style={styles.expandedCoordsBox}>
-                  <Text style={[styles.expandedCoordLabel, { color: colors.subText }]}>
+                  <Text
+                    style={[
+                      styles.expandedCoordLabel,
+                      { color: colors.subText },
+                    ]}
+                  >
                     Coordinates
                   </Text>
-                  <Text style={[styles.expandedCoordValue, { color: colors.text }]}>
+                  <Text
+                    style={[styles.expandedCoordValue, { color: colors.text }]}
+                  >
                     {location.latitude}, {location.longitude}
                   </Text>
                 </View>
@@ -383,23 +408,54 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
 
               <View style={styles.expandedStatsBox}>
                 <View style={styles.expandedStatItem}>
-                  <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
-                  <Text style={[styles.expandedStatLabel, { color: colors.subText }]}>
+                  <Ionicons
+                    name="qr-code-outline"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.expandedStatLabel,
+                      { color: colors.subText },
+                    ]}
+                  >
                     Generated
                   </Text>
-                  <Text style={[styles.expandedStatValue, { color: colors.heading }]}>
+                  <Text
+                    style={[
+                      styles.expandedStatValue,
+                      { color: colors.heading },
+                    ]}
+                  >
                     {location.qrGenerationCount || 0}
                   </Text>
                 </View>
                 <View
-                  style={[styles.expandedStatDivider, { backgroundColor: colors.border }]}
+                  style={[
+                    styles.expandedStatDivider,
+                    { backgroundColor: colors.border },
+                  ]}
                 />
                 <View style={styles.expandedStatItem}>
-                  <Ionicons name="download-outline" size={18} color={colors.success} />
-                  <Text style={[styles.expandedStatLabel, { color: colors.subText }]}>
+                  <Ionicons
+                    name="download-outline"
+                    size={18}
+                    color={colors.success}
+                  />
+                  <Text
+                    style={[
+                      styles.expandedStatLabel,
+                      { color: colors.subText },
+                    ]}
+                  >
                     Downloaded
                   </Text>
-                  <Text style={[styles.expandedStatValue, { color: colors.heading }]}>
+                  <Text
+                    style={[
+                      styles.expandedStatValue,
+                      { color: colors.heading },
+                    ]}
+                  >
                     {location.qrDownloadCount || 0}
                   </Text>
                 </View>
@@ -428,7 +484,9 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
                     size={48}
                     color={colors.subText}
                   />
-                  <Text style={[styles.permissionText, { color: colors.heading }]}>
+                  <Text
+                    style={[styles.permissionText, { color: colors.heading }]}
+                  >
                     Camera permission required
                   </Text>
                   <TouchableOpacity
@@ -466,12 +524,13 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
                   ]}
                   onPress={() => setShowScanner(false)}
                 >
-                  <Ionicons
-                    name="arrow-back"
-                    size={16}
-                    color={colors.text}
-                  />
-                  <Text style={[styles.expandedModalBtnText, { color: colors.text }]}>
+                  <Ionicons name="arrow-back" size={16} color={colors.text} />
+                  <Text
+                    style={[
+                      styles.expandedModalBtnText,
+                      { color: colors.text },
+                    ]}
+                  >
                     Back
                   </Text>
                 </TouchableOpacity>
@@ -489,7 +548,12 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
                   ]}
                   onPress={onClose}
                 >
-                  <Text style={[styles.expandedModalBtnText, { color: colors.text }]}>
+                  <Text
+                    style={[
+                      styles.expandedModalBtnText,
+                      { color: colors.text },
+                    ]}
+                  >
                     Close
                   </Text>
                 </TouchableOpacity>
@@ -564,7 +628,6 @@ function QRExpandedModal({ visible, location, colors, onDownload, onEdit , onClo
     </Modal>
   );
 }
-
 
 /**
  * Main Security Admin Screen
@@ -657,7 +720,11 @@ export default function SecurityAdminScreen({ navigation, route }) {
               setDownloadingAll(true);
 
               for (const location of filteredLocations) {
-                const qrValue = buildGuardQRPayload(undefined, undefined, location.name);
+                const qrValue = buildGuardQRPayload(
+                  undefined,
+                  undefined,
+                  location.name
+                );
 
                 // Create a ref for each QR code
                 const qrRefs = new Map();
@@ -861,25 +928,18 @@ export default function SecurityAdminScreen({ navigation, route }) {
           contentContainerStyle={styles.emptyStateContainer}
         >
           <View
-            style={[
-              styles.emptyState,
-              { backgroundColor: colors.cardMuted },
-            ]}
+            style={[styles.emptyState, { backgroundColor: colors.cardMuted }]}
           >
-            <Ionicons
-              name="qr-code-outline"
-              size={48}
-              color={colors.subText}
-            />
-            <Text
-              style={[styles.emptyStateTitle, { color: colors.heading }]}
-            >
+            <Ionicons name="qr-code-outline" size={48} color={colors.subText} />
+            <Text style={[styles.emptyStateTitle, { color: colors.heading }]}>
               No locations found
             </Text>
             <Text
               style={[styles.emptyStateSubtitle, { color: colors.subText }]}
             >
-              {searchQuery ? 'Try adjusting your search' : 'No QR codes available'}
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'No QR codes available'}
             </Text>
           </View>
         </ScrollView>
