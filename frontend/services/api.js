@@ -343,6 +343,10 @@ export const studentAPI = {
   getLogs: (params = {}) => api.get('/student/logs', { params }),
 };
 
+export const notificationAPI = {
+  saveToken: (params = {}) => api.get('notifications/', { params }),
+};
+
 export const outpass = {
   getOutpasses: () => api.get('/outpass/today'),
   createOutpass: (data) => api.post('/outpass/generate', data),

@@ -1,4 +1,4 @@
-import { getPrismaClient } from "../../config/prisma"
+import { getPrismaClient } from "../../config/prisma.js"
 
 import { sendPushNotification } from "../services/push.service.js"
 

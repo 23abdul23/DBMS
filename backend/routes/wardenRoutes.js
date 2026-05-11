@@ -541,21 +541,27 @@ router.patch(
         })
       })
 
-      eventBus.emit("OUTPASS_APPROVED", {
-        userId: outpass.userId,
-
-        title: "Outpass Approved",
-
-        message: "Your outpass was approved",
-
-        type: "OUTPASS",
-
-        priority: "HIGH",
-
-        entityId: outpass.id,
-
-        entityType: "OUTPASS",
-      })
+      if (action === "approve") {
+        eventBus.emit("OUTPASS_APPROVED", {
+          userId: outpass.userId,
+          title: "Outpass Approved",
+          message: "Your outpass was approved",
+          type: "OUTPASS",
+          priority: "HIGH",
+          entityId: outpass.id,
+          entityType: "OUTPASS",
+        })
+      } else if (action === "reject") {
+        eventBus.emit("OUTPASS_REJECTED", {
+          userId: outpass.userId,
+          title: "Outpass Rejected",
+          message: `Your outpass was rejected. Reason: ${remarks}`,
+          type: "OUTPASS",
+          priority: "HIGH",
+          entityId: outpass.id,
+          entityType: "OUTPASS",
+        })
+      }
 
       res.json({
         message: `Outpass ${nextStatus} successfully`,

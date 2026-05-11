@@ -1,4 +1,4 @@
-import Queue from "bullmq"
+import { Queue } from "bullmq"
 
 const notificationQueue = new Queue("notifications", {
   connection: {

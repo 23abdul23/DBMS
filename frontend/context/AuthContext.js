@@ -2,12 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI, commonAPI } from '../services/api';
+import { authAPI, commonAPI, notificationAPI } from '../services/api';
 import * as SecureStore from 'expo-secure-store';
 import {
   setLogoutCallback,
   clearLogoutCallback,
 } from '../utils/logoutEventEmitter';
+import { Platform } from 'react-native';
+import { registerForPushNotifications } from '../notifications/notificationService';
 
 const normalizeLoginRole = (role) => {
   if (role === 'sac_admin' || role === 'library_admin') {
@@ -85,6 +87,13 @@ export const AuthProvider = ({ children }) => {
 
       setToken(accessToken);
       setUser(userData);
+
+      const token = await registerForPushNotifications();
+
+      await notificationAPI.post('/notifications/token', {
+        token,
+        platform: Platform.OS,
+      });
 
       return { success: true };
     } catch (error) {

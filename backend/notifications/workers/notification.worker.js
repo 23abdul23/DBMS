@@ -1,5 +1,5 @@
 import { Worker } from "bullmq"
-const { createNotification } = require("../services/notification.service")
+import { createNotification } from "../services/notification.service.js"
 
 const worker = new Worker(
   "notifications",

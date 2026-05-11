@@ -32,6 +32,7 @@ import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import GuardDashboardScreen from './screens/GuardScreen';
 import AppStartupSplash from './components/AppStartupSplash';
+import NotificationsScreen from './screens/NotificationsScreen';
 import { useTheme } from './context/ThemeContext';
 import {
   isLibraryAdministrator,
@@ -64,6 +65,9 @@ function RootNavigator() {
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <>
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          </>
         {user ? (
           user.role === 'student' ? (
             <>
@@ -71,10 +75,7 @@ function RootNavigator() {
               <Stack.Screen name="SAC" component={SACScreen} />
               <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
               <Stack.Screen name="Equipments" component={EquipmentScreen} />
-              <Stack.Screen
-                name="CreateOutpass"
-                component={CreateOutpassScreen}
-              />
+              <Stack.Screen name="CreateOutpass" component={CreateOutpassScreen}/>
               <Stack.Screen name="Scan" component={Scanner} />
               <Stack.Screen name="Library" component={LibraryScreen} />
             </>

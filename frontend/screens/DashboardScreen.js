@@ -294,6 +294,28 @@ export default function DashboardScreen({ navigation }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  onPress={() => navigation.navigate('Notifications')}
+                  style={[
+                    styles.roundIconButton,
+                    styles.logoutButton,
+                    {
+                      backgroundColor: isDarkMode
+                        ? 'rgba(59,130,246,0.14)'
+                        : colors.primarySoft,
+                      borderColor: isDarkMode
+                        ? 'rgba(96,165,250,0.22)'
+                        : colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={24}
+                    color={isDarkMode ? '#60a5fa' : colors.primary}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={[
                     styles.roundIconButton,
                     styles.logoutButton,

@@ -26,6 +26,7 @@ const [
   locationRoutesModule,
   libraryRoutesModule,
   securityAdminRoutesModule,
+  notificationRoutesModule,
 
   eventBus,
   notificationQueue,
@@ -53,6 +54,7 @@ const [
   import("./routes/locationRoutes.js"),
   import("./routes/libraryRoutes.js"),
   import("./routes/securityAdminRoutes.js"),
+  import("./notifications/routes/notifications.js"),
 
   import("./notifications/events/eventBus.js"),
   import("./notifications/queues/notification.queue.js"),
@@ -77,6 +79,7 @@ const sacRoutes = sacRoutesModule.default
 const locationRoutes = locationRoutesModule.default
 const libraryRoutes = libraryRoutesModule.default
 const securityAdminRoutes = securityAdminRoutesModule.default
+const notificationRoutes = notificationRoutesModule.default
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -129,6 +132,10 @@ eventBus.on("OUTPASS_APPROVED", async (payload) => {
   await notificationQueue.add("send-notification", payload)
 })
 
+eventBus.on("OUTPASS_REJECTED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/outpass", outpassRoutes)
@@ -143,6 +150,7 @@ app.use("/api/forgot", forgotRoutes)
 app.use("/api/sac", sacRoutes)
 app.use("/api/locations", locationRoutes)
 app.use("/api/library", libraryRoutes)
+app.use("/api/notifications", notificationRoutes)
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
