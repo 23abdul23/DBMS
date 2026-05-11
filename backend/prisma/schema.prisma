@@ -106,6 +106,23 @@ enum LocationType {
   OTHER
 }
 
+enum NotificationType {
+  OUTPASS
+  SECURITY
+  LIBRARY
+  SAC
+  EMERGENCY
+  NEWS
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model User {
   id               String    @id @db.VarChar(24)
   name             String
@@ -145,6 +162,10 @@ model User {
   sessions UserSession[]
   qrGenerationHistory    QRGenerationHistory[]
   qrDownloadHistory      QRDownloadHistory[]
+
+  notifications             Notification[]
+  pushTokens                PushToken[]
+  notificationPreference    NotificationPreference?
 
   @@index([role])
   @@index([hostel])
@@ -469,3 +490,67 @@ model Log {
   @@map("logs")
 }
 
+model Notification {
+  id          String   @id @default(cuid())
+
+  userId      String   @map("user_id") @db.VarChar(24)
+
+  title       String
+  message     String
+
+  type        NotificationType
+  priority    NotificationPriority @default(NORMAL)
+
+  entityId    String?  @map("entity_id")
+  entityType  String?  @map("entity_type")
+
+  isRead      Boolean  @default(false)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt(sort: Desc)])
+
+  @@map("notifications")
+}
+
+model PushToken {
+  id          String   @id @default(cuid())
+
+  userId      String   @map("user_id") @db.VarChar(24)
+
+  token       String   @unique
+
+  platform    String
+
+  deviceName  String?  @map("device_name")
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+
+  @@map("push_tokens")
+}
+
+model NotificationPreference {
+  id                  String @id @default(cuid())
+
+  userId              String @unique @map("user_id") @db.VarChar(24)
+
+  pushEnabled         Boolean @default(true)
+
+  outpassEnabled      Boolean @default(true)
+  libraryEnabled      Boolean @default(true)
+  emergencyEnabled    Boolean @default(true)
+  newsEnabled         Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}

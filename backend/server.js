@@ -26,6 +26,9 @@ const [
   locationRoutesModule,
   libraryRoutesModule,
   securityAdminRoutesModule,
+
+  eventBus,
+  notificationQueue,
 ] = await Promise.all([
   import("express"),
   import("cors"),
@@ -50,6 +53,9 @@ const [
   import("./routes/locationRoutes.js"),
   import("./routes/libraryRoutes.js"),
   import("./routes/securityAdminRoutes.js"),
+
+  import("./notifications/events/eventBus.js"),
+  import("./notifications/queues/notification.queue.js"),
 ])
 
 const { connectDatabase, disconnectDatabase, getDatabaseMode } = databaseModule
@@ -117,6 +123,11 @@ app.use(limiter)
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true }))
+
+// Events
+eventBus.on("OUTPASS_APPROVED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
 
 // Routes
 app.use("/api/auth", authRoutes)

@@ -14,6 +14,8 @@ import {
 } from "../utils/outpassLifecycle.js"
 import { requiresOutpassForExit } from "../utils/locationPolicy.js"
 
+import { eventBus } from "../notifications/events/eventBus.js"
+
 const prisma = getPrismaClient()
 const router = express.Router()
 
@@ -537,6 +539,22 @@ router.patch(
           },
           include: outpassInclude,
         })
+      })
+
+      eventBus.emit("OUTPASS_APPROVED", {
+        userId: outpass.userId,
+
+        title: "Outpass Approved",
+
+        message: "Your outpass was approved",
+
+        type: "OUTPASS",
+
+        priority: "HIGH",
+
+        entityId: outpass.id,
+
+        entityType: "OUTPASS",
       })
 
       res.json({
