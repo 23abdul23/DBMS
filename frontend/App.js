@@ -16,6 +16,7 @@ import WardenTabNavigator from './navigation/WardenTabNavigator';
 import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
 import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
 import SecurityAdminTabNavigator from './navigation/SecurityAdminTabNavigator';
+import SuperAdminTabNavigator from './navigation/SuperAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -33,17 +34,28 @@ import LogBook from './screens/LogBookScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import GuardDashboardScreen from './screens/GuardScreen';
 import AppStartupSplash from './components/AppStartupSplash';
+import NotificationsScreen from './screens/NotificationsScreen';
 import { useTheme } from './context/ThemeContext';
+import { NotificationProvider } from './notifications/notificationProvider';
+import {
+  navigationRef,
+  setNavigationReady,
+} from './notifications/notificationNavigation';
 import {
   isLibraryAdministrator,
   isSacAdministrator,
   isSecurityAdministrator,
+  isSuperAdministrator,
 } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
   const { isDarkMode, colors } = useTheme();
+
+  useEffect(() => {
+    return () => setNavigationReady(false);
+  }, []);
 
   if (loading) {
     return <LoadingScreen />;
@@ -63,12 +75,31 @@ function RootNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      theme={navigationTheme}
+      ref={navigationRef}
+      onReady={() => setNavigationReady(true)}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          user.role === 'student' ? (
+          user.role === 'SUPER_ADMIN' ? (
+            <>
+              <Stack.Screen
+                name="SuperAdminMain"
+                component={SuperAdminTabNavigator}
+              />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
+            </>
+          ) : user.role === 'student' ? (
             <>
               <Stack.Screen name="Main" component={MainTabNavigator} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
               <Stack.Screen name="SAC" component={SACScreen} />
               <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
               <Stack.Screen name="Equipments" component={EquipmentScreen} />
@@ -82,12 +113,20 @@ function RootNavigator() {
           ) : user.role === 'warden' ? (
             <>
               <Stack.Screen name="WardenMain" component={WardenTabNavigator} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
             </>
           ) : isSecurityAdministrator(user) ? (
             <>
               <Stack.Screen
                 name="SecurityAdminMain"
                 component={SecurityAdminTabNavigator}
+              />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
               />
             </>
           ) : isSacAdministrator(user) ? (
@@ -96,12 +135,20 @@ function RootNavigator() {
                 name="SacAdminMain"
                 component={SacAdminTabNavigator}
               />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
             </>
           ) : isLibraryAdministrator(user) ? (
             <>
               <Stack.Screen
                 name="LibraryAdminMain"
                 component={LibraryAdminTabNavigator}
+              />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
               />
             </>
           ) : user.role === 'admin' ? (
@@ -110,10 +157,18 @@ function RootNavigator() {
                 name="SecurityAdminMain"
                 component={SecurityAdminTabNavigator}
               />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
             </>
           ) : (
             <>
               <Stack.Screen name="GuardMain" component={GuardDashboardScreen} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="SAC" component={SACAdminScreen} />
               <Stack.Screen
@@ -159,7 +214,9 @@ export default function App() {
     <LocationProvider>
       <AuthProvider>
         <LocationAccessDeniedProvider>
-          <RootNavigator />
+          <NotificationProvider>
+            <RootNavigator />
+          </NotificationProvider>
         </LocationAccessDeniedProvider>
       </AuthProvider>
     </LocationProvider>

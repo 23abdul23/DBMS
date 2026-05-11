@@ -130,11 +130,19 @@ app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true }))
 
 // Events
+eventBus.on("OUTPASS_CREATED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
 eventBus.on("OUTPASS_APPROVED", async (payload) => {
   await notificationQueue.add("send-notification", payload)
 })
 
 eventBus.on("OUTPASS_REJECTED", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
+eventBus.on("HELLO", async (payload) => {
   await notificationQueue.add("send-notification", payload)
 })
 

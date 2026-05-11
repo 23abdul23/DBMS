@@ -1,8 +1,8 @@
-const express = require("express")
-const { getPrismaClient } = require("../config/prisma")
-const { authenticate, authorize } = require("../middleware/auth")
-const { generateId } = require("../utils/hashGenerator")
-const {
+import express from "express"
+import { getPrismaClient } from "../config/prisma.js"
+import { authenticate, authorize } from "../middleware/auth.js"
+import { generateId } from "../utils/hashGenerator.js"
+import {
   outpassInclude,
   buildOutpassResponse,
   getLatestMovementMap,
@@ -11,8 +11,10 @@ const {
   expireOldOutpasses,
   getDayRange,
   canCancelOutpass,
-} = require("../utils/outpassLifecycle")
-const { requiresOutpassForExit } = require("../utils/locationPolicy")
+} from "../utils/outpassLifecycle.js"
+import { requiresOutpassForExit } from "../utils/locationPolicy.js"
+
+import { eventBus } from "../notifications/events/eventBus.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -539,6 +541,32 @@ router.patch(
         })
       })
 
+      if (action === "approve") {
+        eventBus.emit("OUTPASS_APPROVED", {
+          userId: outpass.userId,
+          title: "Outpass Approved",
+          message: "Your outpass was approved",
+          type: "OUTPASS",
+          priority: "HIGH",
+          entityId: outpass.id,
+          entityType: "OUTPASS",
+          routeName: "Notifications",
+          params: { outpassId: outpass.id, tab: "outpass" },
+        })
+      } else if (action === "reject") {
+        eventBus.emit("OUTPASS_REJECTED", {
+          userId: outpass.userId,
+          title: "Outpass Rejected",
+          message: `Your outpass was rejected. Reason: ${remarks}`,
+          type: "OUTPASS",
+          priority: "HIGH",
+          entityId: outpass.id,
+          entityType: "OUTPASS",
+          routeName: "Notifications",
+          params: { outpassId: outpass.id, tab: "outpass" },
+        })
+      }
+
       res.json({
         message: `Outpass ${nextStatus} successfully`,
         outpass: buildOutpassResponse(updatedOutpass, {
@@ -751,4 +779,4 @@ router.get(
   },
 )
 
-module.exports = router
+export default router

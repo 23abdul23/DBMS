@@ -9,8 +9,7 @@ import {
   Alert,
   ImageBackground,
 } from 'react-native';
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -72,20 +71,6 @@ export default function DashboardScreen({ navigation }) {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (__DEV__) {
-        console.log('[DASHBOARD] screen-focus');
-      }
-
-      return () => {
-        if (__DEV__) {
-          console.log('[DASHBOARD] screen-blur');
-        }
-      };
-    }, [])
-  );
 
   useEffect(() => {
     loadDashboardData();
@@ -281,7 +266,7 @@ export default function DashboardScreen({ navigation }) {
                     },
                   ]}
                 >
-                  {String(user?.studentId).toUpperCase() || 'Student'}
+                  {user?.studentId || 'Student'}
                   {user?.hostel ? `  |  ${user.hostel}` : ''}
                 </Text>
               </View>
@@ -303,7 +288,7 @@ export default function DashboardScreen({ navigation }) {
                 >
                   <Ionicons
                     name={isDarkMode ? 'sunny' : 'moon'}
-                    size={20}
+                    size={24}
                     color={isDarkMode ? '#ffffff' : colors.text}
                   />
                 </TouchableOpacity>
@@ -325,7 +310,7 @@ export default function DashboardScreen({ navigation }) {
                 >
                   <Ionicons
                     name="notifications-outline"
-                    size={20}
+                    size={24}
                     color={isDarkMode ? '#60a5fa' : colors.primary}
                   />
                 </TouchableOpacity>
@@ -347,7 +332,7 @@ export default function DashboardScreen({ navigation }) {
                 >
                   <Ionicons
                     name="log-out-outline"
-                    size={20}
+                    size={24}
                     color={isDarkMode ? '#fda4af' : colors.danger}
                   />
                 </TouchableOpacity>
