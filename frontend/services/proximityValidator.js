@@ -18,12 +18,13 @@ import {
 
 // Structured proximity logger
 const DEBUG_PROXIMITY = __DEV__;
+
 const proximityLog = (obj) => {
-  if (DEBUG_PROXIMITY)
-    console.log(
-      '[PROXIMITY]',
-      typeof obj === 'object' ? JSON.stringify(obj) : obj
-    );
+  if (DEBUG_PROXIMITY) console.log('ENV:', __DEV__);
+  console.log(
+    '[PROXIMITY]',
+    typeof obj === 'object' ? JSON.stringify(obj) : obj
+  );
 };
 
 /**

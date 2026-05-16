@@ -19,6 +19,28 @@ import {
 } from '../config/proximityConfig';
 
 /**
+ * Normalize a location record so coordinate fields are numeric when possible.
+ * Keeps the rest of the payload intact.
+ *
+ * @param {Object} location - Raw location object from API/cache
+ * @returns {Object|null} Normalized location object or null
+ */
+export const normalizeLocationRecord = (location) => {
+  if (!location || typeof location !== 'object') {
+    return null;
+  }
+
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+
+  return {
+    ...location,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+  };
+};
+
+/**
  * Store locations in AsyncStorage with timestamp
  * Called after successful login and periodic refreshes
  *
@@ -36,18 +58,21 @@ export const cacheLocations = async (locations) => {
     }
 
     const timestamp = new Date().toISOString();
+    const normalizedLocations = locations.map((location) =>
+      normalizeLocationRecord(location)
+    );
 
     // Store both locations and timestamp
     await Promise.all([
       AsyncStorage.setItem(
         ASYNC_STORAGE_KEYS.LOCATIONS_CACHE,
-        JSON.stringify(locations)
+        JSON.stringify(normalizedLocations)
       ),
       AsyncStorage.setItem(ASYNC_STORAGE_KEYS.LOCATIONS_CACHE_TS, timestamp),
     ]);
 
     console.log(
-      `[LocationCache] Cached ${locations.length} locations at ${timestamp}`
+      `[LocationCache] Cached ${normalizedLocations.length} locations at ${timestamp}`
     );
     return true;
   } catch (error) {
@@ -84,7 +109,10 @@ export const getCachedLocations = async () => {
     console.log(
       `[LocationCache] Retrieved ${locations.length} locations from cache`
     );
-    return locations;
+
+    console.log('Locations: ', locations);
+
+    return locations.map((location) => normalizeLocationRecord(location));
   } catch (error) {
     console.error(
       '[LocationCache] Failed to retrieve cached locations:',
@@ -184,7 +212,7 @@ export const getLocationByName = (name, cachedLocations = []) => {
     (loc) => loc.name && loc.name.toLowerCase().trim() === normalizedName
   );
 
-  return found || null;
+  return normalizeLocationRecord(found) || null;
 };
 
 /**
@@ -197,7 +225,9 @@ export const getLocationByName = (name, cachedLocations = []) => {
 export const getLocationById = (id, cachedLocations = []) => {
   if (!id) return null;
 
-  return cachedLocations.find((loc) => loc.id === id) || null;
+  return normalizeLocationRecord(
+    cachedLocations.find((loc) => loc.id === id) || null
+  );
 };
 
 /**

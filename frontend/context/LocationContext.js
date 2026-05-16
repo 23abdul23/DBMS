@@ -10,14 +10,27 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 import { locationAPI } from '../services/api';
 import {
   cacheLocations,
   getCachedLocations,
 } from '../utils/locationCacheManager';
 
+const expoExtra =
+  Constants.expoConfig?.extra ??
+  Constants.manifest?.extra ??
+  Constants.manifest2?.extra ??
+  {};
+
+const appEnvironement = String(
+  expoExtra.ENVIRONMENT || expoExtra.ENVIRONEMENT || ''
+)
+  .trim()
+  .toLowerCase();
+
 // Structured location logger
-const DEBUG_LOCATION = __DEV__;
+const DEBUG_LOCATION = appEnvironement === 'development';
 const locationLog = (obj) => {
   if (DEBUG_LOCATION)
     console.log(

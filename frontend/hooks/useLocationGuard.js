@@ -19,7 +19,6 @@
  *     });
  *
  *     if (!result.success) {
- *       Alert.alert('Error', result.error);
  *       return;
  *     }
  *
@@ -28,8 +27,8 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
 import { useAppLocation } from '../context/LocationContext';
+import { useLocationAccessDenied } from '../context/LocationAccessDeniedContext';
 import { validateProximity } from '../services/proximityValidator';
 import {
   getCachedLocations,
@@ -39,6 +38,7 @@ import {
   LOCATION_STALENESS_THRESHOLD,
   PROXIMITY_ERRORS,
 } from '../config/proximityConfig';
+import { buildLocationAccessDeniedCopy } from '../services/locationAccessService';
 
 // Structured location/proximity logger
 const DEBUG_LOCATION = __DEV__;
@@ -48,6 +48,22 @@ const locationLog = (obj) => {
       '[LOCATION_GUARD]',
       typeof obj === 'object' ? JSON.stringify(obj) : obj
     );
+};
+
+const toCoordSnapshot = (location) => {
+  if (!location) {
+    return null;
+  }
+
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+
+  return {
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+    timestamp: location.timestamp || null,
+    name: location.name || null,
+  };
 };
 
 /**
@@ -62,6 +78,7 @@ export const useLocationGuard = () => {
     refreshLocation,
     permissionStatus,
   } = useAppLocation();
+  const { showLocationAccessDenied } = useLocationAccessDenied();
 
   // Prevent concurrent location refreshes
   const isRefreshingRef = useRef(false);
@@ -138,7 +155,7 @@ export const useLocationGuard = () => {
    * @param {Object} options - Additional options
    * @param {string} options.actionName - Action name for logging
    * @param {number} options.radiusMeters - Custom proximity radius
-   * @param {boolean} options.showAlert - Show error alert (default: true)
+   * @param {Function} options.onDeniedConfirm - Callback when the denial modal is confirmed
    * @returns {Promise<Object>} {
    *   success: boolean,
    *   error: string (if failed),
@@ -153,12 +170,12 @@ export const useLocationGuard = () => {
       const {
         actionName = 'Action',
         radiusMeters = undefined,
-        showAlert = true,
+        onDeniedConfirm = null,
       } = options;
 
       try {
         // Step 1: Ensure fresh location
-        locationLog({ event: 'ensure-fresh-location-start', actionName });
+        // locationLog({ event: 'ensure-fresh-location-start', actionName });
         const freshLocation = await ensureFreshLocation();
 
         if (!freshLocation) {
@@ -179,9 +196,15 @@ export const useLocationGuard = () => {
                 : 'no_location',
           };
 
-          if (showAlert) {
-            Alert.alert('Location Required', error, [{ text: 'OK' }]);
-          }
+          showLocationAccessDenied({
+            ...buildLocationAccessDeniedCopy({
+              title: 'Location Required',
+              message: error,
+              failureType: 'location_required',
+              targetLocation: targetLocationName,
+            }),
+            onConfirm: onDeniedConfirm,
+          });
 
           locationLog({
             event: 'ensure-fresh-location-failed',
@@ -199,6 +222,14 @@ export const useLocationGuard = () => {
           targetLocationName,
           cachedLocations
         );
+
+        locationLog({
+          event: 'proximity-context',
+          actionName,
+          targetLocationName,
+          userLocation: toCoordSnapshot(freshLocation),
+          targetLocation: toCoordSnapshot(targetLocation),
+        });
 
         if (!targetLocation) {
           const error = `Location "${targetLocationName}" not configured`;
@@ -223,16 +254,12 @@ export const useLocationGuard = () => {
           actionName,
           targetLocationName,
         });
+        const userCoords = toCoordSnapshot(freshLocation);
+        const targetCoords = toCoordSnapshot(targetLocation);
+
         const validation = validateProximity(
-          {
-            latitude: freshLocation.latitude,
-            longitude: freshLocation.longitude,
-          },
-          {
-            latitude: targetLocation.latitude,
-            longitude: targetLocation.longitude,
-            name: targetLocation.name,
-          },
+          userCoords,
+          targetCoords,
           radiusMeters
         );
 
@@ -245,20 +272,23 @@ export const useLocationGuard = () => {
             reason: 'out_of_range',
           };
 
-          if (showAlert) {
-            Alert.alert(
-              'Out of Range',
-              `${validation.formattedDistance}. ${validation.error}`,
-              [{ text: 'OK' }]
-            );
-          }
+          showLocationAccessDenied({
+            ...buildLocationAccessDeniedCopy({
+              distance: validation.distance,
+              targetLocation: targetLocation?.name || targetLocationName,
+            }),
+            onConfirm: onDeniedConfirm,
+          });
 
           locationLog({
             event: 'proximity-validate-failed',
             actionName,
             targetLocationName,
+            userLocation: userCoords,
+            targetLocation: targetCoords,
             distance: validation.distance,
             formattedDistance: validation.formattedDistance,
+            threshold: validation.threshold,
           });
           return result;
         }
@@ -268,7 +298,11 @@ export const useLocationGuard = () => {
           event: 'proximity-validate-success',
           actionName,
           targetLocationName,
+          userLocation: userCoords,
+          targetLocation: targetCoords,
           distance: validation.distance,
+          formattedDistance: validation.formattedDistance,
+          threshold: validation.threshold,
         });
         try {
           const apiResult = await apiCallback();
@@ -333,7 +367,7 @@ export const useLocationGuard = () => {
         };
       }
     },
-    [ensureFreshLocation, permissionStatus]
+    [ensureFreshLocation, permissionStatus, showLocationAccessDenied]
   );
 
   return {

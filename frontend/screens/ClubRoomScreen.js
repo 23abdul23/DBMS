@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +19,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { sacAPI } from '../services/api';
 import { useAppLocation } from '../context/LocationContext';
 import { useLocationGuard } from '../hooks/useLocationGuard';
+import { useLocationAccessDenied } from '../context/LocationAccessDeniedContext';
 import { SAC_CLUB_ROOMS } from '../constants/sacCatalog';
 import { FONTS } from '../utils/constants';
 import {
@@ -54,12 +56,37 @@ export default function ClubRoomScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
   const { location: currentLocation } = useAppLocation();
   const { validateAndExecute } = useLocationGuard();
+  const { hideLocationAccessDenied } = useLocationAccessDenied();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingKey, setSubmittingKey] = useState(null);
 
+  const DEBUG_CLUB = __DEV__;
+  const clubLog = useCallback(
+    (event, payload = {}) => {
+      if (!DEBUG_CLUB) {
+        return;
+      }
+
+      console.log('[CLUB_ROOM]', JSON.stringify({ event, ...payload }));
+    },
+    [DEBUG_CLUB]
+  );
+
   const isCompact = width < 520;
+
+  useFocusEffect(
+    useCallback(() => {
+      clubLog('screen-focus');
+
+      return () => {
+        clubLog('screen-blur-cleanup');
+        hideLocationAccessDenied();
+        setSubmittingKey(null);
+      };
+    }, [clubLog, hideLocationAccessDenied])
+  );
 
   const myActiveRoomIds = useMemo(
     () =>
@@ -135,16 +162,7 @@ export default function ClubRoomScreen({ navigation, route }) {
    */
   const handleSelectRoom = async (roomName) => {
     // Structured log for room selection
-    const DEBUG_CLUB = __DEV__;
-    const clubLog = (obj) => {
-      if (DEBUG_CLUB)
-        console.log(
-          '[CLUB_ROOM]',
-          typeof obj === 'object' ? JSON.stringify(obj) : obj
-        );
-    };
-
-    clubLog({ event: 'select-room-start', roomName });
+    clubLog('validation-trigger', { roomName });
     const result = await validateAndExecute(
       'SAC', // Location name for proximity validation
       async () => {
@@ -159,13 +177,16 @@ export default function ClubRoomScreen({ navigation, route }) {
       },
       {
         actionName: `Join Room: ${roomName}`,
-        showAlert: true,
+        onDeniedConfirm: () => {
+          clubLog('navigation-start', { roomName });
+          setSubmittingKey(null);
+          navigation.navigate('Main', { screen: 'Dashboard' });
+        },
       }
     );
 
     if (!result.success) {
-      clubLog({
-        event: 'select-room-failed',
+      clubLog('validation-failed', {
         roomName,
         reason: result.reason,
         error: result.error,
@@ -176,7 +197,7 @@ export default function ClubRoomScreen({ navigation, route }) {
 
     // Success - update UI
     setOverview(result.apiResult?.data?.overview || null);
-    clubLog({ event: 'select-room-success', roomName });
+    clubLog('validation-success', { roomName });
     Alert.alert(
       'SAC Updated',
       result.apiResult?.data?.message || `Successfully joined ${roomName}`

@@ -24,10 +24,13 @@ import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
 import { useAppLocation } from '../context/LocationContext';
 import { useLocationGuard } from '../hooks/useLocationGuard';
+import { useLocationAccessDenied } from '../context/LocationAccessDeniedContext';
+import { buildLocationAccessDeniedCopy } from '../services/locationAccessService';
 
 // Structured logger for scanner
 const DEBUG_SCANNER = __DEV__;
 const scannerLog = (obj) => {
+  if (DEBUG_SCANNER)
     console.log(
       '[SCANNER]',
       typeof obj === 'object' ? JSON.stringify(obj) : obj
@@ -41,6 +44,7 @@ export default function Scanner({ navigation, route }) {
   const { user } = useAuth();
   const { location: currentLocation } = useAppLocation();
   const { validateAndExecute } = useLocationGuard();
+  const { showLocationAccessDenied } = useLocationAccessDenied();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -225,12 +229,16 @@ export default function Scanner({ navigation, route }) {
           location,
           // No-op API callback for validation-only; returning a simple success object
           async () => ({ data: { validated: true } }),
-          { actionName: 'Library QR Validate', showAlert: true }
+          {
+            actionName: 'Library QR Validate',
+            onDeniedConfirm: () => {
+              resetScanState();
+              navigation.navigate('Main', { screen: 'Dashboard' });
+            },
+          }
         );
 
         if (!validation.success) {
-          // Validation failed; `validateAndExecute` already showed alert when configured.
-          setScanned(false);
           return;
         }
 
@@ -243,7 +251,7 @@ export default function Scanner({ navigation, route }) {
       // - Refreshing location if stale
       // - Validating proximity (dev mode bypass)
       // - Executing API callback on success
-      // - Showing error alerts on failure
+      // - Showing the shared access-denied modal on failure
       const result = await validateAndExecute(
         location,
         async () => {
@@ -269,13 +277,14 @@ export default function Scanner({ navigation, route }) {
         },
         {
           actionName: 'QR Scan',
-          showAlert: true,
+          onDeniedConfirm: () => {
+            resetScanState();
+            navigation.navigate('Main', { screen: 'Dashboard' });
+          },
         }
       );
 
       if (!result.success) {
-        // Error already shown by validateAndExecute (or explicitly handled)
-        setScanned(false);
         return;
       }
 
@@ -286,22 +295,24 @@ export default function Scanner({ navigation, route }) {
       console.log('QR scan error:', error?.response?.data || error);
       const code = error?.response?.data?.code;
 
-      // Backend proximity validation (shouldn't happen if frontend validates)      const code = error?.response?.data?.code;
-
       if (code === 'LOCATION_OUT_OF_RANGE') {
-        Alert.alert(
-          'Remote Location',
-          error?.response?.data?.message ||
-            'You are trying to access this QR from a remote location.'
-        );
+        showLocationAccessDenied({
+          ...buildLocationAccessDeniedCopy({
+            failureType: 'out_of_range',
+          }),
+          onConfirm: () => {
+            resetScanState();
+            navigation.navigate('Main', { screen: 'Dashboard' });
+          },
+        });
       } else {
         Alert.alert(
           'Invalid QR',
           error?.response?.data?.message || 'Unable to scan this QR code'
         );
-      }
 
-      setScanned(false);
+        setScanned(false);
+      }
     }
   };
 

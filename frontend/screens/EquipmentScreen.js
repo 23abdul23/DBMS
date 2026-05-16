@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { sacAPI } from '../services/api';
 import { useAppLocation } from '../context/LocationContext';
 import { useLocationGuard } from '../hooks/useLocationGuard';
+import { useLocationAccessDenied } from '../context/LocationAccessDeniedContext';
 import { SAC_EQUIPMENT } from '../constants/sacCatalog';
 import { FONTS } from '../utils/constants';
 import { CONTENT_MAX_WIDTH } from '../utils/responsiveLayout';
@@ -36,12 +38,37 @@ export default function EquipmentScreen({ navigation, route }) {
   const { user } = useAuth();
   const { location: currentLocation } = useAppLocation();
   const { validateAndExecute } = useLocationGuard();
+  const { hideLocationAccessDenied } = useLocationAccessDenied();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingKey, setSubmittingKey] = useState(null);
 
+  const DEBUG_EQUIP = __DEV__;
+  const equipLog = useCallback(
+    (event, payload = {}) => {
+      if (!DEBUG_EQUIP) {
+        return;
+      }
+
+      console.log('[EQUIPMENT]', JSON.stringify({ event, ...payload }));
+    },
+    [DEBUG_EQUIP]
+  );
+
   const entrySource = route?.params?.entrySource || 'manual';
+
+  useFocusEffect(
+    useCallback(() => {
+      equipLog('screen-focus');
+
+      return () => {
+        equipLog('screen-blur-cleanup');
+        hideLocationAccessDenied();
+        setSubmittingKey(null);
+      };
+    }, [equipLog, hideLocationAccessDenied])
+  );
 
   const activeEquipment = overview?.myStatus?.activeEquipment || [];
   const currentEquipment = activeEquipment[0] || null;
@@ -116,53 +143,53 @@ export default function EquipmentScreen({ navigation, route }) {
    * Validates user is within range of SAC before allowing equipment selection
    */
   const handleSelectEquipment = async (equipmentName) => {
-    const DEBUG_EQUIP = __DEV__;
-    const equipLog = (obj) => {
-      if (DEBUG_EQUIP)
-        console.log(
-          '[EQUIPMENT]',
-          typeof obj === 'object' ? JSON.stringify(obj) : obj
-        );
-    };
+    const submissionKey = `equipment-select-${equipmentName}`;
 
-    equipLog({ event: 'select-equipment-start', equipmentName });
-    const result = await validateAndExecute(
-      'SAC', // Location name for proximity validation
-      async () => {
-        // API call payload with current location
-        const coordsPayload = {
-          latitude: currentLocation?.latitude || null,
-          longitude: currentLocation?.longitude || null,
-          locationTimestamp: currentLocation?.timestamp || null,
-        };
+    try {
+      setSubmittingKey(submissionKey);
+      equipLog('validation-trigger', { equipmentName });
 
-        return await sacAPI.selectEquipment(equipmentName, coordsPayload);
-      },
-      {
-        actionName: `Borrow Equipment: ${equipmentName}`,
-        showAlert: true,
+      const result = await validateAndExecute(
+        'SAC', // Location name for proximity validation
+        async () => {
+          // API call payload with current location
+          const coordsPayload = {
+            latitude: currentLocation?.latitude || null,
+            longitude: currentLocation?.longitude || null,
+            locationTimestamp: currentLocation?.timestamp || null,
+          };
+
+          return await sacAPI.selectEquipment(equipmentName, coordsPayload);
+        },
+        {
+          actionName: `Borrow Equipment: ${equipmentName}`,
+          onDeniedConfirm: () => {
+            equipLog('navigation-start', { equipmentName });
+            navigation.navigate('Main', { screen: 'Dashboard' });
+          },
+        }
+      );
+
+      if (!result.success) {
+        equipLog('validation-failed', {
+          equipmentName,
+          reason: result.reason,
+          error: result.error,
+        });
+        return;
       }
-    );
 
-    if (!result.success) {
-      equipLog({
-        event: 'select-equipment-failed',
-        equipmentName,
-        reason: result.reason,
-        error: result.error,
-      });
-      // Error already shown by validateAndExecute
-      return;
+      // Success - update UI
+      setOverview(result.apiResult?.data?.overview || null);
+      equipLog('validation-success', { equipmentName });
+      Alert.alert(
+        'SAC Updated',
+        result.apiResult?.data?.message ||
+          `Successfully borrowed ${equipmentName}`
+      );
+    } finally {
+      setSubmittingKey(null);
     }
-
-    // Success - update UI
-    setOverview(result.apiResult?.data?.overview || null);
-    equipLog({ event: 'select-equipment-success', equipmentName });
-    Alert.alert(
-      'SAC Updated',
-      result.apiResult?.data?.message ||
-        `Successfully borrowed ${equipmentName}`
-    );
   };
 
   if (loading) {
@@ -487,9 +514,9 @@ export default function EquipmentScreen({ navigation, route }) {
                     marginTop: 14,
                     borderRadius: 18,
                     padding: 16,
-                    backgroundColor: handleSelectEquipment(item.name)
-                      ? colors.primaryLight
-                      : colors.card,
+                    backgroundColor: userHasItem
+                      ? colors.successSoft
+                      : colors.cardMuted,
                   }}
                 >
                   <Text
@@ -516,18 +543,7 @@ export default function EquipmentScreen({ navigation, route }) {
                   <TouchableOpacity
                     disabled={isBusy || hasAnyActiveEquipment}
                     onPress={() =>
-                      !hasAnyActiveEquipment &&
-                      runAction(
-                        `equipment-select-${item.name}`,
-                        () =>
-                          sacAPI.selectEquipment(item.name, {
-                            latitude: currentLocation?.latitude || null,
-                            longitude: currentLocation?.longitude || null,
-                            locationTimestamp:
-                              currentLocation?.timestamp || null,
-                          }),
-                        `Unable to mark ${item.name} as taken.`
-                      )
+                      !hasAnyActiveEquipment && handleSelectEquipment(item.name)
                     }
                     style={{
                       marginTop: 14,

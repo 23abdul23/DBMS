@@ -12,6 +12,18 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+const expoExtra =
+  Constants.expoConfig?.extra ??
+  Constants.manifest?.extra ??
+  Constants.manifest2?.extra ??
+  {};
+
+const appEnvironement = String(
+  expoExtra.ENVIRONMENT || expoExtra.ENVIRONEMENT || ''
+)
+  .trim()
+  .toLowerCase();
 
 /**
  * Check if proximity validation should be enabled.
@@ -24,7 +36,8 @@ import { Platform } from 'react-native';
 export const isProximityCheckEnabled = () => {
   // __DEV__ is a global constant in React Native
   // true in dev mode, false in production builds
-  return !__DEV__;
+
+  return appEnvironement === 'production';
 };
 
 /**
@@ -32,7 +45,7 @@ export const isProximityCheckEnabled = () => {
  * Students must be within this distance to access SAC/scan QR
  * @type {number}
  */
-export const PROXIMITY_THRESHOLD_METERS = 150;
+export const PROXIMITY_THRESHOLD_METERS = 100;
 
 /**
  * How old user location can be before it's considered stale

@@ -33,11 +33,12 @@ export const isDevelopmentEnvironement = appEnvironement === 'development';
 // Structured API logger
 const DEBUG_API = __DEV__;
 const apiLog = (obj) => {
-  if (DEBUG_API)
+  if (DEBUG_API) {
     console.log(
       '[API_LOG]',
       typeof obj === 'object' ? JSON.stringify(obj) : obj
     );
+  }
 };
 
 export const devQuickLoginCredentialsByRole = {
