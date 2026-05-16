@@ -6,10 +6,25 @@ import React, {
   useEffect,
   useState,
   useRef,
+  useCallback,
 } from 'react';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { locationAPI } from '../services/api';
+import {
+  cacheLocations,
+  getCachedLocations,
+} from '../utils/locationCacheManager';
+
+// Structured location logger
+const DEBUG_LOCATION = __DEV__;
+const locationLog = (obj) => {
+  if (DEBUG_LOCATION)
+    console.log(
+      '[LOCATION_CTX]',
+      typeof obj === 'object' ? JSON.stringify(obj) : obj
+    );
+};
 
 const DEFAULT_LOCATION_REFRESH_MS = 30000; // 30s
 const DEFAULT_LOCATIONS_REFRESH_MS = 55 * 60 * 1000; // 55 minutes
@@ -39,10 +54,10 @@ export const LocationProvider = ({ children }) => {
     if (Platform.OS === 'web') {
       return null;
     }
-
     setLocationLoading(true);
 
     try {
+      locationLog({ event: 'refresh-start' });
       let permissions = await Location.getForegroundPermissionsAsync();
 
       if (permissions.status !== 'granted') {
@@ -50,9 +65,11 @@ export const LocationProvider = ({ children }) => {
       }
 
       setPermissionStatus(permissions.status);
+      locationLog({ event: 'permissions-status', status: permissions.status });
 
       if (permissions.status !== 'granted') {
         setLocation(null);
+        locationLog({ event: 'refresh-aborted-permission-denied' });
         return null;
       }
 
@@ -67,14 +84,49 @@ export const LocationProvider = ({ children }) => {
       };
 
       setLocation(nextLocation);
+      locationLog({ event: 'refresh-success', location: nextLocation });
       return nextLocation;
     } catch (error) {
-      console.log('Location context error:', error);
+      locationLog({
+        event: 'refresh-error',
+        error: error?.message || String(error),
+      });
       return null;
     } finally {
       setLocationLoading(false);
     }
   };
+
+  /**
+   * Fetch and cache fixed locations from API
+   * On success, also stores in AsyncStorage for persistence
+   */
+  const fetchLocations = useCallback(async (isCacheInitialization = false) => {
+    try {
+      locationLog({ event: 'fetch-locations-start', isCacheInitialization });
+      const resp = await locationAPI.getActive();
+      const locationsData = resp?.data?.locations || [];
+
+      setLocations(locationsData);
+
+      // Persist to AsyncStorage for next app startup
+      if (locationsData.length > 0) {
+        await cacheLocations(locationsData);
+      }
+
+      locationLog({
+        event: 'fetch-locations-success',
+        count: locationsData.length,
+      });
+      return locationsData;
+    } catch (error) {
+      locationLog({
+        event: 'fetch-locations-failed',
+        error: error?.response?.data || error,
+      });
+      return [];
+    }
+  }, []);
 
   useEffect(() => {
     refreshLocation();
@@ -86,20 +138,32 @@ export const LocationProvider = ({ children }) => {
       }, DEFAULT_LOCATION_REFRESH_MS);
     }
 
-    // fetch fixed locations (library, sac, etc.) and refresh periodically
-    const fetchLocations = async () => {
+    // Initialize locations from cache, then refresh from API
+    const initializeLocations = async () => {
       try {
-        const resp = await locationAPI.getActive();
-        setLocations(resp?.data?.locations || []);
+        // Step 1: Load from AsyncStorage (fast, no network)
+        const cachedLocations = await getCachedLocations();
+        if (cachedLocations.length > 0) {
+          locationLog({
+            event: 'loaded-locations-from-cache',
+            count: cachedLocations.length,
+          });
+          setLocations(cachedLocations);
+        }
+
+        // Step 2: Fetch fresh data from API (will update cache)
+        await fetchLocations();
       } catch (error) {
-        console.log(
-          'Failed to fetch fixed locations:',
-          error?.response?.data || error
-        );
+        locationLog({
+          event: 'initialize-locations-failed',
+          error: error?.message || String(error),
+        });
       }
     };
 
-    fetchLocations();
+    initializeLocations();
+
+    // Auto-refresh fixed locations periodically
     if (!locationsRefreshTimer.current) {
       locationsRefreshTimer.current = setInterval(() => {
         fetchLocations();
@@ -116,55 +180,66 @@ export const LocationProvider = ({ children }) => {
         locationsRefreshTimer.current = null;
       }
     };
-  }, []);
+  }, [fetchLocations]);
 
-  const getLocationByName = (name) => {
-    if (!name) return null;
-    const normalized = String(name).trim().toLowerCase();
-    return (
-      locations.find(
-        (l) =>
-          String(l.name || '')
-            .trim()
-            .toLowerCase() === normalized
-      ) || null
-    );
-  };
-
-  const getNearestLocation = (coords) => {
-    if (!coords || !coords.latitude || !coords.longitude || !locations?.length)
-      return null;
-    // simple linear nearest lookup using haversine (approx)
-    const toRad = (d) => (d * Math.PI) / 180;
-    const distance = (lat1, lon1, lat2, lon2) => {
-      const R = 6371000;
-      const φ1 = toRad(lat1);
-      const φ2 = toRad(lat2);
-      const Δφ = toRad(lat2 - lat1);
-      const Δλ = toRad(lon2 - lon1);
-      const a =
-        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
-
-    let best = null;
-    for (const loc of locations) {
-      if (!loc.latitude || !loc.longitude) continue;
-      const d = distance(
-        coords.latitude,
-        coords.longitude,
-        Number(loc.latitude),
-        Number(loc.longitude)
+  const getLocationByName = useCallback(
+    (name) => {
+      if (!name) return null;
+      const normalized = String(name).trim().toLowerCase();
+      return (
+        locations.find(
+          (l) =>
+            String(l.name || '')
+              .trim()
+              .toLowerCase() === normalized
+        ) || null
       );
-      if (best === null || d < best.distance) {
-        best = { location: loc, distance: d };
-      }
-    }
+    },
+    [locations]
+  );
 
-    return best;
-  };
+  const getNearestLocation = useCallback(
+    (coords) => {
+      if (
+        !coords ||
+        !coords.latitude ||
+        !coords.longitude ||
+        !locations?.length
+      )
+        return null;
+      // simple linear nearest lookup using haversine (approx)
+      const toRad = (d) => (d * Math.PI) / 180;
+      const distance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371000;
+        const φ1 = toRad(lat1);
+        const φ2 = toRad(lat2);
+        const Δφ = toRad(lat2 - lat1);
+        const Δλ = toRad(lon2 - lon1);
+        const a =
+          Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      let best = null;
+      for (const loc of locations) {
+        if (!loc.latitude || !loc.longitude) continue;
+        const d = distance(
+          coords.latitude,
+          coords.longitude,
+          Number(loc.latitude),
+          Number(loc.longitude)
+        );
+        if (best === null || d < best.distance) {
+          best = { location: loc, distance: d };
+        }
+      }
+
+      return best;
+    },
+    [locations]
+  );
 
   return (
     <LocationContext.Provider

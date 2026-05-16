@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { sacAPI } from '../services/api';
 import { useAppLocation } from '../context/LocationContext';
+import { useLocationGuard } from '../hooks/useLocationGuard';
 import { SAC_EQUIPMENT } from '../constants/sacCatalog';
 import { FONTS } from '../utils/constants';
 import { CONTENT_MAX_WIDTH } from '../utils/responsiveLayout';
@@ -33,6 +34,8 @@ const formatTime = (value) => {
 export default function EquipmentScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const { location: currentLocation } = useAppLocation();
+  const { validateAndExecute } = useLocationGuard();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,7 +111,59 @@ export default function EquipmentScreen({ navigation, route }) {
     }
   };
 
-  const { location: currentLocation } = useAppLocation();
+  /**
+   * Wrapper for selectEquipment action with proximity validation
+   * Validates user is within range of SAC before allowing equipment selection
+   */
+  const handleSelectEquipment = async (equipmentName) => {
+    const DEBUG_EQUIP = __DEV__;
+    const equipLog = (obj) => {
+      if (DEBUG_EQUIP)
+        console.log(
+          '[EQUIPMENT]',
+          typeof obj === 'object' ? JSON.stringify(obj) : obj
+        );
+    };
+
+    equipLog({ event: 'select-equipment-start', equipmentName });
+    const result = await validateAndExecute(
+      'SAC', // Location name for proximity validation
+      async () => {
+        // API call payload with current location
+        const coordsPayload = {
+          latitude: currentLocation?.latitude || null,
+          longitude: currentLocation?.longitude || null,
+          locationTimestamp: currentLocation?.timestamp || null,
+        };
+
+        return await sacAPI.selectEquipment(equipmentName, coordsPayload);
+      },
+      {
+        actionName: `Borrow Equipment: ${equipmentName}`,
+        showAlert: true,
+      }
+    );
+
+    if (!result.success) {
+      equipLog({
+        event: 'select-equipment-failed',
+        equipmentName,
+        reason: result.reason,
+        error: result.error,
+      });
+      // Error already shown by validateAndExecute
+      return;
+    }
+
+    // Success - update UI
+    setOverview(result.apiResult?.data?.overview || null);
+    equipLog({ event: 'select-equipment-success', equipmentName });
+    Alert.alert(
+      'SAC Updated',
+      result.apiResult?.data?.message ||
+        `Successfully borrowed ${equipmentName}`
+    );
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -431,12 +486,10 @@ export default function EquipmentScreen({ navigation, route }) {
                   style={{
                     marginTop: 14,
                     borderRadius: 18,
-                    padding: 14,
-                    backgroundColor: userHasItem
-                      ? colors.successSoft
-                      : colors.cardMuted,
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    padding: 16,
+                    backgroundColor: handleSelectEquipment(item.name)
+                      ? colors.primaryLight
+                      : colors.card,
                   }}
                 >
                   <Text

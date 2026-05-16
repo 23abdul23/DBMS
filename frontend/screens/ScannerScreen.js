@@ -23,13 +23,24 @@ import ScanResultCard from '../components/ScanResultCard';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
 import { useAppLocation } from '../context/LocationContext';
+import { useLocationGuard } from '../hooks/useLocationGuard';
+
+// Structured logger for scanner
+const DEBUG_SCANNER = __DEV__;
+const scannerLog = (obj) => {
+    console.log(
+      '[SCANNER]',
+      typeof obj === 'object' ? JSON.stringify(obj) : obj
+    );
+};
 
 const LIBRARY_LIMIT = Number(Constants.expoConfig?.extra?.LIBRARY_LIMIT || 60);
 
 export default function Scanner({ navigation, route }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const { user } = useAuth();
-  const { location: currentLocation, refreshLocation } = useAppLocation();
+  const { location: currentLocation } = useAppLocation();
+  const { validateAndExecute } = useLocationGuard();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -44,7 +55,17 @@ export default function Scanner({ navigation, route }) {
 
   useEffect(() => {
     if (!permission) {
+      scannerLog({
+        event: 'camera-permission-request-init',
+        permission: !!permission,
+      });
+      const tPermissionRequest = Date.now();
       requestPermission();
+      scannerLog({
+        event: 'camera-permission-requested',
+        startMs: tPermissionRequest,
+        timestamp: new Date().toISOString(),
+      });
     }
   }, [permission, requestPermission]);
 
@@ -61,6 +82,11 @@ export default function Scanner({ navigation, route }) {
   }, [action]);
 
   const resetScanState = () => {
+    scannerLog({
+      event: 'scan-reset',
+      previous: { scanned, scanResult, action },
+      timestamp: new Date().toISOString(),
+    });
     setScanned(false);
     setScanResult(null);
     setAction('');
@@ -192,42 +218,75 @@ export default function Scanner({ navigation, route }) {
         return;
       }
 
+      // Ensure proximity validation for library QR before any library flow
       if (user?.role === 'student' && normalizedLocation === 'library') {
+        // Validate proximity first; do not perform any library actions unless validation succeeds.
+        const validation = await validateAndExecute(
+          location,
+          // No-op API callback for validation-only; returning a simple success object
+          async () => ({ data: { validated: true } }),
+          { actionName: 'Library QR Validate', showAlert: true }
+        );
+
+        if (!validation.success) {
+          // Validation failed; `validateAndExecute` already showed alert when configured.
+          setScanned(false);
+          return;
+        }
+
+        // Validation succeeded — proceed with the normal library scan handler
         await handleLibraryStudentScan();
         return;
       }
+      //[CHANGED] Use location guard to validate proximity and execute API call
+      // Guard handles:
+      // - Refreshing location if stale
+      // - Validating proximity (dev mode bypass)
+      // - Executing API callback on success
+      // - Showing error alerts on failure
+      const result = await validateAndExecute(
+        location,
+        async () => {
+          const coordsPayload = {
+            latitude: currentLocation?.latitude || null,
+            longitude: currentLocation?.longitude || null,
+            locationTimestamp: currentLocation?.timestamp || null,
+          };
 
-      // Ensure we have a recent location; if missing, quickly refresh once
-      if (!currentLocation) {
-        await refreshLocation();
+          return user?.role === 'student' && isGuardLocationQr
+            ? await securityAPI.logStudentScan({
+                location,
+                guardId: parsed?.guardId,
+                guardName: parsed?.guardName,
+                ...coordsPayload,
+              })
+            : await securityAPI.logEntry({
+                location,
+                studentId: parsed?.studentId,
+                userId: parsed?.userId,
+                ...coordsPayload,
+              });
+        },
+        {
+          actionName: 'QR Scan',
+          showAlert: true,
+        }
+      );
+
+      if (!result.success) {
+        // Error already shown by validateAndExecute (or explicitly handled)
+        setScanned(false);
+        return;
       }
 
-      const coordsPayload = {
-        latitude: currentLocation?.latitude || null,
-        longitude: currentLocation?.longitude || null,
-        locationTimestamp: currentLocation?.timestamp || null,
-      };
-
-      const response =
-        user?.role === 'student' && isGuardLocationQr
-          ? await securityAPI.logStudentScan({
-              location,
-              guardId: parsed?.guardId,
-              guardName: parsed?.guardName,
-              ...coordsPayload,
-            })
-          : await securityAPI.logEntry({
-              location,
-              studentId: parsed?.studentId,
-              userId: parsed?.userId,
-              ...coordsPayload,
-            });
-
-      setScanResult(response?.data || null);
-      setAction(response?.data?.log?.action || '');
+      // API call succeeded
+      setScanResult(result.apiResult?.data || null);
+      setAction(result.apiResult?.data?.log?.action || '');
     } catch (error) {
       console.log('QR scan error:', error?.response?.data || error);
       const code = error?.response?.data?.code;
+
+      // Backend proximity validation (shouldn't happen if frontend validates)      const code = error?.response?.data?.code;
 
       if (code === 'LOCATION_OUT_OF_RANGE') {
         Alert.alert(

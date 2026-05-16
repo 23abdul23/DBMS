@@ -28,8 +28,8 @@ const [
   securityAdminRoutesModule,
   notificationRoutesModule,
 
-  eventBus,
-  notificationQueue,
+  eventBusModule,
+  notificationQueueModule,
 ] = await Promise.all([
   import("express"),
   import("cors"),
@@ -80,6 +80,8 @@ const locationRoutes = locationRoutesModule.default
 const libraryRoutes = libraryRoutesModule.default
 const securityAdminRoutes = securityAdminRoutesModule.default
 const notificationRoutes = notificationRoutesModule.default
+const { eventBus } = eventBusModule
+const { notificationQueue } = notificationQueueModule
 
 const app = express()
 const PORT = process.env.PORT || 5000
