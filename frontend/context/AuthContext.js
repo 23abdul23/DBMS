@@ -2,7 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI, commonAPI, notificationAPI } from '../services/api';
+import {
+  authAPI,
+  commonAPI,
+  notificationAPI,
+  locationAPI,
+} from '../services/api';
 import * as SecureStore from 'expo-secure-store';
 import {
   setLogoutCallback,
@@ -10,6 +15,7 @@ import {
 } from '../utils/logoutEventEmitter';
 import { Platform } from 'react-native';
 import { registerForPushNotifications } from '../notifications/notificationService';
+import { cacheLocations } from '../utils/locationCacheManager';
 
 const normalizeLoginRole = (role) => {
   if (role === 'sac_admin' || role === 'library_admin') {
@@ -88,6 +94,27 @@ export const AuthProvider = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
+      // [NEW] Preload active locations after login (non-blocking)
+      // This caches locations in AsyncStorage so app doesn't need to fetch on startup
+      try {
+        const locationsResponse = await locationAPI.getActive();
+        const locationsData = locationsResponse?.data?.locations || [];
+
+        if (locationsData.length > 0) {
+          await cacheLocations(locationsData);
+          console.log(
+            `[AuthContext] Preloaded ${locationsData.length} locations to cache`
+          );
+        }
+      } catch (locError) {
+        // Non-blocking - if location preload fails, continue with login
+        // LocationContext will fetch locations when it initializes
+        console.log(
+          '[AuthContext] Location preload failed (non-blocking):',
+          locError
+        );
+      }
+
       const token = await registerForPushNotifications();
 
       await notificationAPI.post('/notifications/token', {
@@ -135,7 +162,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async (reason = 'USER_REQUESTED') => {
     try {
-      console.log('[AuthContext] Logging out - Reason:', reason);
+      // console.log('[AuthContext] Logging out - Reason:', reason);
 
       // Try to notify backend if it's a user-requested logout (not forced by session revocation)
       if (reason === 'USER_REQUESTED') {
@@ -156,6 +183,10 @@ export const AuthProvider = ({ children }) => {
         SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
         AsyncStorage.removeItem('userData').catch(() => {}),
       ]);
+
+      // [NOTE] Intentionally NOT clearing location cache on logout
+      // Locations are public campus data; can be reused on next login
+      // This reduces API calls and improves login speed
 
       setToken(null);
       setUser(null);

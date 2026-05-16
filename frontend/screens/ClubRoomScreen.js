@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -11,12 +11,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { sacAPI } from '../services/api';
 import { useAppLocation } from '../context/LocationContext';
+import { useLocationGuard } from '../hooks/useLocationGuard';
+import { useLocationAccessDenied } from '../context/LocationAccessDeniedContext';
 import { SAC_CLUB_ROOMS } from '../constants/sacCatalog';
 import { FONTS } from '../utils/constants';
 import {
@@ -51,12 +54,39 @@ export default function ClubRoomScreen({ navigation, route }) {
   const { colors, isDarkMode, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  const { location: currentLocation } = useAppLocation();
+  const { validateAndExecute } = useLocationGuard();
+  const { hideLocationAccessDenied } = useLocationAccessDenied();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingKey, setSubmittingKey] = useState(null);
 
+  const DEBUG_CLUB = __DEV__;
+  const clubLog = useCallback(
+    (event, payload = {}) => {
+      if (!DEBUG_CLUB) {
+        return;
+      }
+
+      console.log('[CLUB_ROOM]', JSON.stringify({ event, ...payload }));
+    },
+    [DEBUG_CLUB]
+  );
+
   const isCompact = width < 520;
+
+  useFocusEffect(
+    useCallback(() => {
+      clubLog('screen-focus');
+
+      return () => {
+        clubLog('screen-blur-cleanup');
+        hideLocationAccessDenied();
+        setSubmittingKey(null);
+      };
+    }, [clubLog, hideLocationAccessDenied])
+  );
 
   const myActiveRoomIds = useMemo(
     () =>
@@ -126,7 +156,53 @@ export default function ClubRoomScreen({ navigation, route }) {
     }
   };
 
-  const { location: currentLocation } = useAppLocation();
+  /**
+   * Wrapper for selectRoom action with proximity validation
+   * Validates user is within range of SAC before allowing room selection
+   */
+  const handleSelectRoom = async (roomName) => {
+    // Structured log for room selection
+    clubLog('validation-trigger', { roomName });
+    const result = await validateAndExecute(
+      'SAC', // Location name for proximity validation
+      async () => {
+        // API call payload with current location
+        const coordsPayload = {
+          latitude: currentLocation?.latitude || null,
+          longitude: currentLocation?.longitude || null,
+          locationTimestamp: currentLocation?.timestamp || null,
+        };
+
+        return await sacAPI.selectRoom(roomName, coordsPayload);
+      },
+      {
+        actionName: `Join Room: ${roomName}`,
+        onDeniedConfirm: () => {
+          clubLog('navigation-start', { roomName });
+          setSubmittingKey(null);
+          navigation.navigate('Main', { screen: 'Dashboard' });
+        },
+      }
+    );
+
+    if (!result.success) {
+      clubLog('validation-failed', {
+        roomName,
+        reason: result.reason,
+        error: result.error,
+      });
+      // Error already shown by validateAndExecute
+      return;
+    }
+
+    // Success - update UI
+    setOverview(result.apiResult?.data?.overview || null);
+    clubLog('validation-success', { roomName });
+    Alert.alert(
+      'SAC Updated',
+      result.apiResult?.data?.message || `Successfully joined ${roomName}`
+    );
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -463,15 +539,6 @@ export default function ClubRoomScreen({ navigation, route }) {
                       <Text
                         style={{
                           color: colors.subText,
-                          fontFamily: FONTS.regular,
-                          fontSize: 12,
-                        }}
-                      >
-                        Last opened
-                      </Text>
-                      <Text
-                        style={{
-                          color: colors.heading,
                           fontFamily: FONTS.bold,
                           fontSize: 16,
                           marginTop: 8,
@@ -494,17 +561,7 @@ export default function ClubRoomScreen({ navigation, route }) {
                               () => sacAPI.leaveRoom(room.name),
                               `Unable to leave ${room.name}.`
                             )
-                          : runAction(
-                              `room-select-${room.name}`,
-                              () =>
-                                sacAPI.selectRoom(room.name, {
-                                  latitude: currentLocation?.latitude || null,
-                                  longitude: currentLocation?.longitude || null,
-                                  locationTimestamp:
-                                    currentLocation?.timestamp || null,
-                                }),
-                              `Unable to update ${room.name}.`
-                            )
+                          : handleSelectRoom(room.name)
                       }
                       style={{
                         marginTop: 16,

@@ -1,3 +1,7 @@
+import dotenv from "dotenv"
+
+dotenv.config()
+
 import { Worker } from "bullmq"
 import { createNotification } from "../services/notification.service.js"
 

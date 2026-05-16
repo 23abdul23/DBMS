@@ -9,6 +9,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
+import { LocationAccessDeniedProvider } from './context/LocationAccessDeniedContext';
 import { ThemeProvider } from './context/ThemeContext'; // Make sure to import ThemeProvider
 import MainTabNavigator from './navigation/MainTabNavigator';
 import WardenTabNavigator from './navigation/WardenTabNavigator';
@@ -186,7 +187,9 @@ export default function App() {
   const content = (
     <LocationProvider>
       <AuthProvider>
-        <RootNavigator />
+        <LocationAccessDeniedProvider>
+          <RootNavigator />
+        </LocationAccessDeniedProvider>
       </AuthProvider>
     </LocationProvider>
   );

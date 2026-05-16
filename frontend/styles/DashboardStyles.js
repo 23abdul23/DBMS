@@ -39,16 +39,16 @@ export default StyleSheet.create({
     lineHeight: 36,
   },
   studentId: {
-    fontSize: 15,
+    fontSize: 18,
     fontFamily: FONTS.regular,
-    marginTop: 8,
+    marginTop: 10,
   },
   heroRightRail: {
     alignItems: 'flex-end',
   },
   roundIconButton: {
-    width: 56,
-    height: 56,
+    width: 50,
+    height: 50,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
