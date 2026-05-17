@@ -8,6 +8,9 @@ async function savePushToken({ userId, token, platform, deviceName }) {
       token,
     },
     update: {
+      userId,
+      platform,
+      deviceName,
       isActive: true,
     },
     create: {
@@ -19,4 +22,20 @@ async function savePushToken({ userId, token, platform, deviceName }) {
   })
 }
 
-export { savePushToken }
+async function deactivatePushToken(token) {
+  if (!token) {
+    return null
+  }
+
+  return prisma.pushToken.updateMany({
+    where: {
+      token,
+      isActive: true,
+    },
+    data: {
+      isActive: false,
+    },
+  })
+}
+
+export { deactivatePushToken, savePushToken }

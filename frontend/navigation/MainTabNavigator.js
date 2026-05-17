@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import DashboardScreen from '../screens/DashboardScreen';
 import OutpassScreen from '../screens/OutpassScreen';
 import EmergencyScreen from '../screens/EmergencyScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import StudentLogsScreen from '../screens/StudentLogsScreen';
 
@@ -31,6 +32,8 @@ export default function MainTabNavigator() {
             iconName = focused ? 'document-text' : 'document-text-outline';
           } else if (route.name === 'Dashboard') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Notifications') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Logs') {
             iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'Profile') {
@@ -62,6 +65,8 @@ export default function MainTabNavigator() {
         component={DashboardScreen}
         options={{ tabBarLabel: 'Home' }}
       />
+
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Logs" component={StudentLogsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

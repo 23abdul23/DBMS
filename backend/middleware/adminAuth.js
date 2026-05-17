@@ -4,6 +4,11 @@ const adminAuth = async (req, res, next) => {
       return res.status(401).json({ message: "Authentication required" })
     }
 
+    // SUPER_ADMIN bypasses all admin checks
+    if (req.user.role === "SUPER_ADMIN") {
+      return next()
+    }
+
     if (req.user.role !== "admin" && req.user.role !== "security") {
       return res.status(403).json({ message: "Admin access required" })
     }

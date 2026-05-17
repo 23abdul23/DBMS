@@ -413,7 +413,12 @@ export const studentAPI = {
 };
 
 export const notificationAPI = {
-  saveToken: (params = {}) => api.get('notifications/', { params }),
+  saveToken: (data) => api.post('/notifications/token', data),
+  list: (params = {}) => api.get('/notifications', { params }),
+  unreadCount: () => api.get('/notifications/unread-count'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  testHelloNotification: (studentId) =>
+    api.post('/notifications/test-hello', { studentId }),
 };
 
 export const outpass = {
@@ -540,6 +545,11 @@ export const securityAdminAPI = {
 
 export const locationAPI = {
   getActive: () => api.get('/locations/active'),
+};
+
+export const adminAPI = {
+  getAllUsersByRole: (role) =>
+    api.get('/admin/users-by-role', { params: { role } }),
 };
 
 export default api;

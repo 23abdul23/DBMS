@@ -3,15 +3,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
-import WardenDashboardScreen from '../screens/WardenDashboardScreen';
-import WardenOutpassScreen from '../screens/WardenOutpassScreen';
-import WardenMonitoringScreen from '../screens/WardenMonitoringScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
+import SuperAdminDashboardScreen from '../screens/SuperAdminDashboardScreen';
+import NotificationTestingScreen from '../screens/NotificationTestingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
-export default function WardenTabNavigator() {
+export default function SuperAdminTabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarPaddingBottom = Math.max(insets.bottom, 10);
@@ -24,13 +22,9 @@ export default function WardenTabNavigator() {
           let iconName = 'ellipse-outline';
 
           if (route.name === 'Dashboard') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Requests') {
-            iconName = focused ? 'document-text' : 'document-text-outline';
-          } else if (route.name === 'Notifications') {
-            iconName = focused ? 'notifications' : 'notifications-outline';
-          } else if (route.name === 'Monitoring') {
-            iconName = focused ? 'pulse' : 'pulse-outline';
+            iconName = focused ? 'grid' : 'grid-outline';
+          } else if (route.name === 'TestNotifications') {
+            iconName = focused ? 'flask' : 'flask-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -53,10 +47,20 @@ export default function WardenTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Dashboard" component={WardenDashboardScreen} />
-      <Tab.Screen name="Requests" component={WardenOutpassScreen} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Monitoring" component={WardenMonitoringScreen} />
+      <Tab.Screen
+        name="Dashboard"
+        component={SuperAdminDashboardScreen}
+        options={{
+          title: 'Dashboard',
+        }}
+      />
+      <Tab.Screen
+        name="TestNotifications"
+        component={NotificationTestingScreen}
+        options={{
+          title: 'Test Notify',
+        }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
