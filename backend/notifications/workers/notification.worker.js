@@ -5,6 +5,10 @@ dotenv.config()
 import { Worker } from "bullmq"
 import { createNotification } from "../services/notification.service.js"
 
+const REDIS_HOST = process.env.REDIS_HOST || "localhost"
+const REDIS_PORT = Number(process.env.REDIS_PORT || 6379)
+const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined
+
 const worker = new Worker(
   "notifications",
   async (job) => {
@@ -20,8 +24,9 @@ const worker = new Worker(
   },
   {
     connection: {
-      host: "localhost",
-      port: 6379,
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      password: REDIS_PASSWORD,
     },
   },
 )
@@ -49,6 +54,8 @@ process.on("SIGINT", () => shutdown("SIGINT"))
 process.on("SIGTERM", () => shutdown("SIGTERM"))
 
 console.log("[Worker] 🚀 Notification worker started and listening for jobs...")
-console.log("[Worker] Queue: 'notifications' | Redis: localhost:6379")
+console.log(
+  `[Worker] Queue: 'notifications' | Redis: ${REDIS_HOST}:${REDIS_PORT}`,
+)
 
 export { worker }

@@ -115,12 +115,22 @@ export const AuthProvider = ({ children }) => {
         );
       }
 
-      const token = await registerForPushNotifications();
+      // Keep login success independent from push registration failures.
+      try {
+        const token = await registerForPushNotifications();
 
-      await notificationAPI.post('/notifications/token', {
-        token,
-        platform: Platform.OS,
-      });
+        if (token) {
+          await notificationAPI.saveToken({
+            token,
+            platform: Platform.OS,
+          });
+        }
+      } catch (pushError) {
+        console.log(
+          '[AuthContext] Push token registration failed (non-blocking):',
+          pushError?.message || pushError
+        );
+      }
 
       return { success: true };
     } catch (error) {

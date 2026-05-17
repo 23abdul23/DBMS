@@ -15,6 +15,7 @@ import {
   canCancelOutpass,
   validateOutpassWindow,
 } from "../utils/outpassLifecycle.js"
+import { eventBus } from "../notifications/events/eventBus.js"
 
 const prisma = getPrismaClient()
 const router = express.Router()
@@ -146,6 +147,38 @@ router.post(
           include: outpassInclude,
         })
       })
+
+      // Fetch student data to get hostel and notify wardens
+      const student = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { hostel: true },
+      })
+
+      if (student?.hostel) {
+        // Find all wardens assigned to this hostel
+        const wardens = await prisma.user.findMany({
+          where: {
+            role: "warden",
+            hostel: student.hostel,
+          },
+          select: { id: true },
+        })
+
+        // Emit notification for each warden
+        for (const warden of wardens) {
+          eventBus.emit("OUTPASS_CREATED", {
+            userId: warden.id,
+            title: "New Outpass Request",
+            message: `Student submitted a new outpass request to ${outpass.destination}`,
+            type: "OUTPASS",
+            priority: "HIGH",
+            entityId: outpass.id,
+            entityType: "OUTPASS",
+            routeName: "Requests",
+            params: { outpassId: outpass.id },
+          })
+        }
+      }
 
       res.status(201).json({
         message:

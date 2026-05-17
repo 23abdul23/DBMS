@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import WardenDashboardScreen from '../screens/WardenDashboardScreen';
 import WardenOutpassScreen from '../screens/WardenOutpassScreen';
 import WardenMonitoringScreen from '../screens/WardenMonitoringScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -26,6 +27,8 @@ export default function WardenTabNavigator() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Requests') {
             iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Notifications') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Monitoring') {
             iconName = focused ? 'pulse' : 'pulse-outline';
           } else if (route.name === 'Profile') {
@@ -52,6 +55,7 @@ export default function WardenTabNavigator() {
     >
       <Tab.Screen name="Dashboard" component={WardenDashboardScreen} />
       <Tab.Screen name="Requests" component={WardenOutpassScreen} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Monitoring" component={WardenMonitoringScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

@@ -35,6 +35,11 @@ import GuardDashboardScreen from './screens/GuardScreen';
 import AppStartupSplash from './components/AppStartupSplash';
 import NotificationsScreen from './screens/NotificationsScreen';
 import { useTheme } from './context/ThemeContext';
+import { NotificationProvider } from './notifications/notificationProvider';
+import {
+  navigationRef,
+  setNavigationReady,
+} from './notifications/notificationNavigation';
 import {
   isLibraryAdministrator,
   isSacAdministrator,
@@ -45,6 +50,10 @@ const Stack = createStackNavigator();
 function RootNavigator() {
   const { user, loading } = useAuth();
   const { isDarkMode, colors } = useTheme();
+
+  useEffect(() => {
+    return () => setNavigationReady(false);
+  }, []);
 
   if (loading) {
     return <LoadingScreen />;
@@ -64,7 +73,11 @@ function RootNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      theme={navigationTheme}
+      ref={navigationRef}
+      onReady={() => setNavigationReady(true)}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           user.role === 'student' ? (
@@ -188,7 +201,9 @@ export default function App() {
     <LocationProvider>
       <AuthProvider>
         <LocationAccessDeniedProvider>
-          <RootNavigator />
+          <NotificationProvider>
+            <RootNavigator />
+          </NotificationProvider>
         </LocationAccessDeniedProvider>
       </AuthProvider>
     </LocationProvider>

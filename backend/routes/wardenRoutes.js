@@ -550,6 +550,8 @@ router.patch(
           priority: "HIGH",
           entityId: outpass.id,
           entityType: "OUTPASS",
+          routeName: "Notifications",
+          params: { outpassId: outpass.id, tab: "outpass" },
         })
       } else if (action === "reject") {
         eventBus.emit("OUTPASS_REJECTED", {
@@ -560,6 +562,8 @@ router.patch(
           priority: "HIGH",
           entityId: outpass.id,
           entityType: "OUTPASS",
+          routeName: "Notifications",
+          params: { outpassId: outpass.id, tab: "outpass" },
         })
       }
 

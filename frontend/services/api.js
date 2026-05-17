@@ -413,7 +413,10 @@ export const studentAPI = {
 };
 
 export const notificationAPI = {
-  saveToken: (params = {}) => api.get('notifications/', { params }),
+  saveToken: (data) => api.post('/notifications/token', data),
+  list: (params = {}) => api.get('/notifications', { params }),
+  unreadCount: () => api.get('/notifications/unread-count'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
 };
 
 export const outpass = {

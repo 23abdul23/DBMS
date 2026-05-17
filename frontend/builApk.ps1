@@ -29,8 +29,34 @@ Write-Host "Step 6: Building Release APK..."
 .\gradlew.bat assembleRelease
 
 Write-Host ""
+Write-Host "Step 7: Renaming APK..."
+
+# Move back to frontend root
+Set-Location ..
+
+# Extract version from app.config.js
+$versionLine = Get-Content .\app.config.js | Select-String "version:"
+$version = ($versionLine -replace '.*version:\s*''([^'']+)''.*', '$1')
+
+# APK paths
+$apkFolder = ".\android\app\build\outputs\apk\release"
+$sourceApk = "$apkFolder\app-release.apk"
+
+# Final APK name
+$newApkName = "AegisID_V_$version.apk"
+$destinationApk = "$apkFolder\$newApkName"
+
+# Remove old APK with same name if exists
+if (Test-Path $destinationApk) {
+    Remove-Item $destinationApk -Force
+}
+
+# Rename APK
+Rename-Item -Path $sourceApk -NewName $newApkName -Force
+
+Write-Host ""
 Write-Host "========================================="
 Write-Host "BUILD SUCCESSFUL"
 Write-Host "APK Location:"
-Write-Host ".\app\build\outputs\apk\release\app-release.apk"
+Write-Host $destinationApk
 Write-Host "========================================="

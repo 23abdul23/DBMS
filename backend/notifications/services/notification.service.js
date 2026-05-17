@@ -12,6 +12,8 @@ async function createNotification({
   priority,
   entityId,
   entityType,
+  routeName,
+  params,
 }) {
   try {
     const notification = await prisma.notification.create({
@@ -58,13 +60,28 @@ async function createNotification({
             notificationId: notification.id,
             entityId,
             entityType,
+            routeName,
+            params: params ? JSON.stringify(params) : undefined,
           },
-        }).catch((error) => {
-          console.error(
-            `[Notification] Failed to send push to ${token.token}:`,
-            error.message,
-          )
-        }),
+        })
+          .then((result) => {
+            const ticketCount = Array.isArray(result?.tickets)
+              ? result.tickets.length
+              : 0
+            const receiptCount = Array.isArray(result?.receipts)
+              ? result.receipts.length
+              : 0
+
+            console.log(
+              `[Notification] Push dispatch complete for token ${token.token}. Tickets=${ticketCount} Receipts=${receiptCount}`,
+            )
+          })
+          .catch((error) => {
+            console.error(
+              `[Notification] Failed to send push to ${token.token}:`,
+              error.message,
+            )
+          }),
       ),
     )
 

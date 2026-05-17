@@ -488,9 +488,9 @@ export default function LoginScreen({ navigation }) {
               </Modal>
 
               {/* Footer */}
-              <View style={styles.footer}>
+              {/* <View style={styles.footer}>
                 <Text style={[styles.footerText, { color: '#D0D0D0' }]}>
-                  Don`&apos;`t have an account?{' '}
+                  Don&apos;t have an account?{' '}
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Register')}
@@ -499,7 +499,7 @@ export default function LoginScreen({ navigation }) {
                     Sign Up
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
             </ScrollView>
           </KeyboardAvoidingView>
         </View>
