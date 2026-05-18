@@ -32,6 +32,11 @@ import {
   isLibraryAdministrator,
   isSacAdministrator,
   isSecurityAdministrator,
+  isSuperAdministrator,
+  SUPER_ADMIN_EMAIL,
+  SAC_ADMIN_EMAIL,
+  LIBRARY_ADMIN_EMAIL,
+  SECURITY_ADMIN_EMAIL,
 } from '../utils/adminScopes';
 
 export default function LoginScreen({ navigation }) {
@@ -147,6 +152,11 @@ export default function LoginScreen({ navigation }) {
       .trim()
       .toLowerCase();
 
+    // Check if it's a SUPER_ADMIN
+    if (normalizedEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      return 'SUPER_ADMIN';
+    }
+
     if (isSecurityAdministrator({ email: normalizedEmail })) {
       return 'security_admin';
     }
@@ -245,15 +255,7 @@ export default function LoginScreen({ navigation }) {
                   <Picker.Item label="Student" value="student" />
                   <Picker.Item label="Warden" value="warden" />
                   <Picker.Item label="Security" value="security" />
-                  <Picker.Item label="SAC Administrator" value="sac_admin" />
-                  <Picker.Item
-                    label="Library Administrator"
-                    value="library_admin"
-                  />
-                  <Picker.Item
-                    label="Security Administrator"
-                    value="security_admin"
-                  />
+                  <Picker.Item label="Admin" value="admin" />
                 </Picker>
               </View>
 
@@ -294,6 +296,34 @@ export default function LoginScreen({ navigation }) {
                           ></Picker.Item>
                         );
                       })}
+                    </Picker>
+                  ) : role === 'admin' ? (
+                    <Picker
+                      selectedValue={email}
+                      style={[
+                        styles.input,
+                        { color: colors.inputText, flex: 1 },
+                      ]}
+                      onValueChange={(itemValue) => setEmail(itemValue)}
+                      dropdownIconColor={colors.subText}
+                    >
+                      <Picker.Item label="Select Admin" value="" />
+                      <Picker.Item
+                        label="SAC Admin"
+                        value={SAC_ADMIN_EMAIL}
+                      />
+                      <Picker.Item
+                        label="Library Admin"
+                        value={LIBRARY_ADMIN_EMAIL}
+                      />
+                      <Picker.Item
+                        label="Security Admin"
+                        value={SECURITY_ADMIN_EMAIL}
+                      />
+                      <Picker.Item
+                        label="SUPER_ADMIN"
+                        value={SUPER_ADMIN_EMAIL}
+                      />
                     </Picker>
                   ) : (
                     <TextInput
@@ -486,20 +516,6 @@ export default function LoginScreen({ navigation }) {
                   </View>
                 </KeyboardAvoidingView>
               </Modal>
-
-              {/* Footer */}
-              {/* <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: '#D0D0D0' }]}>
-                  Don&apos;t have an account?{' '}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Register')}
-                >
-                  <Text style={[styles.signUpText, { color: '#E8F4F8' }]}>
-                    Sign Up
-                  </Text>
-                </TouchableOpacity>
-              </View> */}
             </ScrollView>
           </KeyboardAvoidingView>
         </View>

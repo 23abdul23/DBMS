@@ -39,6 +39,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [impersonatedRole, setImpersonatedRole] = useState(null);
+  const [impersonatedUserId, setImpersonatedUserId] = useState(null);
 
   useEffect(() => {
     loadStoredAuth();
@@ -200,6 +202,9 @@ export const AuthProvider = ({ children }) => {
 
       setToken(null);
       setUser(null);
+      // Also clear impersonation state on logout
+      setImpersonatedRole(null);
+      setImpersonatedUserId(null);
 
       console.log('[AuthContext] Logout complete');
     } catch (error) {
@@ -207,7 +212,32 @@ export const AuthProvider = ({ children }) => {
       // Still clear state even if there's an error
       setToken(null);
       setUser(null);
+      setImpersonatedRole(null);
+      setImpersonatedUserId(null);
     }
+  };
+
+  // SUPER_ADMIN impersonation helpers
+  const startImpersonation = (role, userId) => {
+    setImpersonatedRole(role);
+    setImpersonatedUserId(userId);
+    console.log(
+      `[AuthContext] Started impersonating role: ${role}, userId: ${userId}`
+    );
+  };
+
+  const clearImpersonation = () => {
+    setImpersonatedRole(null);
+    setImpersonatedUserId(null);
+    console.log('[AuthContext] Impersonation cleared');
+  };
+
+  const getDisplayRole = () => {
+    return impersonatedRole || user?.role;
+  };
+
+  const isImpersonating = () => {
+    return impersonatedRole !== null;
   };
 
   const value = {
@@ -219,6 +249,13 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     setAuthenticatedUser,
     logout,
+    // SUPER_ADMIN impersonation
+    impersonatedRole,
+    impersonatedUserId,
+    startImpersonation,
+    clearImpersonation,
+    getDisplayRole,
+    isImpersonating,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,12 +1,45 @@
 import express from "express"
-import { authenticate } from "../../middleware/auth.js"
+import { authenticate, authorize } from "../../middleware/auth.js"
 import { savePushTokenController } from "../controller/notification.controller.js"
+import { testHelloNotification } from "../controller/test.controller.js"
 import { getPrismaClient } from "../../config/prisma.js"
 
 const router = express.Router()
 const prisma = getPrismaClient()
 
 router.post("/token", authenticate, savePushTokenController)
+
+router.post(
+  "/test-hello",
+  authenticate,
+  authorize("SUPER_ADMIN"),
+  async (req, res) => {
+    try {
+      const { studentId } = req.body
+
+      if (!studentId) {
+        return res.status(400).json({
+          success: false,
+          error: "studentId is required",
+        })
+      }
+
+      const result = await testHelloNotification(studentId)
+
+      if (!result.success) {
+        return res.status(400).json(result)
+      }
+
+      res.json(result)
+    } catch (error) {
+      console.error("[API] Error in /test-hello:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to send test notification",
+      })
+    }
+  },
+)
 
 router.get("/", authenticate, async (req, res) => {
   try {

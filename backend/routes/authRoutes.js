@@ -18,7 +18,7 @@ import {
 const prisma = getPrismaClient()
 const router = express.Router()
 
-const roleValues = new Set(["student", "warden", "security", "admin"])
+const roleValues = new Set(["student", "warden", "security", "admin", "super_admin"])
 const genderValues = new Set(["male", "female", "other"])
 const departmentMap = {
   it: "IT",
@@ -351,10 +351,22 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid role" })
     }
 
+    // When user selects "admin" generically, convert "super_admin" to "SUPER_ADMIN" for Prisma
+    // But don't filter by role - let email be the primary search and return their actual role
+    let prismaRoleFilter = {}
+    if (normalizedRole && normalizedRole !== "admin") {
+      // For non-admin roles, filter by role
+      prismaRoleFilter = { role: normalizedRole }
+    } else if (normalizedRole === "super_admin") {
+      // Special case: super_admin should match SUPER_ADMIN enum value
+      prismaRoleFilter = { role: "SUPER_ADMIN" }
+    }
+    // If normalizedRole === "admin" (generic admin), don't filter by role - find by email only
+
     const user = await prisma.user.findFirst({
       where: {
         email: { equals: normalizedEmail, mode: "insensitive" },
-        ...(normalizedRole ? { role: normalizedRole } : {}),
+        ...prismaRoleFilter,
       },
       select: userSelectWithPassword,
     })
