@@ -16,6 +16,7 @@ import WardenTabNavigator from './navigation/WardenTabNavigator';
 import SacAdminTabNavigator from './navigation/SacAdminTabNavigator';
 import LibraryAdminTabNavigator from './navigation/LibraryAdminTabNavigator';
 import SecurityAdminTabNavigator from './navigation/SecurityAdminTabNavigator';
+import SuperAdminTabNavigator from './navigation/SuperAdminTabNavigator';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -44,6 +45,7 @@ import {
   isLibraryAdministrator,
   isSacAdministrator,
   isSecurityAdministrator,
+  isSuperAdministrator,
 } from './utils/adminScopes';
 const Stack = createStackNavigator();
 
@@ -80,7 +82,18 @@ function RootNavigator() {
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          user.role === 'student' ? (
+          user.role === 'SUPER_ADMIN' ? (
+            <>
+              <Stack.Screen
+                name="SuperAdminMain"
+                component={SuperAdminTabNavigator}
+              />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
+            </>
+          ) : user.role === 'student' ? (
             <>
               <Stack.Screen name="Main" component={MainTabNavigator} />
               <Stack.Screen

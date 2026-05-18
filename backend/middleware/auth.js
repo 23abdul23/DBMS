@@ -106,6 +106,11 @@ const authorize = (...roles) => {
         .json({ message: "Access denied. Please authenticate." })
     }
 
+    // SUPER_ADMIN bypasses all role checks
+    if (req.user.role === "SUPER_ADMIN") {
+      return next()
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         message: "Access denied. Insufficient permissions.",

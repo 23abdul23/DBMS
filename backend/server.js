@@ -142,6 +142,10 @@ eventBus.on("OUTPASS_REJECTED", async (payload) => {
   await notificationQueue.add("send-notification", payload)
 })
 
+eventBus.on("HELLO", async (payload) => {
+  await notificationQueue.add("send-notification", payload)
+})
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/outpass", outpassRoutes)
