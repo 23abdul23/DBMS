@@ -121,7 +121,7 @@ module.exports = {
 
     slug: appSlug,
 
-    version: '1.6.2',
+    version: '1.6.4',
 
     orientation: 'portrait',
 

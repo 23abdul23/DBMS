@@ -114,6 +114,7 @@ enum NotificationType {
   SAC
   EMERGENCY
   NEWS
+  HELLO
   SYSTEM
 }
 

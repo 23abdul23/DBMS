@@ -160,6 +160,7 @@ export async function testHelloNotification(studentIdentifier) {
       title: "🔔 HELLO Test Notification",
       message:
         "This is a test notification from super_admin. If you see this, push notifications are working!",
+      // HELLO is the event name; Prisma only persists supported notification types.
       type: notificationTypes.HELLO,
       priority: notificationPriority.NORMAL,
       entityId: student.id,

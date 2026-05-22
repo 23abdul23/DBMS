@@ -47,3 +47,5 @@ frontend/android/
 
 ISSUES.txt
 logs.txt
+
+backend/logs/*
