@@ -69,7 +69,7 @@ const iosBundleIdentifier = isTesting
  * API Config
  */
 const apiPort = Number(
-  getConfigValue('API_PORT', getConfigValue('PORT', 5500))
+  getConfigValue('API_PORT', getConfigValue('PORT', 5000))
 );
 
 const localApiBaseUrl = getConfigValue(

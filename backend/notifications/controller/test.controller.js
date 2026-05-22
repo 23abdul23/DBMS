@@ -29,9 +29,11 @@ function normalizeIdentifier(identifier) {
 async function findStudentByIdentifier(identifier) {
   const normalized = normalizeIdentifier(identifier)
 
+  console.log(`[Test] Resolving student identifier: ${normalized}`)
+
   // Try email lookup first
   if (normalized.includes("@")) {
-    return await prisma.user.findFirst({
+    const student = await prisma.user.findFirst({
       where: {
         email: {
           mode: "insensitive",
@@ -45,10 +47,16 @@ async function findStudentByIdentifier(identifier) {
         name: true,
       },
     })
+
+    console.log(
+      `[Test] Email lookup result: ${student ? student.id : "not found"}`,
+    )
+
+    return student
   }
 
   // Try ID lookup
-  return await prisma.user.findFirst({
+  const student = await prisma.user.findFirst({
     where: {
       OR: [
         {
@@ -69,6 +77,10 @@ async function findStudentByIdentifier(identifier) {
       name: true,
     },
   })
+
+  console.log(`[Test] ID lookup result: ${student ? student.id : "not found"}`)
+
+  return student
 }
 
 /**
@@ -77,10 +89,13 @@ async function findStudentByIdentifier(identifier) {
  * @returns {Promise<Object|null>} Token object or null
  */
 async function getActivePushToken(userId) {
-  return await prisma.pushToken.findFirst({
+  const pushToken = await prisma.pushToken.findFirst({
     where: {
       userId,
       isActive: true,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
     select: {
       id: true,
@@ -89,6 +104,12 @@ async function getActivePushToken(userId) {
       deviceName: true,
     },
   })
+
+  console.log(
+    `[Test] Active push token lookup for ${userId}: ${pushToken ? pushToken.id : "none"}`,
+  )
+
+  return pushToken
 }
 
 /**

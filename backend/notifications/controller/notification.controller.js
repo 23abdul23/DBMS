@@ -3,6 +3,15 @@ import { savePushToken } from "../services/token.service.js"
 async function savePushTokenController(req, res) {
   try {
     const { token, platform, deviceName } = req.body
+    const authenticatedUserId = req.userId || req.user?.userId || req.user?.id
+
+    console.log("[Notifications][token] Incoming save request", {
+      authenticatedUserId,
+      sessionId: req.sessionId,
+      platform,
+      deviceName,
+      tokenPreview: token ? `${token.slice(0, 24)}...` : null,
+    })
 
     if (!token) {
       return res.status(400).json({
@@ -11,11 +20,24 @@ async function savePushTokenController(req, res) {
       })
     }
 
+    if (!authenticatedUserId) {
+      console.warn("[Notifications][token] Missing authenticated user id")
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user is required to save push token",
+      })
+    }
+
     await savePushToken({
-      userId: req.user.userId,
+      userId: authenticatedUserId,
       token,
       platform,
       deviceName,
+    })
+
+    console.log("[Notifications][token] Push token saved successfully", {
+      userId: authenticatedUserId,
+      tokenPreview: `${token.slice(0, 24)}...`,
     })
 
     res.json({

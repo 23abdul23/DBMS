@@ -1,7 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 import {
   authAPI,
   commonAPI,
@@ -25,6 +32,8 @@ const normalizeLoginRole = (role) => {
   return role;
 };
 
+const PUSH_TOKEN_SYNC_STATE_KEY = 'pushTokenSyncState';
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -41,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [impersonatedRole, setImpersonatedRole] = useState(null);
   const [impersonatedUserId, setImpersonatedUserId] = useState(null);
+  const pushTokenSyncInFlightRef = useRef(false);
 
   useEffect(() => {
     loadStoredAuth();
@@ -70,6 +80,9 @@ export const AuthProvider = ({ children }) => {
       } else {
         setToken(null);
         setUser(null);
+        await AsyncStorage.removeItem(PUSH_TOKEN_SYNC_STATE_KEY).catch(
+          () => {}
+        );
       }
     } catch (error) {
       console.log('Error loading stored auth:', error);
@@ -77,6 +90,107 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  const syncPushTokenForCurrentSession = async (source) => {
+    if (loading || !user?.id || !token) {
+      return;
+    }
+
+    if (pushTokenSyncInFlightRef.current) {
+      console.log('[AuthContext] Push token sync skipped (already running)', {
+        source,
+        userId: user.id,
+      });
+      return;
+    }
+
+    pushTokenSyncInFlightRef.current = true;
+
+    try {
+      console.log('[AuthContext] Starting push token sync', {
+        source,
+        userId: user.id,
+        role: user.role,
+        hasAuthToken: Boolean(token),
+        platform: Platform.OS,
+        isDevice: Device.isDevice,
+      });
+
+      const expoPushToken = await registerForPushNotifications();
+
+      if (!expoPushToken) {
+        console.log('[AuthContext] Push token registration returned no token', {
+          source,
+          userId: user.id,
+          platform: Platform.OS,
+          isDevice: Device.isDevice,
+        });
+        return;
+      }
+
+      const syncedStateRaw = await AsyncStorage.getItem(
+        PUSH_TOKEN_SYNC_STATE_KEY
+      );
+
+      const syncedState = syncedStateRaw ? JSON.parse(syncedStateRaw) : null;
+      const nextState = {
+        userId: user.id,
+        token: expoPushToken,
+        platform: Platform.OS,
+      };
+
+      if (
+        syncedState?.userId === nextState.userId &&
+        syncedState?.token === nextState.token &&
+        syncedState?.platform === nextState.platform
+      ) {
+        console.log('[AuthContext] Push token already synced for session', {
+          source,
+          userId: user.id,
+          tokenPreview: expoPushToken.slice(0, 24),
+        });
+        return;
+      }
+
+      console.log('[AuthContext] Saving push token to backend', {
+        source,
+        userId: user.id,
+        tokenPreview: expoPushToken.slice(0, 24),
+        platform: Platform.OS,
+      });
+
+      const response = await notificationAPI.saveToken({
+        token: expoPushToken,
+        platform: Platform.OS,
+        deviceName: Device.modelName || Device.deviceName || Platform.OS,
+      });
+
+      await AsyncStorage.setItem(
+        PUSH_TOKEN_SYNC_STATE_KEY,
+        JSON.stringify(nextState)
+      );
+
+      console.log('[AuthContext] Push token sync complete', {
+        source,
+        userId: user.id,
+        status: response?.status,
+      });
+    } catch (pushError) {
+      console.log('[AuthContext] Push token sync failed (non-blocking):', {
+        source,
+        userId: user?.id,
+        message: pushError?.message || pushError,
+      });
+    } finally {
+      pushTokenSyncInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && user && token) {
+      syncPushTokenForCurrentSession('auth-state-change');
+    }
+  }, [loading, user?.id, token]);
 
   const login = async (email, password, role) => {
     try {
@@ -114,23 +228,6 @@ export const AuthProvider = ({ children }) => {
         console.log(
           '[AuthContext] Location preload failed (non-blocking):',
           locError
-        );
-      }
-
-      // Keep login success independent from push registration failures.
-      try {
-        const token = await registerForPushNotifications();
-
-        if (token) {
-          await notificationAPI.saveToken({
-            token,
-            platform: Platform.OS,
-          });
-        }
-      } catch (pushError) {
-        console.log(
-          '[AuthContext] Push token registration failed (non-blocking):',
-          pushError?.message || pushError
         );
       }
 
@@ -194,6 +291,7 @@ export const AuthProvider = ({ children }) => {
         SecureStore.deleteItemAsync('accessToken').catch(() => {}),
         SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
         AsyncStorage.removeItem('userData').catch(() => {}),
+        AsyncStorage.removeItem(PUSH_TOKEN_SYNC_STATE_KEY).catch(() => {}),
       ]);
 
       // [NOTE] Intentionally NOT clearing location cache on logout

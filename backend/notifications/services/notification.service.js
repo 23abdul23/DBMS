@@ -16,6 +16,16 @@ async function createNotification({
   params,
 }) {
   try {
+    console.log("[Notification] Creating notification record", {
+      userId,
+      title,
+      type,
+      priority,
+      entityId,
+      entityType,
+      routeName,
+    })
+
     const notification = await prisma.notification.create({
       data: {
         userId,
@@ -37,6 +47,12 @@ async function createNotification({
         userId,
         isActive: true,
       },
+    })
+
+    console.log("[Notification] Token lookup complete", {
+      userId,
+      tokenCount: tokens.length,
+      tokenPreviews: tokens.map((entry) => `${entry.token.slice(0, 24)}...`),
     })
 
     if (tokens.length === 0) {

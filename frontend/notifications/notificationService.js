@@ -32,6 +32,11 @@ export async function configureNotificationChannels() {
 }
 
 export async function registerForPushNotifications() {
+  console.log('[Notifications] Push registration requested', {
+    platform: Platform.OS,
+    isDevice: Device.isDevice,
+  });
+
   if (!Device.isDevice) {
     console.log('[Notifications] Push token registration skipped on simulator');
     return null;
@@ -40,6 +45,11 @@ export async function registerForPushNotifications() {
   await configureNotificationChannels();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
+
+  console.log('[Notifications] Existing notification permission status', {
+    platform: Platform.OS,
+    status: existingStatus,
+  });
 
   let finalStatus = existingStatus;
 
@@ -53,9 +63,18 @@ export async function registerForPushNotifications() {
     });
 
     finalStatus = status;
+
+    console.log('[Notifications] Permission request result', {
+      platform: Platform.OS,
+      status: finalStatus,
+    });
   }
 
   if (finalStatus !== 'granted') {
+    console.log('[Notifications] Push permissions not granted', {
+      platform: Platform.OS,
+      status: finalStatus,
+    });
     return;
   }
 
@@ -68,7 +87,17 @@ export async function registerForPushNotifications() {
     throw new Error('Expo projectId is missing for push token generation');
   }
 
+  console.log('[Notifications] Using Expo projectId for token generation', {
+    platform: Platform.OS,
+    hasProjectId: Boolean(projectId),
+  });
+
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+
+  console.log('[Notifications] Expo push token generated', {
+    platform: Platform.OS,
+    tokenPreview: token?.slice(0, 24),
+  });
 
   return token;
 }
