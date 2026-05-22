@@ -1,3 +1,4 @@
+import { isRunningInExpoGo } from 'expo';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -12,6 +13,24 @@ Notifications.setNotificationHandler({
 });
 
 const DEFAULT_ANDROID_CHANNEL = 'default';
+
+export function getNotificationRuntimeInfo() {
+  const executionEnvironment = Constants?.executionEnvironment || 'unknown';
+  const appOwnership = Constants?.appOwnership || 'unknown';
+  const isExpoGo = isRunningInExpoGo();
+
+  return {
+    isExpoGo,
+    executionEnvironment,
+    appOwnership,
+    buildType: Constants?.expoConfig?.extra?.BUILD_TYPE || 'unknown',
+    projectId:
+      Constants?.expoConfig?.extra?.eas?.projectId ||
+      Constants?.easConfig?.projectId ||
+      Constants?.manifest2?.extra?.eas?.projectId ||
+      null,
+  };
+}
 
 export async function configureNotificationChannels() {
   if (Platform.OS !== 'android') {
@@ -32,14 +51,32 @@ export async function configureNotificationChannels() {
 }
 
 export async function registerForPushNotifications() {
+  const runtimeInfo = getNotificationRuntimeInfo();
+
   console.log('[Notifications] Push registration requested', {
     platform: Platform.OS,
     isDevice: Device.isDevice,
+    ...runtimeInfo,
   });
 
   if (!Device.isDevice) {
-    console.log('[Notifications] Push token registration skipped on simulator');
-    return null;
+    console.log(
+      '[Notifications] Running on emulator/simulator; push token registration will still be attempted',
+      {
+        platform: Platform.OS,
+        ...runtimeInfo,
+      }
+    );
+  }
+
+  if (runtimeInfo.isExpoGo) {
+    console.log(
+      '[Notifications] Running in Expo Go; push token registration will still be attempted',
+      {
+        platform: Platform.OS,
+        ...runtimeInfo,
+      }
+    );
   }
 
   await configureNotificationChannels();
@@ -78,10 +115,7 @@ export async function registerForPushNotifications() {
     return;
   }
 
-  const projectId =
-    Constants?.expoConfig?.extra?.eas?.projectId ||
-    Constants?.easConfig?.projectId ||
-    Constants?.manifest2?.extra?.eas?.projectId;
+  const projectId = runtimeInfo.projectId;
 
   if (!projectId) {
     throw new Error('Expo projectId is missing for push token generation');
@@ -90,6 +124,7 @@ export async function registerForPushNotifications() {
   console.log('[Notifications] Using Expo projectId for token generation', {
     platform: Platform.OS,
     hasProjectId: Boolean(projectId),
+    executionEnvironment: runtimeInfo.executionEnvironment,
   });
 
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;

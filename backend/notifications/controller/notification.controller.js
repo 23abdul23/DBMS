@@ -1,8 +1,19 @@
-import { savePushToken } from "../services/token.service.js"
+import {
+  deactivatePushToken,
+  deactivatePushTokensForUser,
+  savePushToken,
+} from "../services/token.service.js"
 
 async function savePushTokenController(req, res) {
   try {
-    const { token, platform, deviceName } = req.body
+    const {
+      token,
+      platform,
+      deviceName,
+      buildType,
+      executionEnvironment,
+      appOwnership,
+    } = req.body
     const authenticatedUserId = req.userId || req.user?.userId || req.user?.id
 
     console.log("[Notifications][token] Incoming save request", {
@@ -10,6 +21,9 @@ async function savePushTokenController(req, res) {
       sessionId: req.sessionId,
       platform,
       deviceName,
+      buildType,
+      executionEnvironment,
+      appOwnership,
       tokenPreview: token ? `${token.slice(0, 24)}...` : null,
     })
 
@@ -53,4 +67,33 @@ async function savePushTokenController(req, res) {
   }
 }
 
-export { savePushTokenController }
+async function deactivatePushTokenController(req, res) {
+  try {
+    const authenticatedUserId = req.userId || req.user?.userId || req.user?.id
+    const { token } = req.body
+
+    console.log("[Notifications][token] Incoming deactivate request", {
+      authenticatedUserId,
+      tokenPreview: token ? `${token.slice(0, 24)}...` : null,
+    })
+
+    if (token) {
+      await deactivatePushToken(token)
+    } else if (authenticatedUserId) {
+      await deactivatePushTokensForUser(authenticatedUserId)
+    }
+
+    return res.json({
+      success: true,
+      message: "Push token deactivated successfully",
+    })
+  } catch (error) {
+    console.error("Error deactivating push token:", error)
+    return res.status(500).json({
+      success: false,
+      message: "Error deactivating push token",
+    })
+  }
+}
+
+export { deactivatePushTokenController, savePushTokenController }

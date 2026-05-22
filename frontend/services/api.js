@@ -422,6 +422,7 @@ export const studentAPI = {
 
 export const notificationAPI = {
   saveToken: (data) => api.post('/notifications/token', data),
+  deactivateToken: (data) => api.post('/notifications/token/deactivate', data),
   list: (params = {}) => api.get('/notifications', { params }),
   unreadCount: () => api.get('/notifications/unread-count'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),

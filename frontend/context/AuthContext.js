@@ -21,7 +21,10 @@ import {
   clearLogoutCallback,
 } from '../utils/logoutEventEmitter';
 import { Platform } from 'react-native';
-import { registerForPushNotifications } from '../notifications/notificationService';
+import {
+  getNotificationRuntimeInfo,
+  registerForPushNotifications,
+} from '../notifications/notificationService';
 import { cacheLocations } from '../utils/locationCacheManager';
 
 const normalizeLoginRole = (role) => {
@@ -114,6 +117,7 @@ export const AuthProvider = ({ children }) => {
         hasAuthToken: Boolean(token),
         platform: Platform.OS,
         isDevice: Device.isDevice,
+        ...getNotificationRuntimeInfo(),
       });
 
       const expoPushToken = await registerForPushNotifications();
@@ -157,12 +161,16 @@ export const AuthProvider = ({ children }) => {
         userId: user.id,
         tokenPreview: expoPushToken.slice(0, 24),
         platform: Platform.OS,
+        ...getNotificationRuntimeInfo(),
       });
 
       const response = await notificationAPI.saveToken({
         token: expoPushToken,
         platform: Platform.OS,
         deviceName: Device.modelName || Device.deviceName || Platform.OS,
+        buildType: getNotificationRuntimeInfo().buildType,
+        executionEnvironment: getNotificationRuntimeInfo().executionEnvironment,
+        appOwnership: getNotificationRuntimeInfo().appOwnership,
       });
 
       await AsyncStorage.setItem(
@@ -272,6 +280,33 @@ export const AuthProvider = ({ children }) => {
   const logout = async (reason = 'USER_REQUESTED') => {
     try {
       // console.log('[AuthContext] Logging out - Reason:', reason);
+
+      if (reason === 'USER_REQUESTED') {
+        try {
+          const syncStateRaw = await AsyncStorage.getItem(
+            PUSH_TOKEN_SYNC_STATE_KEY
+          );
+          const syncState = syncStateRaw ? JSON.parse(syncStateRaw) : null;
+
+          if (syncState?.token) {
+            await notificationAPI
+              .deactivateToken({
+                token: syncState.token,
+              })
+              .catch((error) => {
+                console.log(
+                  '[AuthContext] Push token deactivation failed (non-blocking):',
+                  error?.response?.data?.message || error?.message || error
+                );
+              });
+          }
+        } catch (deactivateError) {
+          console.log(
+            '[AuthContext] Push token logout cleanup failed (non-blocking):',
+            deactivateError?.message || deactivateError
+          );
+        }
+      }
 
       // Try to notify backend if it's a user-requested logout (not forced by session revocation)
       if (reason === 'USER_REQUESTED') {

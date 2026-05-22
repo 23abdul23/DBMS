@@ -1,6 +1,9 @@
 import express from "express"
 import { authenticate, authorize } from "../../middleware/auth.js"
-import { savePushTokenController } from "../controller/notification.controller.js"
+import {
+  deactivatePushTokenController,
+  savePushTokenController,
+} from "../controller/notification.controller.js"
 import { testHelloNotification } from "../controller/test.controller.js"
 import { getPrismaClient } from "../../config/prisma.js"
 
@@ -8,6 +11,7 @@ const router = express.Router()
 const prisma = getPrismaClient()
 
 router.post("/token", authenticate, savePushTokenController)
+router.post("/token/deactivate", authenticate, deactivatePushTokenController)
 
 router.post(
   "/test-hello",

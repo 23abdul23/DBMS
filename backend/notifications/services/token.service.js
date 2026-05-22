@@ -75,4 +75,24 @@ async function deactivatePushToken(token) {
   })
 }
 
-export { deactivatePushToken, savePushToken }
+async function deactivatePushTokensForUser(userId) {
+  if (!userId) {
+    return null
+  }
+
+  console.log("[PushToken] Deactivating all active tokens for user", {
+    userId,
+  })
+
+  return prisma.pushToken.updateMany({
+    where: {
+      userId,
+      isActive: true,
+    },
+    data: {
+      isActive: false,
+    },
+  })
+}
+
+export { deactivatePushToken, deactivatePushTokensForUser, savePushToken }
