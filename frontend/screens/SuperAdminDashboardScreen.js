@@ -149,7 +149,7 @@ export default function SuperAdminDashboardScreen({ navigation }) {
       >
         <View style={styles.headerSection}>
           <Text style={[styles.title, { color: colors.text }]}>
-            SUPER_ADMIN Dashboard
+            super_admin Dashboard
           </Text>
 
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>

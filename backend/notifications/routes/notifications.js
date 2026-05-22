@@ -12,7 +12,7 @@ router.post("/token", authenticate, savePushTokenController)
 router.post(
   "/test-hello",
   authenticate,
-  authorize("SUPER_ADMIN"),
+  authorize("super_admin"),
   async (req, res) => {
     try {
       const { studentId } = req.body

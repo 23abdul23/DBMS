@@ -33,7 +33,7 @@ import {
   isSacAdministrator,
   isSecurityAdministrator,
   isSuperAdministrator,
-  SUPER_ADMIN_EMAIL,
+  super_admin_EMAIL,
   SAC_ADMIN_EMAIL,
   LIBRARY_ADMIN_EMAIL,
   SECURITY_ADMIN_EMAIL,
@@ -152,9 +152,9 @@ export default function LoginScreen({ navigation }) {
       .trim()
       .toLowerCase();
 
-    // Check if it's a SUPER_ADMIN
-    if (normalizedEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
-      return 'SUPER_ADMIN';
+    // Check if it's a super_admin
+    if (normalizedEmail === super_admin_EMAIL.toLowerCase()) {
+      return 'super_admin';
     }
 
     if (isSecurityAdministrator({ email: normalizedEmail })) {
@@ -308,10 +308,7 @@ export default function LoginScreen({ navigation }) {
                       dropdownIconColor={colors.subText}
                     >
                       <Picker.Item label="Select Admin" value="" />
-                      <Picker.Item
-                        label="SAC Admin"
-                        value={SAC_ADMIN_EMAIL}
-                      />
+                      <Picker.Item label="SAC Admin" value={SAC_ADMIN_EMAIL} />
                       <Picker.Item
                         label="Library Admin"
                         value={LIBRARY_ADMIN_EMAIL}
@@ -321,8 +318,8 @@ export default function LoginScreen({ navigation }) {
                         value={SECURITY_ADMIN_EMAIL}
                       />
                       <Picker.Item
-                        label="SUPER_ADMIN"
-                        value={SUPER_ADMIN_EMAIL}
+                        label="super_admin"
+                        value={super_admin_EMAIL}
                       />
                     </Picker>
                   ) : (

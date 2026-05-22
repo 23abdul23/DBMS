@@ -85,7 +85,11 @@ const { notificationQueue } = notificationQueueModule
 
 const app = express()
 const PORT = process.env.PORT || 5000
-const API_BASE_URL = process.API_BASE_URL
+const API_BASE_URL =
+  process.env.ENVIRONMENT == "development"
+    ? process.env.API_BASE_URL_LOCAL
+    : process.env.API_BASE_URL_DEPLOYED
+const localhost = process.env.API_HOST
 const DB_MODE = getDatabaseMode()
 const prisma = getPrismaClient()
 const ENABLE_CAMPUS_SIMULATION =
@@ -269,7 +273,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Aegis ID Backend running on port ${PORT}`)
       console.log(`🗄️ Database mode: ${mode}`)
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`)
+      console.log(`📊 Health check: ${API_BASE_URL}/health`)
     })
   } catch (error) {
     console.error("Failed to start server:", error)

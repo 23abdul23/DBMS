@@ -7,7 +7,7 @@ const prisma = getPrismaClient()
 
 /**
  * Test hello notification controller
- * Handles sending HELLO test notifications via SUPER_ADMIN
+ * Handles sending HELLO test notifications via super_admin
  */
 
 /**
@@ -138,7 +138,7 @@ export async function testHelloNotification(studentIdentifier) {
       userId: student.id,
       title: "🔔 HELLO Test Notification",
       message:
-        "This is a test notification from SUPER_ADMIN. If you see this, push notifications are working!",
+        "This is a test notification from super_admin. If you see this, push notifications are working!",
       type: notificationTypes.HELLO,
       priority: notificationPriority.NORMAL,
       entityId: student.id,

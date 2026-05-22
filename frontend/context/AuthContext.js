@@ -217,7 +217,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // SUPER_ADMIN impersonation helpers
+  // super_admin impersonation helpers
   const startImpersonation = (role, userId) => {
     setImpersonatedRole(role);
     setImpersonatedUserId(userId);
@@ -249,7 +249,7 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     setAuthenticatedUser,
     logout,
-    // SUPER_ADMIN impersonation
+    // super_admin impersonation
     impersonatedRole,
     impersonatedUserId,
     startImpersonation,

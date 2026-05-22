@@ -49,7 +49,7 @@ const environment = String(getConfigValue('ENVIRONMENT', 'production'))
   .toLowerCase();
 
 const isDevelopment = environment === 'development';
-const isTesting = environment === 'development';
+const isTesting = environment === 'testing';
 const isProduction = environment === 'production';
 
 /**
@@ -69,7 +69,7 @@ const iosBundleIdentifier = isTesting
  * API Config
  */
 const apiPort = Number(
-  getConfigValue('API_PORT', getConfigValue('PORT', 3500))
+  getConfigValue('API_PORT', getConfigValue('PORT', 5500))
 );
 
 const localApiBaseUrl = getConfigValue(
@@ -78,16 +78,14 @@ const localApiBaseUrl = getConfigValue(
 );
 
 const deployedApiBaseUrl = getConfigValue(
-  'API_BASE_URL',
+  'API_BASE_URL_DEPLOYED',
   'https://api.aegisid.app/api'
 );
 
-const apiPrimaryBaseUrl = isDevelopment
-  ? localApiBaseUrl
-  : getConfigValue('API_BASE_URL_PRIMARY', deployedApiBaseUrl);
+const apiPrimaryBaseUrl = isDevelopment ? localApiBaseUrl : deployedApiBaseUrl;
 
 const apiSecondaryBaseUrl = isDevelopment
-  ? getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl)
+  ? deployedApiBaseUrl
   : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
 
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
