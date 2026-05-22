@@ -101,22 +101,7 @@ app.use(helmet())
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow mobile apps, Postman, curl (no origin)
-      if (!origin) {
-        return callback(null, true)
-      }
-
-      // Allow browser frontend if needed
-      const allowedOrigins = [API_BASE_URL]
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
-      // Allow mobile API access
-      return callback(null, true)
-    },
+    origin: true,
     credentials: true,
   }),
 )
