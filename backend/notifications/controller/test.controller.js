@@ -1,37 +1,20 @@
 import { getPrismaClient } from "../../config/prisma.js"
 import { eventBus } from "../events/eventBus.js"
-import notificationTypes from "../constants/notificationTypes.js"
 import notificationPriority from "../constants/notificationPriority.js"
 
 const prisma = getPrismaClient()
 
-/**
- * Test hello notification controller
- * Handles sending HELLO test notifications via SUPER_ADMIN
- */
-
-/**
- * Normalizes student identifier (email or ID)
- * @param {string} identifier - Student email or ID
- * @returns {string} Normalized identifier
- */
 function normalizeIdentifier(identifier) {
   return String(identifier || "")
     .trim()
     .toLowerCase()
 }
 
-/**
- * Finds student by email or ID
- * @param {string} identifier - Student email (iit2024244@iiita.ac.in) or ID (iit2024244)
- * @returns {Promise<Object|null>} User object or null
- */
 async function findStudentByIdentifier(identifier) {
   const normalized = normalizeIdentifier(identifier)
 
-  // Try email lookup first
   if (normalized.includes("@")) {
-    return await prisma.user.findFirst({
+    return prisma.user.findFirst({
       where: {
         email: {
           mode: "insensitive",
@@ -47,8 +30,7 @@ async function findStudentByIdentifier(identifier) {
     })
   }
 
-  // Try ID lookup
-  return await prisma.user.findFirst({
+  return prisma.user.findFirst({
     where: {
       OR: [
         {
@@ -71,40 +53,35 @@ async function findStudentByIdentifier(identifier) {
   })
 }
 
-/**
- * Checks if student has active push token
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} Token object or null
- */
-async function getActivePushToken(userId) {
-  return await prisma.pushToken.findFirst({
+async function getActivePushTokens(userId) {
+  return prisma.pushToken.findMany({
     where: {
       userId,
       isActive: true,
+      status: "ACTIVE",
     },
     select: {
       id: true,
-      token: true,
+      tokenType: true,
       platform: true,
       deviceName: true,
+      deviceId: true,
+      appVersion: true,
+      buildNumber: true,
+    },
+    orderBy: {
+      lastSeenAt: "desc",
     },
   })
 }
 
-/**
- * Main controller function to send HELLO test notification
- * @param {string} studentIdentifier - Email or ID of student
- * @returns {Promise<Object>} Result object with status and details
- */
 export async function testHelloNotification(studentIdentifier) {
   try {
-    console.log(`[Test] HELLO notification requested for: ${studentIdentifier}`)
+    console.log(`[Test] Native push test requested for: ${studentIdentifier}`)
 
-    // Find student
     const student = await findStudentByIdentifier(studentIdentifier)
 
     if (!student) {
-      console.warn(`[Test] Student not found: ${studentIdentifier}`)
       return {
         success: false,
         error: "Student not found",
@@ -112,16 +89,12 @@ export async function testHelloNotification(studentIdentifier) {
       }
     }
 
-    console.log(`[Test] Found student: ${student.id} (${student.email})`)
+    const activeTokens = await getActivePushTokens(student.id)
 
-    // Check push token
-    const pushToken = await getActivePushToken(student.id)
-
-    if (!pushToken) {
-      console.warn(`[Test] No active push token for student: ${student.id}`)
+    if (activeTokens.length === 0) {
       return {
         success: false,
-        error: "No active push token for this student",
+        error: "No active native push token for this student",
         studentId: student.id,
         studentEmail: student.email,
         studentName: student.name,
@@ -129,24 +102,21 @@ export async function testHelloNotification(studentIdentifier) {
       }
     }
 
-    console.log(
-      `[Test] Found push token: ${pushToken.token.substring(0, 50)}...`,
-    )
-
-    // Emit HELLO event to queue
     const payload = {
       userId: student.id,
-      title: "🔔 HELLO Test Notification",
+      title: "Native Push Test",
       message:
-        "This is a test notification from SUPER_ADMIN. If you see this, push notifications are working!",
-      type: notificationTypes.HELLO,
+        "This push came through the direct FCM/APNs pipeline without Expo relay.",
+      type: "SYSTEM",
       priority: notificationPriority.NORMAL,
       entityId: student.id,
       entityType: "TEST",
       routeName: "Notifications",
+      params: {
+        tab: "notifications",
+      },
     }
 
-    console.log(`[Test] Emitting HELLO event for user: ${student.id}`)
     eventBus.emit("HELLO", payload)
 
     return {
@@ -155,12 +125,18 @@ export async function testHelloNotification(studentIdentifier) {
       studentEmail: student.email,
       studentName: student.name,
       tokenFound: true,
-      tokenInfo: {
-        platform: pushToken.platform,
-        deviceName: pushToken.deviceName || "Unknown Device",
-      },
+      tokenCount: activeTokens.length,
+      tokenInfo: activeTokens.map((token) => ({
+        id: token.id,
+        tokenType: token.tokenType,
+        platform: token.platform,
+        deviceId: token.deviceId,
+        deviceName: token.deviceName || "Unknown device",
+        appVersion: token.appVersion,
+        buildNumber: token.buildNumber,
+      })),
       notificationPayload: payload,
-      message: `HELLO notification queued for ${student.name} (${student.email})`,
+      message: `Native push notification queued for ${student.name} (${student.email})`,
     }
   } catch (error) {
     console.error("[Test] Error in testHelloNotification:", error)

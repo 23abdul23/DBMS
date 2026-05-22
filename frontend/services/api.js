@@ -414,11 +414,17 @@ export const studentAPI = {
 
 export const notificationAPI = {
   saveToken: (data) => api.post('/notifications/token', data),
+  deactivateToken: (data) => api.post('/notifications/token/deactivate', data),
   list: (params = {}) => api.get('/notifications', { params }),
   unreadCount: () => api.get('/notifications/unread-count'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   testHelloNotification: (studentId) =>
     api.post('/notifications/test-hello', { studentId }),
+  adminOverview: () => api.get('/notifications/admin/overview'),
+  adminTokens: (params = {}) =>
+    api.get('/notifications/admin/tokens', { params }),
+  adminDeliveries: (params = {}) =>
+    api.get('/notifications/admin/deliveries', { params }),
 };
 
 export const outpass = {

@@ -91,6 +91,19 @@ const apiSecondaryBaseUrl = isDevelopment
   : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
 
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
+const androidGoogleServicesFile = getConfigValue(
+  'ANDROID_GOOGLE_SERVICES_FILE',
+  ''
+);
+const iosGoogleServicesFile = getConfigValue('IOS_GOOGLE_SERVICES_FILE', '');
+const apnsEnvironment = String(
+  getConfigValue(
+    'APNS_ENVIRONMENT',
+    isProduction ? 'production' : 'development'
+  )
+)
+  .trim()
+  .toLowerCase();
 
 /**
  * Emergency Contacts
@@ -142,7 +155,18 @@ module.exports = {
     ios: {
       bundleIdentifier: iosBundleIdentifier,
 
+      ...(iosGoogleServicesFile
+        ? {
+            googleServicesFile: iosGoogleServicesFile,
+          }
+        : {}),
+
       supportsTablet: true,
+
+      entitlements: {
+        'aps-environment':
+          apnsEnvironment === 'production' ? 'production' : 'development',
+      },
 
       infoPlist: {
         NSCameraUsageDescription:
@@ -153,12 +177,20 @@ module.exports = {
 
         LSApplicationQueriesSchemes: ['tel', 'telprompt', 'sms', 'smsto'],
 
+        UIBackgroundModes: ['remote-notification'],
+
         ITSAppUsesNonExemptEncryption: false,
       },
     },
 
     android: {
       package: androidPackage,
+
+      ...(androidGoogleServicesFile
+        ? {
+            googleServicesFile: androidGoogleServicesFile,
+          }
+        : {}),
 
       adaptiveIcon: {
         foregroundImage: './assets/aegisLogoWhite.png',

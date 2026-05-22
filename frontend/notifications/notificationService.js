@@ -1,6 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
@@ -12,6 +13,25 @@ Notifications.setNotificationHandler({
 });
 
 const DEFAULT_ANDROID_CHANNEL = 'default';
+const PUSH_DEVICE_ID_KEY = 'nativePushDeviceId';
+
+function buildLocalDeviceId() {
+  return `aegis-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+}
+
+export async function getOrCreatePushDeviceId() {
+  const existing = await AsyncStorage.getItem(PUSH_DEVICE_ID_KEY);
+
+  if (existing) {
+    return existing;
+  }
+
+  const deviceId = buildLocalDeviceId();
+  await AsyncStorage.setItem(PUSH_DEVICE_ID_KEY, deviceId);
+  return deviceId;
+}
 
 export async function configureNotificationChannels() {
   if (Platform.OS !== 'android') {
@@ -31,16 +51,17 @@ export async function configureNotificationChannels() {
   });
 }
 
-export async function registerForPushNotifications() {
-  if (!Device.isDevice) {
-    console.log('[Notifications] Push token registration skipped on simulator');
-    return null;
+export async function ensureNotificationPermission() {
+  if (Platform.OS === 'web' || !Device.isDevice) {
+    return {
+      granted: false,
+      status: 'unsupported',
+    };
   }
 
   await configureNotificationChannels();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-
   let finalStatus = existingStatus;
 
   if (existingStatus !== 'granted') {
@@ -55,22 +76,77 @@ export async function registerForPushNotifications() {
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') {
-    return;
+  return {
+    granted: finalStatus === 'granted',
+    status: finalStatus,
+  };
+}
+
+function normalizeTokenData(tokenResponse) {
+  if (typeof tokenResponse === 'string') {
+    return tokenResponse;
   }
 
-  const projectId =
-    Constants?.expoConfig?.extra?.eas?.projectId ||
-    Constants?.easConfig?.projectId ||
-    Constants?.manifest2?.extra?.eas?.projectId;
+  return tokenResponse?.data || null;
+}
 
-  if (!projectId) {
-    throw new Error('Expo projectId is missing for push token generation');
+function getTokenTypeForPlatform() {
+  return Platform.OS === 'ios' ? 'APNS' : 'FCM';
+}
+
+function getDeviceName() {
+  if (Device.deviceName) {
+    return Device.deviceName;
   }
 
-  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  const parts = [Device.brand, Device.modelName].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : `${Platform.OS} device`;
+}
 
-  return token;
+export async function getNativePushRegistration(tokenResponseOverride = null) {
+  const permission = await ensureNotificationPermission();
+
+  if (!permission.granted) {
+    console.log(
+      `[Notifications] Native push permission not granted: ${permission.status}`
+    );
+    return null;
+  }
+
+  const tokenResponse =
+    tokenResponseOverride || (await Notifications.getDevicePushTokenAsync());
+  const token = normalizeTokenData(tokenResponse);
+
+  if (!token) {
+    throw new Error('Native push token was not returned by the device');
+  }
+
+  const deviceId = await getOrCreatePushDeviceId();
+  const registration = {
+    token,
+    tokenType: getTokenTypeForPlatform(),
+    platform: Platform.OS,
+    deviceId,
+    deviceName: getDeviceName(),
+    appVersion:
+      Application.nativeApplicationVersion || Application.applicationId,
+    buildNumber: Application.nativeBuildVersion || null,
+  };
+
+  console.log(
+    `[Notifications] Native token ready platform=${registration.platform} type=${registration.tokenType} deviceId=${registration.deviceId}`
+  );
+
+  return registration;
+}
+
+export async function deactivateCurrentDevicePushRegistration() {
+  const deviceId = await getOrCreatePushDeviceId();
+
+  return {
+    deviceId,
+    platform: Platform.OS,
+  };
 }
 
 export { DEFAULT_ANDROID_CHANNEL };

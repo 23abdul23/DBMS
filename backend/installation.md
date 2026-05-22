@@ -131,7 +131,7 @@ cd backend
 node notifications/workers/notification.worker.js
 ```
 
-The worker listens to the `notifications` queue and creates notification records, then sends Expo push notifications.
+The worker listens to the `notifications` queue, creates notification records, then delivers pushes through direct FCM/APNs providers.
 
 ## 8. PM2 Notes
 
