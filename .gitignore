@@ -49,3 +49,4 @@ ISSUES.txt
 logs.txt
 
 frontend/google-services.json
+backend/logs/
