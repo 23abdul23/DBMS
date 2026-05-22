@@ -169,26 +169,29 @@ eventBus.on('OUTPASS_APPROVED', async (payload) => ...
 
 ### aegis-notification-worker (notification.worker.js)
 
-**Purpose**: Long-running process that consumes notification jobs from Redis queue and sends push notifications
+**Purpose**: Long-running process that consumes notification jobs from Redis queue and sends native push notifications
 
 **What it does**:
 
 - Connects to Redis queue named `"notifications"`
-- Listens for `"send-notification"` jobs
-- For each job:
+- Listens for `"send-notification"` and `"send-push-delivery"` jobs
+- For each notification:
   1. Creates notification record in database
-  2. Fetches user's active push tokens
-  3. Sends push notification to each device
-- Logs successes and failures with `[Worker]` prefix
+  2. Fetches user's active native push tokens
+  3. Queues one delivery job per device
+- For each delivery:
+  1. Sends direct FCM or APNs push
+  2. Updates retry/failure state in `notification_deliveries`
+- Logs successes and failures with `[Worker]` and `[Delivery]` prefixes
 
 **Logs to watch for**:
 
 ```
 [Worker] 🚀 Notification worker started and listening for jobs...
 [Worker] Queue: 'notifications' | Redis: localhost:6379
-[Worker] Processing notification job abc123...
-[Worker] Notification job abc123 completed successfully
-[Push] Notification sent successfully to ExponentPushToken[...]
+[Worker] Processing send-notification job abc123...
+[Worker] Processing send-push-delivery job def456...
+[Delivery] Delivered notification xyz789 via FCM to token pushToken123 on attempt 1
 ```
 
 **Fails if**:

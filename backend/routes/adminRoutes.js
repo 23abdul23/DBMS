@@ -69,7 +69,7 @@ router.get("/dashboard/stats", [authenticate, adminAuth], async (req, res) => {
   }
 })
 
-// Get all users by role (SUPER_ADMIN only)
+// Get all users by role (super_admin only)
 router.get("/users-by-role", [authenticate, adminAuth], async (req, res) => {
   try {
     const { role } = req.query
@@ -81,22 +81,22 @@ router.get("/users-by-role", [authenticate, adminAuth], async (req, res) => {
     }
 
     // Validate role
-    const validRoles = ["student", "warden", "security", "admin", "SUPER_ADMIN"]
+    const validRoles = ["student", "warden", "security", "admin", "super_admin"]
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         message: `Invalid role. Valid roles: ${validRoles.join(", ")}`,
       })
     }
 
-    // Don't return SUPER_ADMIN in listings
-    if (role === "SUPER_ADMIN") {
+    // Don't return super_admin in listings
+    if (role === "super_admin") {
       return res.json({ users: [] })
     }
 
     const users = await prisma.user.findMany({
       where: {
         role: role,
-        // Exclude SUPER_ADMIN from all listings
+        // Exclude super_admin from all listings
         email: {
           not: "adminAegis@iiita.ac.in",
         },

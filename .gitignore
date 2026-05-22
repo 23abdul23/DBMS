@@ -47,3 +47,7 @@ frontend/android/
 
 ISSUES.txt
 logs.txt
+
+frontend/google-services.json
+backend/logs/
+backend/logs/*

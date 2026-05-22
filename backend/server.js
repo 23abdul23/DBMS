@@ -27,6 +27,7 @@ const [
   libraryRoutesModule,
   securityAdminRoutesModule,
   notificationRoutesModule,
+  tokenServiceModule,
 
   eventBusModule,
   notificationQueueModule,
@@ -55,6 +56,7 @@ const [
   import("./routes/libraryRoutes.js"),
   import("./routes/securityAdminRoutes.js"),
   import("./notifications/routes/notifications.js"),
+  import("./notifications/services/token.service.js"),
 
   import("./notifications/events/eventBus.js"),
   import("./notifications/queues/notification.queue.js"),
@@ -67,6 +69,7 @@ const { runCampusActivitySimulation, runCampusClosingSweep } =
 const { CAMPUS_TIMEZONE } = campusActivityRulesModule
 const { getPrismaClient } = prismaModule
 const { expireOldOutpasses } = outpassLifecycleModule
+const { cleanupStalePushTokens } = tokenServiceModule
 const authRoutes = authRoutesModule.default
 const outpassRoutes = outpassRoutesModule.default
 const emergencyRoutes = emergencyRoutesModule.default
@@ -85,7 +88,11 @@ const { notificationQueue } = notificationQueueModule
 
 const app = express()
 const PORT = process.env.PORT || 5000
-const API_BASE_URL = process.API_BASE_URL
+const API_BASE_URL =
+  process.env.ENVIRONMENT == "development"
+    ? process.env.API_BASE_URL_LOCAL
+    : process.env.API_BASE_URL_DEPLOYED
+const localhost = process.env.API_HOST
 const DB_MODE = getDatabaseMode()
 const prisma = getPrismaClient()
 const ENABLE_CAMPUS_SIMULATION =
@@ -97,22 +104,7 @@ app.use(helmet())
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow mobile apps, Postman, curl (no origin)
-      if (!origin) {
-        return callback(null, true)
-      }
-
-      // Allow browser frontend if needed
-      const allowedOrigins = [API_BASE_URL]
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
-      // Allow mobile API access
-      return callback(null, true)
-    },
+    origin: true,
     credentials: true,
   }),
 )
@@ -207,6 +199,23 @@ cron.schedule(
   { timezone: CAMPUS_TIMEZONE },
 )
 
+cron.schedule(
+  "30 2 * * *",
+  async () => {
+    try {
+      const result = await cleanupStalePushTokens()
+      if (result?.count) {
+        console.log(
+          `Notification token cleanup marked ${result.count} stale device registration(s).`,
+        )
+      }
+    } catch (error) {
+      console.error("Notification token cleanup cron failed:", error)
+    }
+  },
+  { timezone: CAMPUS_TIMEZONE },
+)
+
 if (ENABLE_CAMPUS_SIMULATION) {
   cron.schedule(
     "*/59 * * * *",
@@ -269,7 +278,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Aegis ID Backend running on port ${PORT}`)
       console.log(`🗄️ Database mode: ${mode}`)
-      console.log(`📊 Health check: http://localhost:${PORT}/api/health`)
+      console.log(`📊 Health check: ${API_BASE_URL}/health`)
     })
   } catch (error) {
     console.error("Failed to start server:", error)

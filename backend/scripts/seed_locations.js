@@ -1,3 +1,7 @@
+import dotenv from "dotenv"
+
+dotenv.config()
+
 import { getPrismaClient } from "../config/prisma.js"
 import { generateId } from "../utils/hashGenerator.js"
 

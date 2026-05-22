@@ -44,12 +44,17 @@ const backendEnv = readEnvFile(path.resolve(__dirname, '../backend/.env'));
 const getConfigValue = (key, fallback) =>
   process.env[key] || backendEnv[key] || fallback;
 
+const resolveLocalConfigFile = (relativePath) => {
+  const absolutePath = path.resolve(__dirname, relativePath);
+  return fs.existsSync(absolutePath) ? relativePath : '';
+};
+
 const environment = String(getConfigValue('ENVIRONMENT', 'production'))
   .trim()
   .toLowerCase();
 
 const isDevelopment = environment === 'development';
-const isTesting = environment === 'development';
+const isTesting = environment === 'testing';
 const isProduction = environment === 'production';
 
 /**
@@ -69,7 +74,7 @@ const iosBundleIdentifier = isTesting
  * API Config
  */
 const apiPort = Number(
-  getConfigValue('API_PORT', getConfigValue('PORT', 3500))
+  getConfigValue('API_PORT', getConfigValue('PORT', 5000))
 );
 
 const localApiBaseUrl = getConfigValue(
@@ -78,19 +83,33 @@ const localApiBaseUrl = getConfigValue(
 );
 
 const deployedApiBaseUrl = getConfigValue(
-  'API_BASE_URL',
+  'API_BASE_URL_DEPLOYED',
   'https://api.aegisid.app/api'
 );
 
-const apiPrimaryBaseUrl = isDevelopment
-  ? localApiBaseUrl
-  : getConfigValue('API_BASE_URL_PRIMARY', deployedApiBaseUrl);
+const apiPrimaryBaseUrl = isDevelopment ? localApiBaseUrl : deployedApiBaseUrl;
 
 const apiSecondaryBaseUrl = isDevelopment
-  ? getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl)
+  ? deployedApiBaseUrl
   : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
 
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
+const androidGoogleServicesFile = getConfigValue(
+  'ANDROID_GOOGLE_SERVICES_FILE',
+  resolveLocalConfigFile('./google-services.json')
+);
+const iosGoogleServicesFile = getConfigValue(
+  'IOS_GOOGLE_SERVICES_FILE',
+  resolveLocalConfigFile('./GoogleService-Info.plist')
+);
+const apnsEnvironment = String(
+  getConfigValue(
+    'APNS_ENVIRONMENT',
+    isProduction ? 'production' : 'development'
+  )
+)
+  .trim()
+  .toLowerCase();
 
 /**
  * Emergency Contacts
@@ -123,7 +142,7 @@ module.exports = {
 
     slug: appSlug,
 
-    version: '1.6.2',
+    version: '1.6.8',
 
     orientation: 'portrait',
 
@@ -142,7 +161,18 @@ module.exports = {
     ios: {
       bundleIdentifier: iosBundleIdentifier,
 
+      ...(iosGoogleServicesFile
+        ? {
+            googleServicesFile: iosGoogleServicesFile,
+          }
+        : {}),
+
       supportsTablet: true,
+
+      entitlements: {
+        'aps-environment':
+          apnsEnvironment === 'production' ? 'production' : 'development',
+      },
 
       infoPlist: {
         NSCameraUsageDescription:
@@ -153,12 +183,20 @@ module.exports = {
 
         LSApplicationQueriesSchemes: ['tel', 'telprompt', 'sms', 'smsto'],
 
+        UIBackgroundModes: ['remote-notification'],
+
         ITSAppUsesNonExemptEncryption: false,
       },
     },
 
     android: {
       package: androidPackage,
+
+      ...(androidGoogleServicesFile
+        ? {
+            googleServicesFile: androidGoogleServicesFile,
+          }
+        : {}),
 
       adaptiveIcon: {
         foregroundImage: './assets/aegisLogoWhite.png',

@@ -110,7 +110,7 @@ export const getCachedLocations = async () => {
       `[LocationCache] Retrieved ${locations.length} locations from cache`
     );
 
-    console.log('Locations: ', locations);
+    // console.log('Locations: ', locations);
 
     return locations.map((location) => normalizeLocationRecord(location));
   } catch (error) {

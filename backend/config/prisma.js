@@ -23,7 +23,7 @@ const getPrismaClient = () => {
     prisma = new PrismaClient({
       adapter,
       log:
-        process.env.NODE_ENV === "development"
+        process.env.ENVIRONMENT === "development"
           ? ["query", "warn", "error"]
           : ["warn", "error"],
     })

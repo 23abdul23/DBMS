@@ -1,13 +1,10 @@
-export const SAC_ADMIN_EMAILS = ["sacAdmin@iiita.ac.in", "sac@iiita.ac.in"]
-export const LIBRARY_ADMIN_EMAILS = [
-  "libAdmin@iiita.ac.in",
-  "library@iiita.ac.in",
-]
+export const SAC_ADMIN_EMAILS = ["sac@iiita.ac.in", "sacAdmin@iiita.ac.in"]
+export const LIBRARY_ADMIN_EMAILS = ["lib@iiita.ac.in", "library@iiita.ac.in"]
 
 export const SAC_ADMIN_EMAIL = SAC_ADMIN_EMAILS[0]
 export const LIBRARY_ADMIN_EMAIL = LIBRARY_ADMIN_EMAILS[0]
 export const SECURITY_ADMIN_EMAIL = "security@iiita.ac.in"
-export const SUPER_ADMIN_EMAIL = "adminAegis@iiita.ac.in"
+export const super_admin_EMAIL = "adminAegis@iiita.ac.in"
 
 export const normalizeEmail = (value) =>
   String(value || "")
@@ -24,7 +21,7 @@ export const isLibraryAdminEmail = (value) =>
 export const isSecurityAdminEmail = (value) =>
   matchesAnyEmail(value, SECURITY_ADMIN_EMAIL)
 export const isSuperAdminEmail = (value) =>
-  normalizeEmail(value) === normalizeEmail(SUPER_ADMIN_EMAIL)
+  normalizeEmail(value) === normalizeEmail(super_admin_EMAIL)
 
 export const isSacAdministrator = (user) => isSacAdminEmail(user?.email)
 export const isLibraryAdministrator = (user) => isLibraryAdminEmail(user?.email)

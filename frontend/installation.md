@@ -1,6 +1,6 @@
 # Frontend Installation And Setup
 
-This guide covers the frontend-only setup for Aegis: Expo, React Native, navigation, and push-notification testing.
+This guide covers the frontend-only setup for Aegis: Expo, React Native, navigation, and native push-notification testing.
 
 ## 1. Prerequisites
 
@@ -11,7 +11,7 @@ Install these tools before starting:
 - Git
 - Expo CLI or the Expo tooling bundled with your environment
 - Android Studio or Xcode if you want a native simulator/emulator
-- Expo Development Build if you want to test push notifications on SDK 53+
+- Expo Development Build or EAS build if you want to test native FCM/APNs push notifications
 
 ## 2. Install Dependencies
 
@@ -63,9 +63,9 @@ npx expo start --tunnel
 
 ## 5. Push Notification Testing
 
-Expo Go does not support Android remote push notifications on the current SDK line used by this project.
+Expo Go is not sufficient for validating this project's native push pipeline.
 
-Use a development build or a native run target instead of Expo Go when testing push notifications.
+Use a development build or a native run target instead of Expo Go when testing remote push notifications.
 
 Recommended commands:
 
@@ -83,7 +83,7 @@ If you are building a dev client for device testing, use your usual EAS developm
 The app uses:
 
 - React Navigation for screen routing
-- Expo Notifications for push registration
+- Expo Notifications for native token access, permissions, and foreground/tap handling
 - Axios for API calls
 - React Native components and Expo modules for the UI
 
@@ -99,7 +99,7 @@ The app uses:
 ### Push notifications do not work in Expo Go
 
 - Use a development build.
-- Verify the backend saved the push token.
+- Verify the backend saved a native FCM/APNs token.
 - Verify the notification worker is running and Redis is reachable.
 
 ### Useful Paths

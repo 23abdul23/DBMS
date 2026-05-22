@@ -3,7 +3,10 @@
  * Allows axios interceptor to trigger logout in AuthContext
  */
 
+import { createLogger, serializeError } from './logger';
+
 let logoutCallback = null;
+const authLogger = createLogger('auth', 'Auth');
 
 export const setLogoutCallback = (callback) => {
   logoutCallback = callback;
@@ -14,15 +17,15 @@ export const clearLogoutCallback = () => {
 };
 
 export const emitLogout = async (reason = 'SESSION_REVOKED') => {
-  console.log('[LogoutEventEmitter] Logout triggered:', reason);
+  authLogger.info('logout-emitted', { reason });
 
   if (logoutCallback) {
     try {
       await logoutCallback(reason);
     } catch (error) {
-      console.error('[LogoutEventEmitter] Error in logout callback:', error);
+      authLogger.error('logout-callback-failed', serializeError(error));
     }
   } else {
-    console.warn('[LogoutEventEmitter] No logout callback registered');
+    authLogger.warn('logout-callback-missing');
   }
 };
