@@ -13,8 +13,7 @@ import {
   setLogoutCallback,
   clearLogoutCallback,
 } from '../utils/logoutEventEmitter';
-import { Platform } from 'react-native';
-import { registerForPushNotifications } from '../notifications/notificationService';
+import { deactivateCurrentDevicePushRegistration } from '../notifications/notificationService';
 import { cacheLocations } from '../utils/locationCacheManager';
 
 const normalizeLoginRole = (role) => {
@@ -117,23 +116,6 @@ export const AuthProvider = ({ children }) => {
         );
       }
 
-      // Keep login success independent from push registration failures.
-      try {
-        const token = await registerForPushNotifications();
-
-        if (token) {
-          await notificationAPI.saveToken({
-            token,
-            platform: Platform.OS,
-          });
-        }
-      } catch (pushError) {
-        console.log(
-          '[AuthContext] Push token registration failed (non-blocking):',
-          pushError?.message || pushError
-        );
-      }
-
       return { success: true };
     } catch (error) {
       return {
@@ -178,6 +160,23 @@ export const AuthProvider = ({ children }) => {
 
       // Try to notify backend if it's a user-requested logout (not forced by session revocation)
       if (reason === 'USER_REQUESTED') {
+        try {
+          const pushRegistration =
+            await deactivateCurrentDevicePushRegistration();
+
+          await notificationAPI
+            .deactivateToken({
+              ...pushRegistration,
+              reason: 'user_logout',
+            })
+            .catch(() => {});
+        } catch (pushError) {
+          console.log(
+            '[AuthContext] Push token deactivation failed (non-blocking):',
+            pushError?.message || pushError
+          );
+        }
+
         try {
           // Ignore errors - user might already be logged out
           await authAPI.logout?.().catch(() => {});

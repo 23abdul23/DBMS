@@ -1,5 +1,19 @@
 Run from the repository root:
 
+Import users from CSV using name/email and randomize the remaining student data:
+
+`node backend/scripts/upsert_users_from_csv.js`
+
+Optional preview without writing:
+
+`node backend/scripts/upsert_users_from_csv.js --dry-run`
+
+Optional custom CSV path:
+
+`node backend/scripts/upsert_users_from_csv.js --csv=backend/scripts/DATA.csv`
+
+Legacy deterministic student ingestion:
+
 `node backend/scripts/ingest_to_db_students.js`
 
 Optional preview without writing:
