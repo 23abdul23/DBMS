@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { emitLogout } from '../utils/logoutEventEmitter';
+import { createLogger, sanitizeForLogs, serializeError } from '../utils/logger';
 
 const ACTIVE_API_BASE_URL_KEY = 'activeApiBaseUrl';
 const normalizeBaseUrl = (url) => String(url || '').replace(/\/+$/, '');
@@ -26,20 +27,23 @@ const appEnvironement = String(
   .trim()
   .toLowerCase();
 
-console.log(appEnvironement);
-
 export const isDevelopmentEnvironement = appEnvironement === 'development';
 
-// Structured API logger
-const DEBUG_API = __DEV__;
-const apiLog = (obj) => {
-  if (DEBUG_API) {
-    console.log(
-      '[API_LOG]',
-      typeof obj === 'object' ? JSON.stringify(obj) : obj
-    );
-  }
+const apiLogger = createLogger('api', 'API');
+
+const sanitizeUrl = (baseUrl, url) => {
+  const fullUrl = `${baseUrl || ''}${url || ''}`;
+  return fullUrl.replace(/([?&](token|refreshToken|password|email)=)[^&]*/gi, '$1[redacted]');
 };
+
+const buildApiLogContext = (config = {}) => ({
+  method: String(config.method || 'get').toUpperCase(),
+  url: sanitizeUrl(config.baseURL || activeApiBaseUrl, config.url),
+  timeout: config.timeout,
+  hasAuth: Boolean(config.headers?.Authorization),
+  params: sanitizeForLogs(config.params),
+  body: sanitizeForLogs(config.data),
+});
 
 export const devQuickLoginCredentialsByRole = {
   student: {
@@ -94,13 +98,10 @@ const setActiveApiBaseUrl = async (baseUrl, reason = 'manual') => {
   try {
     await AsyncStorage.setItem(ACTIVE_API_BASE_URL_KEY, baseUrl);
   } catch (storageError) {
-    console.warn(
-      'Failed to persist API base URL:',
-      storageError?.message || storageError
-    );
+      apiLogger.warn('failed-to-persist-base-url', serializeError(storageError));
   }
 
-  console.log(`API switched to ${baseUrl} (${reason})`);
+  apiLogger.info('api-base-url-switched', { baseUrl, reason });
 };
 
 const restoreActiveApiBaseUrl = async () => {
@@ -116,47 +117,16 @@ const restoreActiveApiBaseUrl = async () => {
       await setActiveApiBaseUrl(persistedBaseUrl, 'restore');
     }
   } catch (storageError) {
-    console.warn(
-      'Failed to restore API base URL:',
-      storageError?.message || storageError
-    );
+    apiLogger.warn('failed-to-restore-base-url', serializeError(storageError));
   }
 };
 
-const shouldTriggerFailover = (error) => {
-  if (!canFailover) {
-    return false;
-  }
-
-  if (
-    normalizeBaseUrl(activeApiBaseUrl) ===
-    normalizeBaseUrl(SECONDARY_API_BASE_URL)
-  ) {
-    return false;
-  }
-
-  const originalRequest = error?.config;
-  if (!originalRequest || originalRequest.__retriedOnFailover) {
-    return false;
-  }
-
-  if (error?.code === 'ECONNABORTED') {
-    return true;
-  }
-
-  if (!error?.response) {
-    return true;
-  }
-
-  const status = error.response.status;
-  return [500, 502, 503, 504].includes(status);
-};
-
-console.log('Primary API URL:', PRIMARY_API_BASE_URL);
-
-if (SECONDARY_API_BASE_URL) {
-  console.log('Secondary API URL:', SECONDARY_API_BASE_URL);
-}
+apiLogger.info('api-config', {
+  environment: appEnvironement || 'unknown',
+  primaryBaseUrl: PRIMARY_API_BASE_URL,
+  secondaryBaseUrl: SECONDARY_API_BASE_URL || null,
+  failoverEnabled: canFailover,
+});
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -196,23 +166,12 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
 
-      // log request start (avoid logging large bodies)
-      apiLog({
-        event: 'request-start',
-        method: config.method,
-        url: config.url,
-        hasAuth: !!config.headers?.Authorization,
-        paramsPreview: config.params
-          ? JSON.stringify(config.params)
-          : undefined,
-        bodyPreview: config.data
-          ? JSON.stringify(config.data).slice(0, 200)
-          : undefined,
+      apiLogger.debug('request-start', {
+        ...buildApiLogContext(config),
         timestamp: new Date().toISOString(),
       });
     } catch (e) {
-      // non-fatal logging error
-      console.warn('[API] request interceptor error', e?.message || e);
+      apiLogger.warn('request-interceptor-log-failed', serializeError(e));
     }
 
     return config;
@@ -228,14 +187,16 @@ api.interceptors.response.use(
     try {
       const start = response.config?._startTime;
       const duration = start ? Date.now() - start : null;
-      apiLog({
-        event: 'response-received',
-        method: response.config?.method,
-        url: response.config?.url,
+      apiLogger.debug('response-received', {
+        method: String(response.config?.method || 'get').toUpperCase(),
+        url: sanitizeUrl(
+          response.config?.baseURL || activeApiBaseUrl,
+          response.config?.url
+        ),
         status: response.status,
         durationMs: duration,
       });
-    } catch (e) {
+    } catch {
       // ignore logging failures
     }
     return response;
@@ -249,10 +210,12 @@ api.interceptors.response.use(
       const duration = originalRequest?._startTime
         ? Date.now() - originalRequest._startTime
         : null;
-      apiLog({
-        event: 'request-error',
-        method: originalRequest?.method,
-        url: originalRequest?.url,
+      apiLogger.warn('request-error', {
+        method: String(originalRequest?.method || 'get').toUpperCase(),
+        url: sanitizeUrl(
+          originalRequest?.baseURL || activeApiBaseUrl,
+          originalRequest?.url
+        ),
         status: error.response?.status,
         code: errorCode,
         message: errorMessage,
@@ -260,18 +223,17 @@ api.interceptors.response.use(
         retried: !!originalRequest?._retry,
       });
     } catch (e) {
-      console.warn('[API] error logging failed', e?.message || e);
+      apiLogger.warn('response-error-log-failed', serializeError(e));
     }
 
     // If already retried or not a 401, don't retry
-    if (originalRequest._retry || error.response?.status !== 401) {
+    if (originalRequest?._retry || error.response?.status !== 401) {
       return Promise.reject(error);
     }
 
     // SESSION_REVOKED means user logged in elsewhere - force logout immediately
     if (errorCode === 'SESSION_REVOKED' || errorCode === 'USER_DISABLED') {
-      apiLog({
-        event: 'session-revoked',
+      apiLogger.warn('session-revoked', {
         code: errorCode,
         message: errorMessage,
       });
@@ -289,22 +251,24 @@ api.interceptors.response.use(
 
     // TOKEN_EXPIRED or TOKEN needs refresh
     if (errorCode === 'TOKEN_EXPIRED' || error.response?.status === 401) {
+      if (!originalRequest) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
 
         if (!refreshToken) {
-          apiLog({
-            event: 'no-refresh-token',
+          apiLogger.warn('no-refresh-token', {
             message: 'No refresh token available - logging out',
           });
           await emitLogout('NO_REFRESH_TOKEN');
           return Promise.reject(error);
         }
 
-        apiLog({
-          event: 'token-refresh-attempt',
+        apiLogger.debug('token-refresh-attempt', {
           url: `${PRIMARY_API_BASE_URL}/auth/refresh`,
         });
         const response = await axios.post(
@@ -324,7 +288,7 @@ api.interceptors.response.use(
 
         // Check if refresh was successful
         if (responseCode === 'SESSION_REVOKED' || !accessToken) {
-          apiLog({ event: 'refresh-session-revoked', responseCode });
+          apiLogger.warn('refresh-session-revoked', { responseCode });
           await Promise.all([
             SecureStore.deleteItemAsync('accessToken').catch(() => {}),
             SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -340,15 +304,14 @@ api.interceptors.response.use(
           await SecureStore.setItemAsync('refreshToken', newRefreshToken);
         }
 
-        apiLog({ event: 'token-refreshed-success' });
+        apiLogger.info('token-refreshed-success');
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        apiLog({
-          event: 'token-refresh-failed',
-          error: refreshError.response?.data,
+        apiLogger.warn('token-refresh-failed', {
+          error: serializeError(refreshError),
         });
 
         const refreshErrorCode = refreshError.response?.data?.code;
@@ -360,9 +323,9 @@ api.interceptors.response.use(
           refreshErrorCode === 'USER_DISABLED' ||
           refreshError.response?.status === 401
         ) {
-          console.log(
-            '[API] Refresh error indicates session revoked - logging out'
-          );
+          apiLogger.warn('refresh-error-triggered-logout', {
+            refreshErrorCode,
+          });
           await Promise.all([
             SecureStore.deleteItemAsync('accessToken').catch(() => {}),
             SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
@@ -414,11 +377,17 @@ export const studentAPI = {
 
 export const notificationAPI = {
   saveToken: (data) => api.post('/notifications/token', data),
+  deactivateToken: (data) => api.post('/notifications/token/deactivate', data),
   list: (params = {}) => api.get('/notifications', { params }),
   unreadCount: () => api.get('/notifications/unread-count'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   testHelloNotification: (studentId) =>
     api.post('/notifications/test-hello', { studentId }),
+  adminOverview: () => api.get('/notifications/admin/overview'),
+  adminTokens: (params = {}) =>
+    api.get('/notifications/admin/tokens', { params }),
+  adminDeliveries: (params = {}) =>
+    api.get('/notifications/admin/deliveries', { params }),
 };
 
 export const outpass = {

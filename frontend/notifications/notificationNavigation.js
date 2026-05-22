@@ -1,6 +1,8 @@
 import { createNavigationContainerRef } from '@react-navigation/native';
+import { createLogger, serializeError } from '../utils/logger';
 
 export const navigationRef = createNavigationContainerRef();
+const navigationLogger = createLogger('notifications', 'Notifications');
 
 let navigationReady = false;
 const pendingResponses = [];
@@ -24,24 +26,36 @@ function navigateFromResponse(response) {
       params =
         typeof data.params === 'string' ? JSON.parse(data.params) : data.params;
     } catch (e) {
-      console.log('[Notifications] Failed to parse navigation params:', e);
+      navigationLogger.warn(
+        'failed-to-parse-notification-navigation-params',
+        serializeError(e)
+      );
     }
   }
 
   if (!navigationRef.isReady()) {
+    navigationLogger.debug('queueing-notification-response-until-navigation-ready');
     pendingResponses.push(response);
     return;
   }
 
   try {
+    navigationLogger.info('navigating-from-notification-response', {
+      targetRoute,
+      params,
+    });
     navigationRef.navigate(targetRoute, params);
   } catch (error) {
-    console.log('[Notifications] Navigation from response failed:', error);
+    navigationLogger.error(
+      'notification-navigation-failed',
+      serializeError(error)
+    );
   }
 }
 
 export function handleNotificationResponse(response) {
   if (!navigationReady || !navigationRef.isReady()) {
+    navigationLogger.debug('notification-response-received-before-navigation-ready');
     pendingResponses.push(response);
     return;
   }
@@ -51,6 +65,10 @@ export function handleNotificationResponse(response) {
 
 export function setNavigationReady(isReady) {
   navigationReady = Boolean(isReady);
+  navigationLogger.debug('navigation-ready-state-updated', {
+    navigationReady,
+    queuedResponses: pendingResponses.length,
+  });
 
   if (!navigationReady || !navigationRef.isReady()) {
     return;

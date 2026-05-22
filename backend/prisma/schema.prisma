@@ -24,6 +24,7 @@ enum Department {
   IT
   IT_BI
   Electronics
+  M_Tech
 }
 
 enum AcademicYear {
@@ -122,6 +123,33 @@ enum NotificationPriority {
   NORMAL
   HIGH
   URGENT
+}
+
+enum PushTokenType {
+  FCM
+  APNS
+}
+
+enum PushPlatform {
+  android
+  ios
+}
+
+enum PushTokenStatus {
+  ACTIVE
+  INVALID
+  LOGGED_OUT
+  STALE
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  SENDING
+  RETRYING
+  DELIVERED
+  FAILED
+  INVALID_TOKEN
+  SKIPPED
 }
 
 model User {
@@ -504,12 +532,16 @@ model Notification {
 
   entityId    String?  @map("entity_id")
   entityType  String?  @map("entity_type")
+  routeName   String?  @map("route_name")
+  routeParams Json?    @map("route_params")
+  badgeCount  Int?     @map("badge_count")
 
   isRead      Boolean  @default(false)
 
   createdAt   DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
 
   @@index([userId, isRead])
   @@index([createdAt(sort: Desc)])
@@ -524,19 +556,59 @@ model PushToken {
 
   token       String   @unique
 
-  platform    String
+  tokenType   PushTokenType @map("token_type")
+  platform    PushPlatform
 
+  deviceId    String   @map("device_id") @db.VarChar(128)
   deviceName  String?  @map("device_name")
+  appVersion  String?  @map("app_version") @db.VarChar(50)
+  buildNumber String?  @map("build_number") @db.VarChar(50)
 
   isActive    Boolean  @default(true)
+  status      PushTokenStatus @default(ACTIVE)
+  invalidReason String? @map("invalid_reason")
 
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  lastRegisteredAt DateTime @default(now()) @map("last_registered_at")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+  lastDeliveredAt DateTime? @map("last_delivered_at")
+  lastFailureAt DateTime? @map("last_failure_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
 
-  @@index([userId])
+  @@unique([deviceId])
+  @@index([userId, isActive, status])
+  @@index([lastSeenAt])
 
   @@map("push_tokens")
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(cuid())
+  notificationId    String                     @map("notification_id")
+  pushTokenId       String                     @map("push_token_id")
+  status            NotificationDeliveryStatus @default(QUEUED)
+  attemptCount      Int                        @default(0) @map("attempt_count")
+  providerMessageId String?                    @map("provider_message_id")
+  failureCode       String?                    @map("failure_code")
+  failureReason     String?                    @map("failure_reason")
+  providerResponse  Json?                      @map("provider_response")
+  nextRetryAt       DateTime?                  @map("next_retry_at")
+  sentAt            DateTime?                  @map("sent_at")
+  deliveredAt       DateTime?                  @map("delivered_at")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  pushToken     PushToken    @relation(fields: [pushTokenId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId, status])
+  @@index([pushTokenId, status])
+  @@index([createdAt(sort: Desc)])
+
+  @@map("notification_deliveries")
 }
 
 model NotificationPreference {

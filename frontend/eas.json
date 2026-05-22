@@ -7,18 +7,33 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "ANDROID_GOOGLE_SERVICES_FILE": "./google-services.json",
+        "IOS_GOOGLE_SERVICES_FILE": "./GoogleService-Info.plist",
+        "APNS_ENVIRONMENT": "development"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "ANDROID_GOOGLE_SERVICES_FILE": "./google-services.json",
+        "IOS_GOOGLE_SERVICES_FILE": "./GoogleService-Info.plist",
+        "APNS_ENVIRONMENT": "development"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "ANDROID_GOOGLE_SERVICES_FILE": "./google-services.json",
+        "IOS_GOOGLE_SERVICES_FILE": "./GoogleService-Info.plist",
+        "APNS_ENVIRONMENT": "production"
+      },
       "android": {
         "buildType": "app-bundle"
       }

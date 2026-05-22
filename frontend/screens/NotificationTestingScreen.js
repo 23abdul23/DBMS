@@ -1,29 +1,65 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   FlatList,
-  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
-import { notificationAPI } from '../services/api';
+
 import ImpersonationBanner from '../components/ImpersonationBanner';
+import { useTheme } from '../context/ThemeContext';
+import { notificationAPI } from '../services/api';
+
+function formatStatusCounts(items = []) {
+  return items.reduce((accumulator, item) => {
+    accumulator[item.status] = item?._count?._all || 0;
+    return accumulator;
+  }, {});
+}
 
 export default function NotificationTestingScreen() {
   const { colors } = useTheme();
   const [studentId, setStudentId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [testLogs, setTestLogs] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
   const [result, setResult] = useState(null);
-  const [expandedLog, setExpandedLog] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [tokens, setTokens] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
+
+  const refreshDiagnostics = async () => {
+    try {
+      setLoadingDiagnostics(true);
+
+      const [overviewResponse, tokensResponse, deliveriesResponse] =
+        await Promise.all([
+          notificationAPI.adminOverview(),
+          notificationAPI.adminTokens({ limit: 12 }),
+          notificationAPI.adminDeliveries({ limit: 12 }),
+        ]);
+
+      setOverview(overviewResponse.data || null);
+      setTokens(tokensResponse.data?.data || []);
+      setDeliveries(deliveriesResponse.data?.data || []);
+    } catch (error) {
+      console.log(
+        '[Notifications] Failed to load diagnostics:',
+        error?.message || error
+      );
+    } finally {
+      setLoadingDiagnostics(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshDiagnostics();
+  }, []);
 
   const handleSendTestNotification = async () => {
     if (!studentId.trim()) {
@@ -32,156 +68,43 @@ export default function NotificationTestingScreen() {
     }
 
     try {
-      setLoading(true);
+      setSending(true);
       const response = await notificationAPI.testHelloNotification(studentId);
 
       if (response?.data?.success) {
         setResult(response.data);
-        setTestLogs((prev) => [
-          {
-            id: Date.now().toString(),
-            timestamp: new Date().toLocaleTimeString(),
-            studentId,
-            ...response.data,
-          },
-          ...prev,
-        ]);
         setStudentId('');
+        await refreshDiagnostics();
         Alert.alert(
-          'Success',
-          `Test notification sent to ${response.data.studentName || studentId}`
+          'Queued',
+          `Native push notification queued for ${
+            response.data.studentName || studentId
+          }`
         );
       } else {
+        const errorMessage =
+          response?.data?.error || 'Failed to queue notification';
         setResult({
           success: false,
-          error: response?.data?.error || 'Unknown error',
+          error: errorMessage,
         });
-        Alert.alert(
-          'Error',
-          response?.data?.error || 'Failed to send notification'
-        );
+        Alert.alert('Error', errorMessage);
       }
     } catch (error) {
-      const errorMsg =
+      const errorMessage =
         error?.response?.data?.error || error?.message || 'Unknown error';
       setResult({
         success: false,
-        error: errorMsg,
+        error: errorMessage,
       });
-      Alert.alert('Error', errorMsg);
+      Alert.alert('Error', errorMessage);
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
-  const renderResultStatus = () => {
-    if (!result) return null;
-
-    if (result.success) {
-      return (
-        <View style={[styles.resultCard, styles.successCard]}>
-          <View style={styles.resultHeader}>
-            <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
-            <Text style={[styles.resultTitle, { color: '#16a34a' }]}>
-              Notification Queued
-            </Text>
-          </View>
-
-          <View style={styles.resultContent}>
-            <ResultRow label="Student" value={result.studentName} />
-            <ResultRow label="Email" value={result.studentEmail} />
-            {result.tokenFound && (
-              <>
-                <ResultRow
-                  label="Device"
-                  value={result.tokenInfo?.deviceName}
-                />
-                <ResultRow
-                  label="Platform"
-                  value={result.tokenInfo?.platform}
-                />
-              </>
-            )}
-            {!result.tokenFound && (
-              <ResultRow
-                label="Status"
-                value="⚠️ No active push token"
-                valueColor="#ea580c"
-              />
-            )}
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={[styles.resultCard, styles.errorCard]}>
-        <View style={styles.resultHeader}>
-          <Ionicons name="close-circle" size={24} color="#ef4444" />
-          <Text style={[styles.resultTitle, { color: '#dc2626' }]}>Error</Text>
-        </View>
-        <Text style={[styles.errorMessage, { color: '#991b1b' }]}>
-          {result.error}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderLogItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.logItem,
-        { borderColor: colors.border, borderWidth: 1 },
-        item.success
-          ? { backgroundColor: colors.success + '15' }
-          : { backgroundColor: colors.danger + '15' },
-      ]}
-      onPress={() => setExpandedLog(expandedLog === item.id ? null : item.id)}
-    >
-      <View style={styles.logHeader}>
-        <View style={styles.logTitleRow}>
-          <Ionicons
-            name={item.success ? 'checkmark-circle' : 'close-circle'}
-            size={20}
-            color={item.success ? colors.success : colors.danger}
-          />
-          <Text style={[styles.logTime, { color: colors.text }]}>
-            {item.timestamp}
-          </Text>
-        </View>
-        <Ionicons
-          name={expandedLog === item.id ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={colors.textMuted}
-        />
-      </View>
-
-      {expandedLog === item.id && (
-        <View style={[styles.logDetails, { borderTopColor: colors.border }]}>
-          <DetailRow label="Student ID" value={item.studentId} />
-          {item.studentName && (
-            <DetailRow label="Name" value={item.studentName} />
-          )}
-          {item.studentEmail && (
-            <DetailRow label="Email" value={item.studentEmail} />
-          )}
-          {item.success && item.tokenFound && (
-            <>
-              <DetailRow label="Device" value={item.tokenInfo?.deviceName} />
-              <DetailRow label="Platform" value={item.tokenInfo?.platform} />
-            </>
-          )}
-          {item.error && (
-            <DetailRow
-              label="Error"
-              value={item.error}
-              valueColor={colors.danger}
-            />
-          )}
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+  const tokenCounts = formatStatusCounts(overview?.tokenCounts);
+  const deliveryCounts = formatStatusCounts(overview?.recentDeliveries);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -189,15 +112,40 @@ export default function NotificationTestingScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
       >
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Test HELLO Notification
-          </Text>
-          <Text
-            style={[styles.sectionDescription, { color: colors.textMuted }]}
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Native Push Diagnostics
+            </Text>
+            <Text
+              style={[styles.sectionDescription, { color: colors.textMuted }]}
+            >
+              Android uses FCM tokens. iOS uses APNs tokens. Expo relay is not
+              in this path.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.refreshButton,
+              { borderColor: colors.border, backgroundColor: colors.card },
+            ]}
+            onPress={refreshDiagnostics}
+            disabled={loadingDiagnostics}
           >
-            Send a test notification to verify push delivery
+            {loadingDiagnostics ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="refresh" size={18} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Send Direct Push Test
           </Text>
 
           <View style={[styles.inputContainer, { borderColor: colors.border }]}>
@@ -213,7 +161,7 @@ export default function NotificationTestingScreen() {
               placeholderTextColor={colors.textMuted}
               value={studentId}
               onChangeText={setStudentId}
-              editable={!loading}
+              editable={!sending}
             />
           </View>
 
@@ -221,72 +169,276 @@ export default function NotificationTestingScreen() {
             style={[
               styles.sendButton,
               { backgroundColor: colors.primary },
-              loading && { opacity: 0.6 },
+              sending && { opacity: 0.7 },
             ]}
             onPress={handleSendTestNotification}
-            disabled={loading}
+            disabled={sending}
           >
-            {loading ? (
+            {sending ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Ionicons name="send" size={18} color="#fff" />
             )}
             <Text style={styles.sendButtonText}>
-              {loading ? 'Sending...' : 'Send Test Notification'}
+              {sending ? 'Queueing...' : 'Queue Test Notification'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {renderResultStatus()}
-
-        {testLogs.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Tests ({testLogs.length})
+        {result && (
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: result.success
+                  ? colors.success + '14'
+                  : colors.danger + '14',
+                borderColor: result.success ? colors.success : colors.danger,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.cardTitle,
+                { color: result.success ? colors.success : colors.danger },
+              ]}
+            >
+              {result.success ? 'Queued Successfully' : 'Queue Failed'}
             </Text>
 
-            <FlatList
-              data={testLogs}
-              renderItem={renderLogItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              nestedScrollEnabled={false}
-            />
+            {result.success ? (
+              <>
+                <InfoRow
+                  label="Student"
+                  value={`${result.studentName} (${result.studentEmail})`}
+                  colors={colors}
+                />
+                <InfoRow
+                  label="Active Devices"
+                  value={String(result.tokenCount || 0)}
+                  colors={colors}
+                />
+                {(result.tokenInfo || []).map((token) => (
+                  <InfoRow
+                    key={token.id}
+                    label={`${token.platform}/${token.tokenType}`}
+                    value={`${token.deviceName} • ${token.deviceId}`}
+                    colors={colors}
+                  />
+                ))}
+              </>
+            ) : (
+              <Text style={[styles.errorText, { color: colors.danger }]}>
+                {result.error}
+              </Text>
+            )}
           </View>
         )}
 
-        <View style={styles.footer} />
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Token Status
+          </Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              label="Active"
+              value={tokenCounts.ACTIVE || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Invalid"
+              value={tokenCounts.INVALID || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Logged Out"
+              value={tokenCounts.LOGGED_OUT || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Stale"
+              value={tokenCounts.STALE || 0}
+              colors={colors}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Delivery Status (7 days)
+          </Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              label="Delivered"
+              value={deliveryCounts.DELIVERED || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Retrying"
+              value={deliveryCounts.RETRYING || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Failed"
+              value={deliveryCounts.FAILED || 0}
+              colors={colors}
+            />
+            <StatCard
+              label="Invalid"
+              value={deliveryCounts.INVALID_TOKEN || 0}
+              colors={colors}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Recent Device Registrations
+          </Text>
+          <FlatList
+            data={tokens}
+            scrollEnabled={false}
+            keyExtractor={(item) => item.id}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.listCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.listTitle, { color: colors.text }]}>
+                  {item.user?.name || item.user?.email || item.userId}
+                </Text>
+                <Text style={[styles.listMeta, { color: colors.textMuted }]}>
+                  {item.platform.toUpperCase()} • {item.tokenType} •{' '}
+                  {item.status}
+                </Text>
+                <Text style={[styles.listMeta, { color: colors.textMuted }]}>
+                  {item.deviceName || 'Unknown device'} • {item.deviceId}
+                </Text>
+              </View>
+            )}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Recent Delivery Failures
+          </Text>
+          <FlatList
+            data={(overview?.recentFailures || []).slice(0, 8)}
+            scrollEnabled={false}
+            keyExtractor={(item) => item.id}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                No recent failed deliveries
+              </Text>
+            }
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.listCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.listTitle, { color: colors.text }]}>
+                  {item.notification?.title || 'Notification'}
+                </Text>
+                <Text style={[styles.listMeta, { color: colors.textMuted }]}>
+                  {item.pushToken?.user?.name || item.pushToken?.user?.email}
+                </Text>
+                <Text style={[styles.listMeta, { color: colors.danger }]}>
+                  {item.status} • {item.failureCode || item.failureReason}
+                </Text>
+              </View>
+            )}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Recent Delivery Log
+          </Text>
+          <FlatList
+            data={deliveries}
+            scrollEnabled={false}
+            keyExtractor={(item) => item.id}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.listCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.listTitle, { color: colors.text }]}>
+                  {item.notification?.title || 'Notification'}
+                </Text>
+                <Text style={[styles.listMeta, { color: colors.textMuted }]}>
+                  {item.pushToken?.platform?.toUpperCase()} •{' '}
+                  {item.pushToken?.tokenType} • attempt {item.attemptCount}
+                </Text>
+                <Text
+                  style={[
+                    styles.listMeta,
+                    {
+                      color:
+                        item.status === 'DELIVERED'
+                          ? colors.success
+                          : item.status === 'RETRYING'
+                          ? colors.warning
+                          : item.status === 'FAILED' ||
+                            item.status === 'INVALID_TOKEN'
+                          ? colors.danger
+                          : colors.textMuted,
+                    },
+                  ]}
+                >
+                  {item.status}
+                  {item.failureCode ? ` • ${item.failureCode}` : ''}
+                </Text>
+              </View>
+            )}
+          />
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-function ResultRow({ label, value, valueColor }) {
-  const { colors } = useTheme();
+function InfoRow({ label, value, colors }) {
   return (
-    <View style={styles.resultRow}>
-      <Text style={[styles.resultLabel, { color: colors.textMuted }]}>
-        {label}:
+    <View style={styles.infoRow}>
+      <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+        {label}
       </Text>
-      <Text style={[styles.resultValue, { color: valueColor || colors.text }]}>
-        {value || 'N/A'}
-      </Text>
+      <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
 
-function DetailRow({ label, value, valueColor }) {
-  const { colors } = useTheme();
+function StatCard({ label, value, colors }) {
   return (
-    <View style={styles.detailRow}>
-      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>
-        {label}:
-      </Text>
-      <Text
-        style={[styles.detailValue, { color: valueColor || colors.text }]}
-        numberOfLines={3}
-      >
-        {value}
+    <View
+      style={[
+        styles.statCard,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+    >
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+        {label}
       </Text>
     </View>
   );
@@ -299,24 +451,46 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  content: {
+    paddingBottom: 32,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+  },
+  refreshButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   section: {
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 4,
   },
   sectionDescription: {
     fontSize: 13,
-    marginBottom: 16,
+    marginTop: 4,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
     marginBottom: 12,
     backgroundColor: '#fff',
@@ -333,104 +507,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 10,
     paddingVertical: 12,
-    borderRadius: 8,
     gap: 8,
   },
   sendButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
-  },
-  // Result Card
-  resultCard: {
-    marginHorizontal: 12,
-    marginVertical: 12,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-  },
-  successCard: {
-    borderLeftColor: '#22c55e',
-    backgroundColor: '#f0fdf4',
-  },
-  errorCard: {
-    borderLeftColor: '#ef4444',
-    backgroundColor: '#fef2f2',
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  resultTitle: {
-    fontSize: 16,
     fontWeight: '700',
   },
-  resultContent: {
-    gap: 8,
+  card: {
+    marginHorizontal: 12,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
   },
-  resultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
   },
-  resultLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  resultValue: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  errorMessage: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  // Log Item
-  logItem: {
-    borderRadius: 8,
-    padding: 12,
+  infoRow: {
+    gap: 4,
     marginBottom: 8,
   },
-  logHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
-  logTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  logTime: {
+  infoValue: {
     fontSize: 13,
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  logDetails: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 4,
+  statCard: {
+    minWidth: '47%',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  detailLabel: {
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  statLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    flex: 0.35,
+    marginTop: 4,
   },
-  detailValue: {
+  listCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  listTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  listMeta: {
     fontSize: 12,
-    flex: 0.65,
-    textAlign: 'right',
+    marginTop: 4,
   },
-  footer: {
-    height: 40,
+  emptyText: {
+    fontSize: 13,
   },
 });

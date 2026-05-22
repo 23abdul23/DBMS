@@ -27,6 +27,7 @@ const [
   libraryRoutesModule,
   securityAdminRoutesModule,
   notificationRoutesModule,
+  tokenServiceModule,
 
   eventBusModule,
   notificationQueueModule,
@@ -55,6 +56,7 @@ const [
   import("./routes/libraryRoutes.js"),
   import("./routes/securityAdminRoutes.js"),
   import("./notifications/routes/notifications.js"),
+  import("./notifications/services/token.service.js"),
 
   import("./notifications/events/eventBus.js"),
   import("./notifications/queues/notification.queue.js"),
@@ -67,6 +69,7 @@ const { runCampusActivitySimulation, runCampusClosingSweep } =
 const { CAMPUS_TIMEZONE } = campusActivityRulesModule
 const { getPrismaClient } = prismaModule
 const { expireOldOutpasses } = outpassLifecycleModule
+const { cleanupStalePushTokens } = tokenServiceModule
 const authRoutes = authRoutesModule.default
 const outpassRoutes = outpassRoutesModule.default
 const emergencyRoutes = emergencyRoutesModule.default
@@ -202,6 +205,23 @@ cron.schedule(
       }
     } catch (error) {
       console.error("Nightly outpass expiry cron failed:", error)
+    }
+  },
+  { timezone: CAMPUS_TIMEZONE },
+)
+
+cron.schedule(
+  "30 2 * * *",
+  async () => {
+    try {
+      const result = await cleanupStalePushTokens()
+      if (result?.count) {
+        console.log(
+          `Notification token cleanup marked ${result.count} stale device registration(s).`,
+        )
+      }
+    } catch (error) {
+      console.error("Notification token cleanup cron failed:", error)
     }
   },
   { timezone: CAMPUS_TIMEZONE },

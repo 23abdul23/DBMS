@@ -44,6 +44,11 @@ const backendEnv = readEnvFile(path.resolve(__dirname, '../backend/.env'));
 const getConfigValue = (key, fallback) =>
   process.env[key] || backendEnv[key] || fallback;
 
+const resolveLocalConfigFile = (relativePath) => {
+  const absolutePath = path.resolve(__dirname, relativePath);
+  return fs.existsSync(absolutePath) ? relativePath : '';
+};
+
 const environment = String(getConfigValue('ENVIRONMENT', 'production'))
   .trim()
   .toLowerCase();
@@ -91,6 +96,22 @@ const apiSecondaryBaseUrl = isDevelopment
   : getConfigValue('API_BASE_URL_SECONDARY', deployedApiBaseUrl);
 
 const apiHost = getConfigValue('API_HOST', '10.145.159.171');
+const androidGoogleServicesFile = getConfigValue(
+  'ANDROID_GOOGLE_SERVICES_FILE',
+  resolveLocalConfigFile('./google-services.json')
+);
+const iosGoogleServicesFile = getConfigValue(
+  'IOS_GOOGLE_SERVICES_FILE',
+  resolveLocalConfigFile('./GoogleService-Info.plist')
+);
+const apnsEnvironment = String(
+  getConfigValue(
+    'APNS_ENVIRONMENT',
+    isProduction ? 'production' : 'development'
+  )
+)
+  .trim()
+  .toLowerCase();
 
 /**
  * Emergency Contacts
@@ -142,7 +163,18 @@ module.exports = {
     ios: {
       bundleIdentifier: iosBundleIdentifier,
 
+      ...(iosGoogleServicesFile
+        ? {
+            googleServicesFile: iosGoogleServicesFile,
+          }
+        : {}),
+
       supportsTablet: true,
+
+      entitlements: {
+        'aps-environment':
+          apnsEnvironment === 'production' ? 'production' : 'development',
+      },
 
       infoPlist: {
         NSCameraUsageDescription:
@@ -153,12 +185,20 @@ module.exports = {
 
         LSApplicationQueriesSchemes: ['tel', 'telprompt', 'sms', 'smsto'],
 
+        UIBackgroundModes: ['remote-notification'],
+
         ITSAppUsesNonExemptEncryption: false,
       },
     },
 
     android: {
       package: androidPackage,
+
+      ...(androidGoogleServicesFile
+        ? {
+            googleServicesFile: androidGoogleServicesFile,
+          }
+        : {}),
 
       adaptiveIcon: {
         foregroundImage: './assets/aegisLogoWhite.png',

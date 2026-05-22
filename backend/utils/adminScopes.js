@@ -1,6 +1,6 @@
-export const SAC_ADMIN_EMAILS = ["sacAdmin@iiita.ac.in", "sac@iiita.ac.in"]
+export const SAC_ADMIN_EMAILS = ["sac@iiita.ac.in", "sacAdmin@iiita.ac.in"]
 export const LIBRARY_ADMIN_EMAILS = [
-  "libAdmin@iiita.ac.in",
+  "lib@iiita.ac.in",
   "library@iiita.ac.in",
 ]
 

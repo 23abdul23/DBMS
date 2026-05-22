@@ -3,7 +3,10 @@ import dotenv from "dotenv"
 dotenv.config()
 
 import { Worker } from "bullmq"
-import { createNotification } from "../services/notification.service.js"
+import {
+  createNotification,
+  processNotificationDelivery,
+} from "../services/notification.service.js"
 
 const REDIS_HOST = process.env.REDIS_HOST || "localhost"
 const REDIS_PORT = Number(process.env.REDIS_PORT || 6379)
@@ -12,13 +15,24 @@ const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined
 const worker = new Worker(
   "notifications",
   async (job) => {
-    console.log(`[Worker] Processing notification job ${job.id}...`)
+    console.log(`[Worker] Processing ${job.name} job ${job.id}...`)
+
     try {
-      const result = await createNotification(job.data)
-      console.log(`[Worker] Notification job ${job.id} completed successfully`)
+      const result =
+        job.name === "send-push-delivery"
+          ? await processNotificationDelivery(job)
+          : await createNotification(job.data)
+
+      console.log(
+        `[Worker] ${job.name} job ${job.id} completed with status ${result?.status || "ok"}`,
+      )
+
       return result
     } catch (error) {
-      console.error(`[Worker] Error processing job ${job.id}:`, error.message)
+      console.error(
+        `[Worker] Error processing ${job.name} job ${job.id}:`,
+        error.message,
+      )
       throw error
     }
   },
@@ -32,11 +46,11 @@ const worker = new Worker(
 )
 
 worker.on("completed", (job) => {
-  console.log(`[Worker] Job ${job.id} completed`)
+  console.log(`[Worker] Job ${job.id} (${job.name}) completed`)
 })
 
 worker.on("failed", (job, error) => {
-  console.error(`[Worker] Job ${job.id} failed:`, error.message)
+  console.error(`[Worker] Job ${job?.id} (${job?.name}) failed:`, error.message)
 })
 
 worker.on("error", (error) => {
@@ -53,7 +67,7 @@ const shutdown = async (signal) => {
 process.on("SIGINT", () => shutdown("SIGINT"))
 process.on("SIGTERM", () => shutdown("SIGTERM"))
 
-console.log("[Worker] 🚀 Notification worker started and listening for jobs...")
+console.log("[Worker] Notification worker started and listening for jobs...")
 console.log(
   `[Worker] Queue: 'notifications' | Redis: ${REDIS_HOST}:${REDIS_PORT}`,
 )

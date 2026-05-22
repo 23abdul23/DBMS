@@ -385,6 +385,18 @@ router.post("/login", async (req, res) => {
       },
     })
 
+    await prisma.pushToken.updateMany({
+      where: {
+        userId: user.id,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+        status: "LOGGED_OUT",
+        invalidReason: "single_device_policy_login_rotation",
+      },
+    })
+
     const refreshToken = generateRefreshToken()
 
     const refreshTokenHash = hashToken(refreshToken)

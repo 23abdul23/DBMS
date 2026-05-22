@@ -13,9 +13,9 @@ import {
   setLogoutCallback,
   clearLogoutCallback,
 } from '../utils/logoutEventEmitter';
-import { Platform } from 'react-native';
-import { registerForPushNotifications } from '../notifications/notificationService';
+import { deactivateCurrentDevicePushRegistration } from '../notifications/notificationService';
 import { cacheLocations } from '../utils/locationCacheManager';
+import { createLogger, serializeError } from '../utils/logger';
 
 const normalizeLoginRole = (role) => {
   if (role === 'sac_admin' || role === 'library_admin') {
@@ -26,6 +26,7 @@ const normalizeLoginRole = (role) => {
 };
 
 const AuthContext = createContext();
+const authLogger = createLogger('auth', 'Auth');
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -72,7 +73,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     } catch (error) {
-      console.log('Error loading stored auth:', error);
+      authLogger.warn('failed-to-load-stored-auth', serializeError(error));
     } finally {
       setLoading(false);
     }
@@ -104,38 +105,24 @@ export const AuthProvider = ({ children }) => {
 
         if (locationsData.length > 0) {
           await cacheLocations(locationsData);
-          console.log(
-            `[AuthContext] Preloaded ${locationsData.length} locations to cache`
-          );
-        }
-      } catch (locError) {
-        // Non-blocking - if location preload fails, continue with login
-        // LocationContext will fetch locations when it initializes
-        console.log(
-          '[AuthContext] Location preload failed (non-blocking):',
-          locError
-        );
-      }
-
-      // Keep login success independent from push registration failures.
-      try {
-        const token = await registerForPushNotifications();
-
-        if (token) {
-          await notificationAPI.saveToken({
-            token,
-            platform: Platform.OS,
+          authLogger.info('preloaded-active-locations', {
+            count: locationsData.length,
           });
         }
-      } catch (pushError) {
-        console.log(
-          '[AuthContext] Push token registration failed (non-blocking):',
-          pushError?.message || pushError
+      } catch (locError) {
+        authLogger.warn(
+          'location-preload-failed-non-blocking',
+          serializeError(locError)
         );
       }
 
       return { success: true };
     } catch (error) {
+      authLogger.warn('login-failed', {
+        status: error?.response?.status,
+        code: error?.response?.data?.code,
+        message: error?.response?.data?.message || error?.message,
+      });
       return {
         success: false,
         error: error.response?.data?.message || 'Login failed',
@@ -164,7 +151,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.register(userData);
       return { success: true, data: response.data };
     } catch (error) {
-      console.log(error);
+      authLogger.warn('registration-failed', serializeError(error));
       return {
         success: false,
         error: error.response?.data?.message || 'Registration failed',
@@ -174,17 +161,34 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async (reason = 'USER_REQUESTED') => {
     try {
-      // console.log('[AuthContext] Logging out - Reason:', reason);
+      authLogger.info('logout-started', { reason });
 
       // Try to notify backend if it's a user-requested logout (not forced by session revocation)
       if (reason === 'USER_REQUESTED') {
         try {
+          const pushRegistration =
+            await deactivateCurrentDevicePushRegistration();
+
+          await notificationAPI
+            .deactivateToken({
+              ...pushRegistration,
+              reason: 'user_logout',
+            })
+            .catch(() => {});
+        } catch (pushError) {
+          authLogger.warn(
+            'push-token-deactivation-failed-non-blocking',
+            serializeError(pushError)
+          );
+        }
+
+        try {
           // Ignore errors - user might already be logged out
           await authAPI.logout?.().catch(() => {});
         } catch (err) {
-          console.log(
-            '[AuthContext] Logout API call failed (expected if session revoked):',
-            err
+          authLogger.warn(
+            'logout-api-call-failed',
+            serializeError(err)
           );
         }
       }
@@ -206,9 +210,9 @@ export const AuthProvider = ({ children }) => {
       setImpersonatedRole(null);
       setImpersonatedUserId(null);
 
-      console.log('[AuthContext] Logout complete');
+      authLogger.info('logout-complete', { reason });
     } catch (error) {
-      console.log('[AuthContext] Error during logout:', error);
+      authLogger.error('logout-failed', serializeError(error));
       // Still clear state even if there's an error
       setToken(null);
       setUser(null);
@@ -221,15 +225,13 @@ export const AuthProvider = ({ children }) => {
   const startImpersonation = (role, userId) => {
     setImpersonatedRole(role);
     setImpersonatedUserId(userId);
-    console.log(
-      `[AuthContext] Started impersonating role: ${role}, userId: ${userId}`
-    );
+    authLogger.info('impersonation-started', { role, userId });
   };
 
   const clearImpersonation = () => {
     setImpersonatedRole(null);
     setImpersonatedUserId(null);
-    console.log('[AuthContext] Impersonation cleared');
+    authLogger.info('impersonation-cleared');
   };
 
   const getDisplayRole = () => {
