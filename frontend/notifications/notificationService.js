@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { createLogger } from '../utils/logger';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -15,6 +16,7 @@ Notifications.setNotificationHandler({
 
 const DEFAULT_ANDROID_CHANNEL = 'default';
 const PUSH_DEVICE_ID_KEY = 'nativePushDeviceId';
+const notificationsLogger = createLogger('notifications', 'Notifications');
 
 function buildLocalDeviceId() {
   return `aegis-${Date.now().toString(36)}-${Math.random()
@@ -26,11 +28,13 @@ export async function getOrCreatePushDeviceId() {
   const existing = await AsyncStorage.getItem(PUSH_DEVICE_ID_KEY);
 
   if (existing) {
+    notificationsLogger.debug('reusing-push-device-id', { deviceId: existing });
     return existing;
   }
 
   const deviceId = buildLocalDeviceId();
   await AsyncStorage.setItem(PUSH_DEVICE_ID_KEY, deviceId);
+  notificationsLogger.info('created-push-device-id', { deviceId });
   return deviceId;
 }
 
@@ -50,10 +54,15 @@ export async function configureNotificationChannels() {
     enableLights: true,
     showBadge: true,
   });
+
+  notificationsLogger.debug('android-channel-configured', {
+    channelId: DEFAULT_ANDROID_CHANNEL,
+  });
 }
 
 export async function ensureNotificationPermission() {
   if (Platform.OS === 'web') {
+    notificationsLogger.warn('permission-check-skipped-web');
     return {
       granted: false,
       status: 'web_unsupported',
@@ -61,6 +70,7 @@ export async function ensureNotificationPermission() {
   }
 
   if (!Device.isDevice) {
+    notificationsLogger.warn('permission-check-skipped-simulator');
     return {
       granted: false,
       status: 'emulator_or_simulator_unsupported',
@@ -72,6 +82,10 @@ export async function ensureNotificationPermission() {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
+  notificationsLogger.debug('permission-status-read', {
+    existingStatus,
+  });
+
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync({
       ios: {
@@ -82,6 +96,7 @@ export async function ensureNotificationPermission() {
     });
 
     finalStatus = status;
+    notificationsLogger.info('permission-request-result', { status });
   }
 
   return {
@@ -112,26 +127,33 @@ function getDeviceName() {
 }
 
 export async function getNativePushRegistration(tokenResponseOverride = null) {
+  notificationsLogger.info('native-push-registration-start', {
+    platform: Platform.OS,
+    appOwnership: Constants.appOwnership || 'unknown',
+    isDevice: Device.isDevice,
+  });
+
   const permission = await ensureNotificationPermission();
 
   if (!permission.granted) {
-    console.log(
-      `[Notifications] Native push registration skipped: ${permission.status}`
-    );
+    notificationsLogger.warn('native-push-registration-skipped', permission);
     return null;
   }
 
   if (Constants.appOwnership === 'expo') {
-    console.log(
-      '[Notifications] Running inside Expo Go. Native push delivery must be validated with a development build or production build.'
-    );
+    notificationsLogger.warn('running-inside-expo-go');
   }
 
+  notificationsLogger.debug('requesting-native-device-push-token');
   const tokenResponse =
     tokenResponseOverride || (await Notifications.getDevicePushTokenAsync());
   const token = normalizeTokenData(tokenResponse);
 
   if (!token) {
+    notificationsLogger.error('native-push-token-missing', {
+      tokenResponseType: typeof tokenResponse,
+      tokenResponse,
+    });
     throw new Error('Native push token was not returned by the device');
   }
 
@@ -147,15 +169,26 @@ export async function getNativePushRegistration(tokenResponseOverride = null) {
     buildNumber: Application.nativeBuildVersion || null,
   };
 
-  console.log(
-    `[Notifications] Native token ready platform=${registration.platform} type=${registration.tokenType} deviceId=${registration.deviceId}`
-  );
+  notificationsLogger.info('native-token-ready', {
+    platform: registration.platform,
+    tokenType: registration.tokenType,
+    deviceId: registration.deviceId,
+    deviceName: registration.deviceName,
+    appVersion: registration.appVersion,
+    buildNumber: registration.buildNumber,
+    token,
+  });
 
   return registration;
 }
 
 export async function deactivateCurrentDevicePushRegistration() {
   const deviceId = await getOrCreatePushDeviceId();
+
+  notificationsLogger.debug('deactivate-current-device-push-registration', {
+    deviceId,
+    platform: Platform.OS,
+  });
 
   return {
     deviceId,

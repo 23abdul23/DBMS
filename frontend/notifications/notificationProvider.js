@@ -7,18 +7,21 @@ import { useAuth } from '../context/AuthContext';
 import { notificationAPI } from '../services/api';
 import { handleNotificationResponse } from './notificationNavigation';
 import { getNativePushRegistration } from './notificationService';
+import { createLogger, serializeError } from '../utils/logger';
 
 export const NotificationContext = createContext();
+const notificationsLogger = createLogger('notifications', 'Notifications');
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
+  const userId = user?.id;
 
   useEffect(() => {
     const receivedSubscription = Notifications.addNotificationReceivedListener(
       (notification) => {
         const notificationId = notification?.request?.identifier;
         const data = notification?.request?.content?.data || {};
-        console.log('[Notifications] Foreground notification received:', {
+        notificationsLogger.info('foreground-notification-received', {
           notificationId,
           data,
         });
@@ -28,18 +31,22 @@ export function NotificationProvider({ children }) {
     const responseSubscription =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response?.notification?.request?.content?.data || {};
-        console.log('[Notifications] Notification tap received:', data);
+        notificationsLogger.info('notification-tap-received', data);
         handleNotificationResponse(response);
       });
 
     Notifications.getLastNotificationResponseAsync()
       .then((response) => {
         if (response) {
+          notificationsLogger.debug('processing-last-notification-response');
           handleNotificationResponse(response);
         }
       })
       .catch((error) => {
-        console.log('[Notifications] Failed to read last response:', error);
+        notificationsLogger.warn(
+          'failed-to-read-last-notification-response',
+          serializeError(error)
+        );
       });
 
     return () => {
@@ -49,7 +56,11 @@ export function NotificationProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!user || Platform.OS === 'web') {
+    if (!userId || Platform.OS === 'web') {
+      notificationsLogger.debug('token-sync-skipped', {
+        hasUser: Boolean(userId),
+        platform: Platform.OS,
+      });
       return undefined;
     }
 
@@ -62,17 +73,30 @@ export function NotificationProvider({ children }) {
         );
 
         if (!registration || isCancelled) {
+          notificationsLogger.debug('token-sync-aborted', {
+            hasRegistration: Boolean(registration),
+            isCancelled,
+          });
           return;
         }
 
+        notificationsLogger.info('syncing-native-token', {
+          userId,
+          platform: registration.platform,
+          tokenType: registration.tokenType,
+          deviceId: registration.deviceId,
+          token: registration.token,
+        });
         await notificationAPI.saveToken(registration);
-        console.log(
-          `[Notifications] Synced native ${registration.tokenType} token for device ${registration.deviceId}`
-        );
+        notificationsLogger.info('native-token-sync-success', {
+          userId,
+          tokenType: registration.tokenType,
+          deviceId: registration.deviceId,
+        });
       } catch (error) {
-        console.log(
-          '[Notifications] Native token sync failed:',
-          error?.message || error
+        notificationsLogger.error(
+          'native-token-sync-failed',
+          serializeError(error)
         );
       }
     };
@@ -81,7 +105,7 @@ export function NotificationProvider({ children }) {
 
     const tokenSubscription = Notifications.addPushTokenListener
       ? Notifications.addPushTokenListener((token) => {
-          console.log('[Notifications] Native push token refresh received');
+          notificationsLogger.info('native-push-token-refresh-received');
           syncNativeToken(token);
         })
       : null;
@@ -90,7 +114,7 @@ export function NotificationProvider({ children }) {
       isCancelled = true;
       tokenSubscription?.remove?.();
     };
-  }, [user?.id]);
+  }, [userId]);
 
   return children;
 }

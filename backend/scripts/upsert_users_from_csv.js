@@ -113,16 +113,11 @@ const parseCsv = (csvPath) => {
     return []
   }
 
-<<<<<<< Updated upstream
-  const headerValues = splitCsvLine(lines[0]).map((value) => value.toLowerCase())
-  const hasHeader = headerValues.includes("name") && headerValues.includes("email")
-=======
   const headerValues = splitCsvLine(lines[0]).map((value) =>
     value.toLowerCase(),
   )
   const hasHeader =
     headerValues.includes("name") && headerValues.includes("email")
->>>>>>> Stashed changes
   const dataLines = hasHeader ? lines.slice(1) : lines
 
   return dataLines
@@ -242,15 +237,11 @@ const assignHostelAndRoom = (students) => {
 
 const buildStudentRecord = (row, existingStudentIds) => {
   const gender = pickGender()
-<<<<<<< Updated upstream
-  const studentId = generateUniqueStudentId(row.name, row.email, existingStudentIds)
-=======
   const studentId = generateUniqueStudentId(
     row.name,
     row.email,
     existingStudentIds,
   )
->>>>>>> Stashed changes
 
   return {
     name: row.name,
@@ -331,13 +322,9 @@ const run = async () => {
       .filter(Boolean),
   )
 
-<<<<<<< Updated upstream
-  const students = rows.map((row) => buildStudentRecord(row, existingStudentIds))
-=======
   const students = rows.map((row) =>
     buildStudentRecord(row, existingStudentIds),
   )
->>>>>>> Stashed changes
   assignHostelAndRoom(students)
 
   const pwHash = await hashPassword()
@@ -358,12 +345,8 @@ const run = async () => {
           hostel: existing.hostel || student.hostel,
           roomNumber: existing.roomNumber || student.roomNumber,
           phoneNumber: existing.phoneNumber || student.phoneNumber,
-<<<<<<< Updated upstream
-          emergencyContact: existing.emergencyContact || student.emergencyContact,
-=======
           emergencyContact:
             existing.emergencyContact || student.emergencyContact,
->>>>>>> Stashed changes
           studentId: existing.studentId || student.studentId,
         }
 
