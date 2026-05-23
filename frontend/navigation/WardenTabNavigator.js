@@ -53,9 +53,9 @@ export default function WardenTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Dashboard" component={WardenDashboardScreen} />
-      <Tab.Screen name="Requests" component={WardenOutpassScreen} />
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
+      <Tab.Screen name="Requests" component={WardenOutpassScreen} />
+      <Tab.Screen name="Dashboard" component={WardenDashboardScreen} />
       <Tab.Screen name="Monitoring" component={WardenMonitoringScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
