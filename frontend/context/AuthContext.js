@@ -1,7 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 import {
   authAPI,
   commonAPI,
@@ -13,7 +20,10 @@ import {
   setLogoutCallback,
   clearLogoutCallback,
 } from '../utils/logoutEventEmitter';
-import { deactivateCurrentDevicePushRegistration } from '../notifications/notificationService';
+import {
+  deactivateCurrentDevicePushRegistration,
+  getNativePushRegistration,
+} from '../notifications/notificationService';
 import { cacheLocations } from '../utils/locationCacheManager';
 import { createLogger, serializeError } from '../utils/logger';
 
@@ -24,6 +34,8 @@ const normalizeLoginRole = (role) => {
 
   return role;
 };
+
+const PUSH_TOKEN_SYNC_STATE_KEY = 'pushTokenSyncState';
 
 const AuthContext = createContext();
 const authLogger = createLogger('auth', 'Auth');
@@ -42,6 +54,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [impersonatedRole, setImpersonatedRole] = useState(null);
   const [impersonatedUserId, setImpersonatedUserId] = useState(null);
+  const pushTokenSyncInFlightRef = useRef(false);
 
   useEffect(() => {
     loadStoredAuth();
@@ -71,6 +84,9 @@ export const AuthProvider = ({ children }) => {
       } else {
         setToken(null);
         setUser(null);
+        await AsyncStorage.removeItem(PUSH_TOKEN_SYNC_STATE_KEY).catch(
+          () => {}
+        );
       }
     } catch (error) {
       authLogger.warn('failed-to-load-stored-auth', serializeError(error));
@@ -78,6 +94,106 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  const syncPushTokenForCurrentSession = async (source) => {
+    if (loading || !user?.id || !token) {
+      return;
+    }
+
+    if (pushTokenSyncInFlightRef.current) {
+      console.log('[AuthContext] Push token sync skipped (already running)', {
+        source,
+        userId: user.id,
+      });
+      return;
+    }
+
+    pushTokenSyncInFlightRef.current = true;
+
+    try {
+      authLogger.info('push-token-sync-started', {
+        source,
+        userId: user.id,
+        role: user.role,
+        hasAuthToken: Boolean(token),
+        isDevice: Device.isDevice,
+      });
+
+      const registration = await getNativePushRegistration();
+
+      if (!registration) {
+        authLogger.info('push-token-sync-skipped-no-registration', {
+          source,
+          userId: user.id,
+          isDevice: Device.isDevice,
+        });
+        return;
+      }
+
+      const syncedStateRaw = await AsyncStorage.getItem(
+        PUSH_TOKEN_SYNC_STATE_KEY
+      );
+
+      const syncedState = syncedStateRaw ? JSON.parse(syncedStateRaw) : null;
+      const nextState = {
+        userId: user.id,
+        token: registration.token,
+        platform: registration.platform,
+        deviceId: registration.deviceId,
+      };
+
+      if (
+        syncedState?.userId === nextState.userId &&
+        syncedState?.token === nextState.token &&
+        syncedState?.platform === nextState.platform &&
+        syncedState?.deviceId === nextState.deviceId
+      ) {
+        authLogger.debug('push-token-already-synced-for-session', {
+          source,
+          userId: user.id,
+          deviceId: registration.deviceId,
+          tokenPreview: registration.token.slice(0, 24),
+        });
+        return;
+      }
+
+      authLogger.info('push-token-sync-saving', {
+        source,
+        userId: user.id,
+        deviceId: registration.deviceId,
+        tokenType: registration.tokenType,
+        platform: registration.platform,
+        tokenPreview: registration.token.slice(0, 24),
+      });
+
+      const response = await notificationAPI.saveToken(registration);
+
+      await AsyncStorage.setItem(
+        PUSH_TOKEN_SYNC_STATE_KEY,
+        JSON.stringify(nextState)
+      );
+
+      authLogger.info('push-token-sync-complete', {
+        source,
+        userId: user.id,
+        status: response?.status,
+      });
+    } catch (pushError) {
+      authLogger.warn('push-token-sync-failed-non-blocking', {
+        source,
+        userId: user?.id,
+        error: serializeError(pushError),
+      });
+    } finally {
+      pushTokenSyncInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && user && token) {
+      syncPushTokenForCurrentSession('auth-state-change');
+    }
+  }, [loading, user?.id, token]);
 
   const login = async (email, password, role) => {
     try {
@@ -186,10 +302,7 @@ export const AuthProvider = ({ children }) => {
           // Ignore errors - user might already be logged out
           await authAPI.logout?.().catch(() => {});
         } catch (err) {
-          authLogger.warn(
-            'logout-api-call-failed',
-            serializeError(err)
-          );
+          authLogger.warn('logout-api-call-failed', serializeError(err));
         }
       }
 
@@ -198,6 +311,7 @@ export const AuthProvider = ({ children }) => {
         SecureStore.deleteItemAsync('accessToken').catch(() => {}),
         SecureStore.deleteItemAsync('refreshToken').catch(() => {}),
         AsyncStorage.removeItem('userData').catch(() => {}),
+        AsyncStorage.removeItem(PUSH_TOKEN_SYNC_STATE_KEY).catch(() => {}),
       ]);
 
       // [NOTE] Intentionally NOT clearing location cache on logout
@@ -206,6 +320,9 @@ export const AuthProvider = ({ children }) => {
 
       setToken(null);
       setUser(null);
+      // Also clear impersonation state on logout
+      setImpersonatedRole(null);
+      setImpersonatedUserId(null);
       // Also clear impersonation state on logout
       setImpersonatedRole(null);
       setImpersonatedUserId(null);

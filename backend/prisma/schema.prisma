@@ -12,6 +12,7 @@ enum UserRole {
   security
   admin
   SUPER_ADMIN
+  super_admin
 }
 
 enum Gender {
@@ -115,6 +116,7 @@ enum NotificationType {
   SAC
   EMERGENCY
   NEWS
+  HELLO
   SYSTEM
 }
 

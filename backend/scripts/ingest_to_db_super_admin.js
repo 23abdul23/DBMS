@@ -4,7 +4,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 import { getPrismaClient, disconnectSQL } from "../config/prisma.js"
 import { generateId } from "../utils/hashGenerator.js"
-import { SUPER_ADMIN_EMAIL, normalizeEmail } from "../utils/adminScopes.js"
+import { super_admin_EMAIL, normalizeEmail } from "../utils/adminScopes.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -16,10 +16,10 @@ const prisma = getPrismaClient()
 
 const DEFAULT_PASSWORD = "123456"
 
-const SUPER_ADMIN = {
-  email: SUPER_ADMIN_EMAIL,
+const super_admin = {
+  email: super_admin_EMAIL,
   name: "Super Administrator",
-  role: "SUPER_ADMIN",
+  role: "super_admin",
   gender: "other",
   phoneNumber: "8000000000",
   emergencyContact: "Campus Control Room - 7909069340",
@@ -40,16 +40,16 @@ const run = async () => {
 
   const existingUser = await prisma.user.findUnique({
     where: {
-      email: SUPER_ADMIN.email,
+      email: super_admin.email,
     },
     select: {
       email: true,
     },
   })
 
-  console.log("SUPER_ADMIN user ingestion started")
+  console.log("super_admin user ingestion started")
   console.log(`Mode: ${options.dryRun ? "dry-run" : "write"}`)
-  console.log(`Email: ${SUPER_ADMIN.email}`)
+  console.log(`Email: ${super_admin.email}`)
   console.log(`Status: ${existingUser ? "skip (already exists)" : "insert"}`)
 
   if (options.dryRun || existingUser) {
@@ -62,13 +62,13 @@ const run = async () => {
   const result = await prisma.user.create({
     data: {
       id: generateId(),
-      name: SUPER_ADMIN.name,
-      email: SUPER_ADMIN.email,
+      name: super_admin.name,
+      email: super_admin.email,
       passwordHash,
-      role: SUPER_ADMIN.role,
-      gender: SUPER_ADMIN.gender,
-      phoneNumber: SUPER_ADMIN.phoneNumber,
-      emergencyContact: SUPER_ADMIN.emergencyContact,
+      role: super_admin.role,
+      gender: super_admin.gender,
+      phoneNumber: super_admin.phoneNumber,
+      emergencyContact: super_admin.emergencyContact,
       isActive: true,
     },
   })
@@ -78,7 +78,7 @@ const run = async () => {
 
 run()
   .catch((error) => {
-    console.error("\nSUPER_ADMIN user ingestion failed")
+    console.error("\nsuper_admin user ingestion failed")
     console.error(error)
     process.exitCode = 1
   })

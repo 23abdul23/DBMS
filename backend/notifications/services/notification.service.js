@@ -54,6 +54,16 @@ async function createNotification({
   const routeParams = params && typeof params === "object" ? params : null
 
   try {
+    console.log("[Notification] Creating notification record", {
+      userId,
+      title,
+      type,
+      priority,
+      entityId,
+      entityType,
+      routeName,
+    })
+
     const notification = await prisma.notification.create({
       data: {
         userId,
