@@ -24,6 +24,7 @@ enum Department {
   IT
   IT_BI
   Electronics
+  M_Tech
 }
 
 enum AcademicYear {
