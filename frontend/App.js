@@ -96,10 +96,10 @@ function RootNavigator() {
           ) : user.role === 'student' ? (
             <>
               <Stack.Screen name="Main" component={MainTabNavigator} />
-              <Stack.Screen
+              {/* <Stack.Screen
                 name="Notifications"
                 component={NotificationsScreen}
-              />
+              /> */}
               <Stack.Screen name="SAC" component={SACScreen} />
               <Stack.Screen name="ClubRooms" component={ClubRoomScreen} />
               <Stack.Screen name="Equipments" component={EquipmentScreen} />

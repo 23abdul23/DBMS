@@ -1,10 +1,6 @@
 # Aegis ID
 
-Aegis ID is a mobile-first campus management system built as a DBMS-oriented project. It digitizes student identity and movement workflows across hostels, campus gates, emergency reporting, SAC spaces, and the library. The repository contains an Expo-based frontend, a Node.js/Express backend, and a PostgreSQL database managed through Prisma.
-
-## Project Overview
-
-The project is designed around real campus operations instead of a single ID-card screen. Its main goal is to centralize movement, approval, and safety workflows in one system so students, wardens, guards, and admins all work against the same database-backed records.
+Aegis ID is a mobile-first campus management system. It digitizes student identity and movement workflows across hostels, campus gates, emergency reporting, SAC spaces, and the library. The project is designed around real campus operations instead of a single ID-card screen. Its main goal is to centralize movement, approval, and safety workflows in one system so students, wardens, guards, and admins all work against the same database-backed records.
 
 The current implementation is centered on:
 
