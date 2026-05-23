@@ -48,23 +48,118 @@ class PushDispatchError extends Error {
 }
 
 function normalizePrivateKey(value) {
-  return String(value || "")
+  return unwrapEnvValue(value)
+    .replace(/\\r/g, "\r")
     .replace(/\\n/g, "\n")
     .trim()
 }
 
+function unwrapEnvValue(value) {
+  const normalized = String(value || "")
+    .replace(/^\uFEFF/, "")
+    .trim()
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    return normalized.slice(1, -1).trim()
+  }
+
+  return normalized
+}
+
+function parseJsonEnv(value, label) {
+  let candidate = unwrapEnvValue(value)
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const parsed = JSON.parse(candidate)
+
+      if (typeof parsed === "string") {
+        candidate = parsed
+        continue
+      }
+
+      return parsed
+    } catch (error) {
+      if (attempt === 1) {
+        throw new PushDispatchError(`${label} is not valid JSON`, {
+          provider: "FCM",
+          code: "FCM_CONFIG_INVALID",
+          details: error,
+        })
+      }
+    }
+  }
+
+  throw new PushDispatchError(`${label} is not valid JSON`, {
+    provider: "FCM",
+    code: "FCM_CONFIG_INVALID",
+  })
+}
+
+function toFirebaseServiceAccount(rawAccount) {
+  const serviceAccount = {
+    projectId:
+      rawAccount?.projectId || rawAccount?.project_id || rawAccount?.projectID,
+    clientEmail:
+      rawAccount?.clientEmail ||
+      rawAccount?.client_email ||
+      rawAccount?.clientEmailAddress,
+    privateKey: normalizePrivateKey(
+      rawAccount?.privateKey || rawAccount?.private_key,
+    ),
+  }
+
+  if (
+    !serviceAccount.projectId ||
+    !serviceAccount.clientEmail ||
+    !serviceAccount.privateKey
+  ) {
+    throw new PushDispatchError(
+      "Firebase service account is incomplete. Expected projectId, clientEmail, and privateKey.",
+      {
+        provider: "FCM",
+        code: "FCM_CONFIG_INVALID",
+      },
+    )
+  }
+
+  if (
+    !serviceAccount.privateKey.includes("-----BEGIN PRIVATE KEY-----") ||
+    !serviceAccount.privateKey.includes("-----END PRIVATE KEY-----")
+  ) {
+    throw new PushDispatchError(
+      "Firebase private key is not a valid PEM block. Remove extra quotes and preserve newline escapes.",
+      {
+        provider: "FCM",
+        code: "FCM_CONFIG_INVALID",
+      },
+    )
+  }
+
+  return serviceAccount
+}
+
 function getFirebaseServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON.trim()
-    return JSON.parse(rawJson)
+    return toFirebaseServiceAccount(
+      parseJsonEnv(
+        process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+        "FIREBASE_SERVICE_ACCOUNT_JSON",
+      ),
+    )
   }
 
   if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
     const decoded = Buffer.from(
-      process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+      unwrapEnvValue(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64),
       "base64",
     ).toString("utf8")
-    return JSON.parse(decoded)
+    return toFirebaseServiceAccount(
+      parseJsonEnv(decoded, "FIREBASE_SERVICE_ACCOUNT_BASE64"),
+    )
   }
 
   if (
@@ -72,11 +167,11 @@ function getFirebaseServiceAccount() {
     process.env.FIREBASE_CLIENT_EMAIL &&
     process.env.FIREBASE_PRIVATE_KEY
   ) {
-    return {
+    return toFirebaseServiceAccount({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
-    }
+    })
   }
 
   return null
@@ -93,15 +188,33 @@ function getFirebaseMessaging() {
   }
 
   if (!firebaseApp) {
-    firebaseApp = admin.apps.length
-      ? admin.app()
-      : admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId: serviceAccount.projectId,
-            clientEmail: serviceAccount.clientEmail,
-            privateKey: normalizePrivateKey(serviceAccount.privateKey),
-          }),
-        })
+    try {
+      firebaseApp = admin.apps.length
+        ? admin.app()
+        : admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: serviceAccount.projectId,
+              clientEmail: serviceAccount.clientEmail,
+              privateKey: normalizePrivateKey(serviceAccount.privateKey),
+            }),
+          })
+    } catch (error) {
+      const message = String(error?.message || "")
+      const likelyKeyIssue =
+        message.includes("Failed to parse private key") ||
+        message.includes("DECODER routines::unsupported")
+
+      throw new PushDispatchError(
+        likelyKeyIssue
+          ? "Firebase private key could not be parsed. Remove extra quotes and store the PEM with \\n escapes or use FIREBASE_SERVICE_ACCOUNT_BASE64."
+          : message || "Firebase Admin initialization failed",
+        {
+          provider: "FCM",
+          code: "FCM_CONFIG_INVALID",
+          details: error,
+        },
+      )
+    }
   }
 
   return firebaseApp.messaging()
@@ -260,6 +373,9 @@ async function sendFcmNotification({
       },
     }
   } catch (error) {
+    if (error instanceof PushDispatchError) {
+      throw error
+    }
     throw normalizeFirebaseError(error)
   }
 }
