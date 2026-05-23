@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -52,10 +53,17 @@ export async function configureNotificationChannels() {
 }
 
 export async function ensureNotificationPermission() {
-  if (Platform.OS === 'web' || !Device.isDevice) {
+  if (Platform.OS === 'web') {
     return {
       granted: false,
-      status: 'unsupported',
+      status: 'web_unsupported',
+    };
+  }
+
+  if (!Device.isDevice) {
+    return {
+      granted: false,
+      status: 'emulator_or_simulator_unsupported',
     };
   }
 
@@ -108,9 +116,15 @@ export async function getNativePushRegistration(tokenResponseOverride = null) {
 
   if (!permission.granted) {
     console.log(
-      `[Notifications] Native push permission not granted: ${permission.status}`
+      `[Notifications] Native push registration skipped: ${permission.status}`
     );
     return null;
+  }
+
+  if (Constants.appOwnership === 'expo') {
+    console.log(
+      '[Notifications] Running inside Expo Go. Native push delivery must be validated with a development build or production build.'
+    );
   }
 
   const tokenResponse =
