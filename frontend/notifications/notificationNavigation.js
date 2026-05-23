@@ -34,7 +34,9 @@ function navigateFromResponse(response) {
   }
 
   if (!navigationRef.isReady()) {
-    navigationLogger.debug('queueing-notification-response-until-navigation-ready');
+    navigationLogger.debug(
+      'queueing-notification-response-until-navigation-ready'
+    );
     pendingResponses.push(response);
     return;
   }
@@ -55,7 +57,9 @@ function navigateFromResponse(response) {
 
 export function handleNotificationResponse(response) {
   if (!navigationReady || !navigationRef.isReady()) {
-    navigationLogger.debug('notification-response-received-before-navigation-ready');
+    navigationLogger.debug(
+      'notification-response-received-before-navigation-ready'
+    );
     pendingResponses.push(response);
     return;
   }

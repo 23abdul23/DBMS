@@ -82,7 +82,7 @@ function RootNavigator() {
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          user.role === 'SUPER_ADMIN' ? (
+          user.role === 'super_admin' ? (
             <>
               <Stack.Screen
                 name="SuperAdminMain"

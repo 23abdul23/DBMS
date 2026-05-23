@@ -17,7 +17,7 @@ router.post("/token/deactivate", authenticate, deactivatePushTokenController)
 router.post(
   "/test-hello",
   authenticate,
-  authorize("SUPER_ADMIN"),
+  authorize("super_admin"),
   async (req, res) => {
     try {
       const { studentId } = req.body
@@ -49,7 +49,7 @@ router.post(
 router.get(
   "/admin/overview",
   authenticate,
-  authorize("SUPER_ADMIN"),
+  authorize("super_admin"),
   async (_req, res) => {
     try {
       const [tokenCounts, recentDeliveries, recentFailures] = await Promise.all(
@@ -126,7 +126,7 @@ router.get(
 router.get(
   "/admin/tokens",
   authenticate,
-  authorize("SUPER_ADMIN"),
+  authorize("super_admin"),
   async (req, res) => {
     try {
       const limit = Math.min(Number.parseInt(req.query.limit, 10) || 50, 100)
@@ -188,7 +188,7 @@ router.get(
 router.get(
   "/admin/deliveries",
   authenticate,
-  authorize("SUPER_ADMIN"),
+  authorize("super_admin"),
   async (req, res) => {
     try {
       const limit = Math.min(Number.parseInt(req.query.limit, 10) || 50, 100)

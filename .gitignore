@@ -50,3 +50,4 @@ logs.txt
 
 frontend/google-services.json
 backend/logs/
+backend/logs/*

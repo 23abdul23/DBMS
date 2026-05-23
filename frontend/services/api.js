@@ -33,7 +33,10 @@ const apiLogger = createLogger('api', 'API');
 
 const sanitizeUrl = (baseUrl, url) => {
   const fullUrl = `${baseUrl || ''}${url || ''}`;
-  return fullUrl.replace(/([?&](token|refreshToken|password|email)=)[^&]*/gi, '$1[redacted]');
+  return fullUrl.replace(
+    /([?&](token|refreshToken|password|email)=)[^&]*/gi,
+    '$1[redacted]'
+  );
 };
 
 const buildApiLogContext = (config = {}) => ({
@@ -58,12 +61,20 @@ export const devQuickLoginCredentialsByRole = {
     email: 'guard100@iiita.ac.in',
     password: '123456',
   },
+  admin: {
+    email: 'adminAegis@iiita.ac.in',
+    password: '123456',
+  },
   sac_admin: {
     email: 'sacAdmin@iiita.ac.in',
     password: '123456',
   },
   library_admin: {
     email: 'libAdmin@iiita.ac.in',
+    password: '123456',
+  },
+  security_admin: {
+    email: 'security@iiita.ac.in',
     password: '123456',
   },
 };
@@ -98,7 +109,7 @@ const setActiveApiBaseUrl = async (baseUrl, reason = 'manual') => {
   try {
     await AsyncStorage.setItem(ACTIVE_API_BASE_URL_KEY, baseUrl);
   } catch (storageError) {
-      apiLogger.warn('failed-to-persist-base-url', serializeError(storageError));
+    apiLogger.warn('failed-to-persist-base-url', serializeError(storageError));
   }
 
   apiLogger.info('api-base-url-switched', { baseUrl, reason });
